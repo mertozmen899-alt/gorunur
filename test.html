@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3 soruda durumunu gör | Görünür</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0E0E0F">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/app.js" defer></script>
+<script src="assets/test.js" defer></script>
+</head>
+<body>
+<div class="test-govde">
+<div class="kap" style="width:100%">
+<div class="test-ust">
+<a href="./" class="logo" aria-label="Görünür ana sayfa">
+<span class="logo-isaret"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span>
+<span class="logo-ad">Görünür</span>
+</a>
+<div style="display:flex;align-items:center;gap:18px">
+<span id="adim-etiket" style="font-size:14px;font-weight:700;color:#B9B5AD">Soru 1 / 3</span>
+<a href="./" style="font-size:14px;font-weight:600;color:#9A958C">Vazgeç</a>
+</div>
+</div>
+<div class="ilerleme" role="progressbar" aria-label="İlerleme" aria-valuemin="0" aria-valuemax="100" aria-valuenow="20"><i id="ilerleme" style="width:20%"></i></div>
+</div>
+
+<main class="test">
+
+<!-- 1 -->
+<section id="s1">
+<h1 tabindex="-1">Müşterileriniz size nasıl ulaşıyor?</h1>
+<p class="acik">Birden fazla seçebilirsiniz. Neyi ölçeceğimizi buna göre seçiyoruz.</p>
+<div style="margin-top:18px">
+<button type="button" class="secenek" data-mod="gelir" aria-pressed="true">
+<span class="ikon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg></span>
+<span class="m"><strong>Bana gelirler</strong><small>Dükkânınız, kliniğiniz ya da ofisiniz var; müşteri kapınıza gelir.</small></span>
+<span class="kutu"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>
+</button>
+<button type="button" class="secenek" data-mod="giderim" aria-pressed="false">
+<span class="ikon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11zM12 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/></svg></span>
+<span class="m"><strong>Ben onlara giderim</strong><small>Evlere ya da iş yerlerine siz gidersiniz; bir şehirde ya da bölgede çalışırsınız.</small></span>
+<span class="kutu"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>
+</button>
+<button type="button" class="secenek" data-mod="online" aria-pressed="false">
+<span class="ikon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 100-18 9 9 0 000 18zM3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg></span>
+<span class="m"><strong>Online çalışırım</strong><small>İşinizi internetten yaparsınız; müşteriniz her şehirden olabilir.</small></span>
+<span class="kutu"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>
+</button>
+</div>
+<p style="font-size:13px;color:#9A958C;margin:18px 0 0">Adınızı veya telefonunuzu istemiyoruz. Yaklaşık 1 dakika sürer.</p>
+</section>
+
+<!-- 2 -->
+<section id="s2" hidden>
+<h1 tabindex="-1">Nerede hizmet veriyorsunuz?</h1>
+<p class="acik">Aramaları sizin bölgenizden yapacağız. Müşterinize adres tarif ederken söylediğiniz yeri yazın.</p>
+<label for="sehir" style="display:block;font-weight:700;font-size:14px;margin-top:30px;color:#D6D2CA">İlçe veya şehir</label>
+<input id="sehir" class="girdi" type="text" autocomplete="off" placeholder="Birkaç harf yazın, örn. Kadı" aria-describedby="sehir-not">
+<div id="sehir-oneri" class="oneriler" hidden></div>
+<p id="sehir-not" style="font-size:13px;color:#9A958C;margin:10px 0 0">Listede yoksa yazdığınız gibi kullanırız.</p>
+<button type="button" id="turkiye" class="btn btn-cizgi" style="margin-top:14px;font-size:14px;padding:10px 16px" hidden>Türkiye geneli hizmet veriyorum</button>
+</section>
+
+<!-- 3 -->
+<section id="s3" hidden>
+<h1 tabindex="-1">Ne iş yapıyorsunuz?</h1>
+<p class="acik">Müşterinizin arayacağı gibi yazın. "Berber", "kuaför" ya da "saç tasarım" fark etmez, biz anlarız.</p>
+<label for="is" style="display:block;font-weight:700;font-size:14px;margin-top:30px;color:#D6D2CA">İşinizi arayın</label>
+<input id="is" class="girdi" type="text" autocomplete="off" placeholder="Birkaç harf yazın, örn. veter">
+<div id="is-oneri" class="oneriler" hidden></div>
+<div id="is-secili" class="secili" hidden></div>
+</section>
+
+<!-- Hazırlanıyor -->
+<section id="s4" hidden>
+<div class="logo-isaret" style="width:64px;height:64px;border-radius:20px"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
+<h1 tabindex="-1" style="font-size:clamp(30px,4.5vw,38px);margin-top:24px">"<span class="is-adi"></span>" için ekranınızı hazırlıyoruz</h1>
+<div class="adimlar" id="adimlar" aria-live="polite">
+<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Google Haritalar'a bakıyoruz</div>
+<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Google aramalarına bakıyoruz</div>
+<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Yapay zekâ cevaplarını kontrol ediyoruz</div>
+<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Sizden önce çıkanları buluyoruz</div>
+<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Yapılacaklar listenizi yazıyoruz</div>
+</div>
+</section>
+
+<!-- Sonuç -->
+<section id="s5" hidden>
+<span class="pil pil-a" style="text-transform:uppercase;letter-spacing:.04em">Örnek ekranınız</span>
+<h1 tabindex="-1" style="font-size:clamp(28px,4.5vw,38px);line-height:1.15;margin-top:18px"><span class="yer"></span> <span class="is-kucuk"></span> arayanlara verilen her 100 yapay zekâ cevabının <span style="color:#FFC145">kaçında</span> adınız geçiyor?</h1>
+<p style="font-size:16px;color:#B9B5AD;margin:14px 0 0;line-height:1.6">Görünür açılınca bunu sizin için ölçüp tek bir sayıyla söyleyeceğiz. Yanında da bu hafta yapmanız gereken 3 işi sıralayacağız.</p>
+<div class="ucgrid" style="margin-top:24px">
+<div class="sonuc-kutu"><div style="font-size:13px;color:#9A958C;font-weight:700">Google Haritalar</div><div style="font-family:var(--baslik);font-weight:800;font-size:26px;margin-top:6px">?. sıra</div></div>
+<div class="sonuc-kutu"><div style="font-size:13px;color:#9A958C;font-weight:700">ChatGPT</div><div style="font-family:var(--baslik);font-weight:800;font-size:26px;margin-top:6px">% ?</div></div>
+<div class="sonuc-kutu"><div style="font-size:13px;color:#9A958C;font-weight:700">Gemini</div><div style="font-family:var(--baslik);font-weight:800;font-size:26px;margin-top:6px">% ?</div></div>
+</div>
+<div class="form-koyu">
+<form id="test-form" class="form" novalidate>
+<label class="b" for="t-eposta" style="font-size:15px">Gerçek sonucunuz hazır olunca size yazalım</label>
+<div class="satir-form">
+<input id="t-eposta" type="email" autocomplete="email" inputmode="email" placeholder="ornek@isletmeniz.com" required>
+<button type="submit" class="btn btn-amber">Bekleme listesine katıl</button>
+</div>
+<label class="onay"><input type="checkbox"><span>Görünür açıldığında bana e-postayla haber verilmesini kabul ediyorum.</span></label>
+<div class="uyari" role="alert" aria-live="assertive"></div>
+<div class="kucuk">Ayda en fazla 3 e-posta. İstediğiniz an çıkabilirsiniz. Ayrıntılar <a href="aydinlatma.html">aydınlatma metninde</a>.</div>
+</form>
+<div class="tesekkur" hidden style="background:#1F1C15;border:1.5px solid #FFC145">
+<strong>Teşekkürler, listedesiniz.</strong>
+<p style="margin:6px 0 0;font-size:15px">Sonucunuz hazır olunca <span class="adres"></span> adresine yazacağız.</p>
+</div>
+</div>
+<a href="./" style="display:inline-block;margin-top:20px;font-weight:700">← Ana sayfaya dön</a>
+</section>
+
+<div class="gezinme" id="gezinme">
+<button type="button" class="geri" id="geri" style="visibility:hidden">← Geri</button>
+<button type="button" class="btn btn-amber" id="ileri">Devam</button>
+</div>
+</main>
+<footer style="text-align:center;padding:20px 24px 28px;font-size:13px;color:#9A958C">Cevaplarınızı yalnızca size özel ekranı hazırlamak için kullanırız.</footer>
+</div>
+</body>
+</html>
