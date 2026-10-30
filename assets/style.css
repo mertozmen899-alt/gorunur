@@ -72,7 +72,7 @@ h1,h2,h3{margin:0}
 .btn-amber{background:var(--amber);color:var(--siyah)} .btn-amber:hover{background:var(--amber2);color:var(--siyah)}
 .btn-cizgi{background:transparent;color:var(--yazi);border:1.5px solid var(--cizgi3)} .btn-cizgi:hover{border-color:var(--yazi3);color:var(--yazi)}
 .btn-siyah{background:var(--siyah);color:var(--amber)} .btn-siyah:hover{color:var(--amber2)}
-.btn[disabled]{background:var(--kart3);color:var(--soluk2);cursor:not-allowed}
+.btn[disabled]{background:var(--kart3);color:var(--soluk);cursor:not-allowed}
 
 /* Üst menü */
 .ust{border-bottom:1px solid var(--cizgi);position:sticky;top:0;z-index:20;background:var(--ustzemin);backdrop-filter:blur(8px)}
@@ -289,8 +289,8 @@ h1,h2,h3{margin:0}
 .paket .giris{font-size:13px;font-weight:700;color:var(--soluk)}
 .ozellik{display:flex;gap:10px;align-items:center;font-size:15px}
 .ozellik>span{flex:1}
-.bilgi{position:relative;flex:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--cizgi3);color:var(--soluk);font-size:11px;font-weight:800;background:none;cursor:help;padding:0}
-.bilgi::after{content:"";position:absolute;inset:-11px;border-radius:50%}
+.bilgi{position:relative;flex:none;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--cizgi3);color:var(--soluk);font-size:11px;font-weight:800;background:none;cursor:help;padding:0}
+.bilgi::after{content:"";position:absolute;inset:-10px;border-radius:50%}
 .bilgi .balon{display:none;position:absolute;right:0;bottom:30px;width:230px;background:var(--kart3);border:1px solid var(--cizgi3);color:var(--yazi2);border-radius:12px;padding:10px 12px;font-size:13px;font-weight:500;line-height:1.5;text-align:left;z-index:5;box-shadow:0 16px 30px -12px rgba(var(--golgerenk),.22)}
 .bilgi:hover .balon,.bilgi:focus .balon,.bilgi[aria-expanded="true"] .balon{display:block}
 .paket .btn{margin-top:auto;white-space:nowrap}
@@ -365,7 +365,7 @@ h1,h2,h3{margin:0}
 .satir-form{display:flex;gap:10px;flex-wrap:wrap}
 .satir-form input{flex:1 1 220px;min-width:0;font-size:16px;padding:14px 16px;border-radius:14px;border:2px solid var(--siyah);background:var(--kart);color:var(--siyah);min-height:48px}
 .onay{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.5;color:var(--yazi);cursor:pointer}
-.onay input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--siyah);flex:none}
+.onay input{width:24px;height:24px;margin:0;accent-color:var(--siyah);flex:none}
 .uyari{font-size:14px;font-weight:700;color:var(--kirmizi2);min-height:1px}
 .kucuk{font-size:13px;color:var(--yazi2);line-height:1.5}
 .tesekkur{background:var(--amberzemin);border:1.5px solid var(--amber);color:var(--yazi);border-radius:20px;padding:24px}
@@ -1099,7 +1099,7 @@ body:has(.lp-promo:not([hidden])) .wa-dugme{opacity:0;pointer-events:none}
 /* İçeriğe geç: yalnız klavyeyle odaklanınca görünür */
 .atla{position:absolute;left:12px;top:-80px;z-index:100;background:var(--siyah);color:var(--amber);border-radius:12px;padding:12px 18px;font-weight:800;text-decoration:none;box-shadow:0 10px 24px -10px rgba(0,0,0,.5)}
 .atla:focus,.atla:focus-visible{top:12px;color:var(--amber);outline:3px solid var(--amber);outline-offset:2px}
-#icerik:focus{outline:none}
+#icerik:focus,main[tabindex="-1"]:focus{outline:none}
 
 /* Hero: ana düğmenin altında küçük ikincil bağlantı */
 .lp-ikincil{margin:14px 0 0;font-size:14.5px;line-height:1.5;color:var(--soluk)}
@@ -1186,3 +1186,17 @@ body:has(.lp-promo:not([hidden])) .wa-dugme{opacity:0;pointer-events:none}
 .kim-metin .kim-bas{font-size:12.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--yazi3);margin-bottom:4px}
 .kim-dugme{flex:none}
 @media (max-width:720px){.kim-serit{flex-wrap:wrap;padding:16px}.kim-metin{flex-basis:calc(100% - 80px)}.kim-dugme{width:100%;justify-content:center}}
+
+/* v28: hazırlık düzeltmeleri */
+/* Hesap açma: aydınlatma metni onay kutusundan ayrı, sadece bilgi */
+.kayit-bilgi{margin:10px 0 0;font-size:13px;line-height:1.55;color:var(--soluk)}
+.kayit-bilgi a{color:var(--yazi3)}
+/* Hızlı testte sorular sürerken telefonda WhatsApp düğmesi soru metninin üstüne binmesin; sonuç ekranında görünür */
+@media (max-width:720px){body:has(#s5[hidden]) .wa-dugme{display:none}}
+/* 404 sayfası */
+.yok-sayfa{max-width:640px;margin:0 auto;padding:72px 24px 96px;text-align:center}
+.yok-sayfa .yok-kod{font-family:var(--baslik);font-weight:800;font-size:clamp(72px,16vw,128px);line-height:1;letter-spacing:-.04em;color:var(--amber);margin:0}
+.yok-sayfa h1{font-family:var(--baslik);font-weight:800;font-size:clamp(28px,5vw,40px);letter-spacing:-.03em;line-height:1.15;margin:12px 0 0}
+.yok-sayfa p{color:var(--yazi3);font-size:17px;line-height:1.6;margin:14px auto 0;max-width:460px}
+.yok-dugmeler{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
+@media (max-width:480px){.yok-dugmeler .btn{width:100%}}
