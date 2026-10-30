@@ -131,33 +131,68 @@ async function gemini(soru: string, anahtar: string, modeller: string[]) {
   throw new Error("Gemini: ücretsiz kota yetmedi ya da model bulunamadı (" + sonHata + ")");
 }
 
+type Db = ReturnType<typeof createClient>;
+type Isl = Record<string, any>;
+function anahtarlar() {
+  const ortam = Deno.env.toObject();
+  const bul = (ad: string) => (ortam[ad] || Object.entries(ortam).find(([k]) => k.trim().toUpperCase() === ad)?.[1] || "").trim();
+  return { SERP: bul("SERPAPI_KEY"), GEM: bul("GEMINI_API_KEY") };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ hata: "Sadece POST" }, 405);
 
   const URL_ = Deno.env.get("SUPABASE_URL")!;
+  const db = createClient(URL_, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const { SERP, GEM } = anahtarlar();
+
+  // Haftalık otomatik ölçüm: veritabanındaki zamanlanmış iş çağırır
+  const cronAnahtar = req.headers.get("x-gorunur-cron");
+  if (cronAnahtar) {
+    const { data: ayar } = await db.from("cron_ayar").select("deger").eq("ad", "olcum_anahtari").maybeSingle();
+    if (!ayar || ayar.deger !== cronAnahtar) return json({ hata: "Yetkisiz" }, 401);
+    if (!SERP && !GEM) return json({ hata: "Anahtar yok" }, 503);
+    const sinir = new Date(Date.now() - 6.5 * 864e5).toISOString();
+    const { data: isletmeler } = await db.from("isletmeler").select("*").eq("kurulum_bitti", true).eq("haftalik_olcum", true);
+    const sirada: Isl[] = [];
+    for (const isl of isletmeler || []) {
+      const { data: son } = await db.from("olcumler").select("baslangic").eq("isletme_id", isl.id).order("baslangic", { ascending: false }).limit(1).maybeSingle();
+      if (!son || son.baslangic < sinir) sirada.push(isl);
+      if (sirada.length >= 2) break; // bir çağrıda en fazla 2 işletme (süre sınırı)
+    }
+    // Arka planda sırayla ölç, isteğe hemen cevap ver
+    // @ts-ignore EdgeRuntime Supabase ortamında var
+    EdgeRuntime.waitUntil((async () => {
+      for (const isl of sirada) {
+        try { await olcumYap(db, isl, SERP, GEM, "haftalik"); } catch (e) { console.log("haftalik olcum hatasi", isl.id, String(e)); }
+      }
+    })());
+    return json({ sirada: sirada.length }, 202);
+  }
+
+  // Kullanıcının kendi başlattığı ölçüm
   const auth = req.headers.get("Authorization") || "";
   const kullaniciDb = createClient(URL_, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } } });
   const { data: u } = await kullaniciDb.auth.getUser();
   if (!u?.user) return json({ hata: "Giriş yapmanız gerekiyor." }, 401);
-  const db = createClient(URL_, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   const { data: isl } = await db.from("isletmeler").select("*").eq("sahip", u.user.id).maybeSingle();
   if (!isl || !isl.kurulum_bitti) return json({ hata: "Önce kurulumu tamamlayın." }, 400);
 
-  // Günlük ölçüm hakkı
+  // Günlük ölçüm hakkı (otomatik haftalık ölçümler sayılmaz)
   const hak = parseInt(Deno.env.get("GUNLUK_OLCUM_HAKKI") || "5", 10);
   const { count } = await db.from("olcumler").select("id", { count: "exact", head: true })
-    .eq("sahip", u.user.id).gte("baslangic", new Date(Date.now() - 864e5).toISOString());
+    .eq("sahip", u.user.id).eq("kaynak", "elle").gte("baslangic", new Date(Date.now() - 864e5).toISOString());
   if ((count || 0) >= hak) return json({ hata: `Bugünkü ölçüm hakkınız (${hak}) doldu. Yarın tekrar deneyin.` }, 429);
 
-  const ortam = Deno.env.toObject();
-  const bul = (ad: string) => (ortam[ad] || Object.entries(ortam).find(([k]) => k.trim().toUpperCase() === ad)?.[1] || "").trim();
-  const SERP = bul("SERPAPI_KEY");
-  const GEM = bul("GEMINI_API_KEY");
-  const eksik = [!SERP && "SERPAPI_KEY", !GEM && "GEMINI_API_KEY"].filter(Boolean);
-  if (eksik.length === 2) return json({ hata: "Ölçüm anahtarları henüz eklenmedi: " + eksik.join(", ") }, 503);
+  if (!SERP && !GEM) return json({ hata: "Ölçüm anahtarları henüz eklenmedi: SERPAPI_KEY, GEMINI_API_KEY" }, 503);
+  const { son, hepsiHata } = await olcumYap(db, isl, SERP, GEM, "elle");
+  return json({ olcum: son }, hepsiHata ? 502 : 200);
+});
 
+async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "elle" | "haftalik") {
+  const eksik = [!SERP && "SERPAPI_KEY", !GEM && "GEMINI_API_KEY"].filter(Boolean) as string[];
   const semtKisa = (isl.semt || "").split(",")[0].trim();
   const sehir = ((isl.semt || "").split(",")[1] || "").trim();
   const turkiye = isl.semt === "Türkiye geneli";
@@ -181,7 +216,7 @@ Deno.serve(async (req) => {
   const kelimeler = tekillestir([...elle, ...populer, ...otomatikKelimeler(isK, yerK)]).slice(0, 5);
   const siteAlan = alanAdi(isl.site);
 
-  const { data: kayit } = await db.from("olcumler").insert({ isletme_id: isl.id, sahip: u.user.id, durum: "suruyor" }).select("id").single();
+  const { data: kayit } = await db.from("olcumler").insert({ isletme_id: isl.id, sahip: isl.sahip, durum: "suruyor", kaynak }).select("id").single();
   const hatalar: string[] = eksik.map((e) => `${e} eksik`);
   const s: Record<string, unknown> = {};
   type Satir = { sira: number; ad: unknown; puan: unknown; yorum: unknown; adres: unknown; site: unknown; tur: unknown; place_id: unknown; siz?: boolean };
@@ -262,41 +297,63 @@ Deno.serve(async (req) => {
     }
   };
 
-  // 3) Yapay zekâ (Gemini + Google arama)
+  // 3) Yapay zekâ: 10 müşteri sorusu; kaç cevapta adınız ve rakiplerin adı geçiyor
   const yz = async () => {
     if (!GEM) return;
     // Ücretsiz planda Google arama aracı yok; GEMINI_ARAMALI=1 ise (ücretli plan) aramalı sorar
     aramaKotasiYok = (Deno.env.get("GEMINI_ARAMALI") || "") !== "1";
     const yer = turkiye ? "Türkiye'de" : `${semtKisa}${sehir ? ", " + sehir : ""} bölgesinde`;
-    const sorular = [
-      `${yer} iyi bir ${isK} önerir misin? Birkaç işletme adı ver.`,
-      `${turkiye ? "" : semtKisa + " civarında "}en çok tavsiye edilen ${isK} hangileri?`.trim(),
+    const cekir = isK.split(/\s+/).filter((k) => k && !EKLER.has(k)).join(" ") || isK;
+    const sorular = tekillestir([
+      `${yer} iyi bir ${isK} önerir misin?`,
+      `${yer} en çok tavsiye edilen ${isK} hangileri?`,
       `${yer} ${isK} arıyorum, güvenilir bir yer söyler misin?`,
-    ];
+      `${yer} uygun fiyatlı ${cekir} için nereye gitmeliyim?`,
+      `${yer} kaliteli ${cekir} için hangi işletmeyi önerirsin?`,
+      ...kelimeler.map((k) => `"${k}" diye arıyorum. Hangi işletmeleri önerirsin?`),
+    ]).slice(0, 10);
     const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.5-flash"].filter(Boolean) as string[];
     const KISA = " Kısa cevap ver: 3-5 işletme adı ve her biri için tek cümle.";
-    const cevaplar: Array<Record<string, unknown>> = await Promise.all(sorular.map(async (soru) => {
-      try {
-        const { model, metin, aramali } = await gemini(soru + KISA, GEM, modeller);
-        return { soru, model, aramali, geciyor: adGeciyor(metin, isl.ad), ozet: metin.slice(0, 1200) };
-      } catch (e) {
-        return { soru, hata: /timed out|aborted/i.test(String((e as Error).message)) ? "Yapay zekâ zamanında cevap vermedi." : String((e as Error).message).slice(0, 200) };
+    const cevaplar: Array<Record<string, unknown>> = new Array(sorular.length);
+    // Dakikalık sınıra takılmamak için aynı anda en fazla 4 soru
+    let sira = 0;
+    await Promise.all(Array.from({ length: 4 }, async () => {
+      while (sira < sorular.length) {
+        const n = sira++, soru = sorular[n];
+        try {
+          const { model, metin, aramali } = await gemini(soru + KISA, GEM, modeller);
+          cevaplar[n] = { soru, model, aramali, geciyor: adGeciyor(metin, isl.ad), ozet: metin.slice(0, 1200) };
+        } catch (e) {
+          cevaplar[n] = { soru, hata: /timed out|aborted/i.test(String((e as Error).message)) ? "Yapay zekâ zamanında cevap vermedi." : String((e as Error).message).slice(0, 200) };
+        }
       }
     }));
-    const basarili = cevaplar.filter((c) => !("hata" in c));
+    const basarili = cevaplar.filter((c) => c && !("hata" in c));
     s.yz_soru_sayisi = basarili.length;
     s.yz_gecen = basarili.filter((c) => (c as { geciyor: boolean }).geciyor).length;
     s.yz_cevaplar = cevaplar;
-    const hataliYz = cevaplar.filter((c) => "hata" in c);
+    const hataliYz = cevaplar.filter((c) => c && "hata" in c);
     if (hataliYz.length) hatalar.push(`Yapay zekâ: ${hataliYz.length} soru sorulamadı (${String(hataliYz[0].hata).slice(0, 140)})`);
+    yzMetinleri = basarili.map((c) => String((c as { ozet: string }).ozet || ""));
   };
+  let yzMetinleri: string[] = [];
 
   const sonuclar = await Promise.allSettled([harita(), arama(), yz()]);
   sonuclar.forEach((r) => { if (r.status === "rejected") hatalar.push(String(r.reason?.message || r.reason).slice(0, 200)); });
   s.kelimeler = kelimeSonuc;
+  if (yzMetinleri.length) {
+    const adaylar = new Map<string, string>();
+    for (const l of haritaListeleri) for (const r of (l || []).slice(0, 10)) {
+      const ad = String(r.ad || ""); const k = sade(ad);
+      if (ad && !adaylar.has(k) && !benMi(r)) adaylar.set(k, ad);
+    }
+    const pay = [...adaylar.values()].slice(0, 25).map((ad) => ({ ad, sayi: yzMetinleri.filter((m) => adGeciyor(m, ad)).length }))
+      .filter((x) => x.sayi > 0).sort((a, b) => b.sayi - a.sayi).slice(0, 6);
+    s.yz_rakipler = pay;
+  }
 
   const hepsiHata = sonuclar.every((r) => r.status === "rejected");
   const guncel = { ...s, hatalar, durum: hepsiHata ? "hata" : "bitti", bitis: new Date().toISOString() };
-  const { data: son } = await db.from("olcumler").update(guncel).eq("id", kayit!.id).select("*").single();
-  return json({ olcum: son }, hepsiHata ? 502 : 200);
-});
+  const { data: son } = await db.from("olcumler").update(guncel).eq("id", (kayit as { id: string }).id).select("*").single();
+  return { son, hepsiHata };
+}

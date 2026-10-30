@@ -324,3 +324,26 @@ h1,h2,h3{margin:0}
 .hazir-metin p{margin:6px 0 10px;font-size:14px;line-height:1.55;color:var(--yazi)}
 .hazir-baslik{font-size:12px;font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:.04em}
 .is-sonuc{margin:10px 0 0;font-size:13px;color:var(--yazi3)}
+
+/* Gelişim grafiği */
+.grafikler{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+.grafik{background:var(--zemin2);border:1px solid var(--cizgi2);border-radius:16px;padding:14px 12px 6px}
+.grafik-baslik{display:block;font-size:13px;font-weight:700;color:var(--yazi3);margin:0 0 6px 4px}
+.grafik svg{width:100%;height:auto;display:block}
+.g-izgi{stroke:var(--cizgi);stroke-width:1}
+.g-yazi{fill:var(--soluk);font-size:12px;font-family:inherit}
+.g-deger{fill:var(--yazi);font-size:13px;font-weight:800;font-family:inherit}
+.g-cizgi{fill:none;stroke:var(--amber);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.g-nokta{fill:var(--amber);stroke:var(--zemin2);stroke-width:2}
+.g-nokta.bos{fill:var(--zemin2);stroke:var(--soluk)}
+@media (max-width:760px){.grafikler{grid-template-columns:minmax(0,1fr)}}
+/* Yapay zekâ payı */
+.pay-liste{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.pay-satir{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,2fr) auto;align-items:center;gap:12px;font-size:14px}
+.pay-ad{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.pay-cubuk{height:10px;background:var(--kart2);border-radius:999px;overflow:hidden}
+.pay-cubuk i{display:block;height:100%;background:var(--yazi3);border-radius:999px}
+.pay-satir.siz .pay-ad,.pay-satir.siz .pay-sayi{color:var(--amber)}
+.pay-satir.siz .pay-cubuk i{background:var(--amber)}
+.pay-sayi{font-weight:800;font-variant-numeric:tabular-nums;color:var(--yazi2)}
+@media (max-width:560px){.pay-satir{grid-template-columns:minmax(0,1fr) auto}.pay-cubuk{grid-column:1/-1;grid-row:2}}

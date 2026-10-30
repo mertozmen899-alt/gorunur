@@ -194,10 +194,71 @@
     return adimlar;
   }
 
+  var gecmis = [];
+  function kisaTarih(t) { return new Date(t).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }); }
+  // Basit çizgi grafik (SVG). ters=true ise küçük değer yukarıda (sıra için)
+  function cizgiGrafik(kutu, noktalar, ayar) {
+    var NS = 'http://www.w3.org/2000/svg', G = 560, Y = 170, sol = 38, sag = 14, ust = 14, alt = 30;
+    var svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', '0 0 ' + G + ' ' + Y); svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', ayar.etiket);
+    function e(ad, at, metin) { var x = document.createElementNS(NS, ad); for (var k in at) x.setAttribute(k, at[k]); if (metin != null) x.textContent = metin; svg.appendChild(x); return x; }
+    var yx = function (v) { var o = (v - ayar.min) / (ayar.max - ayar.min); if (ayar.ters) o = 1 - o; return ust + (1 - o) * (Y - ust - alt); };
+    ayar.cizgiler.forEach(function (v) { var y = yx(v); e('line', { x1: sol, x2: G - sag, y1: y, y2: y, 'class': 'g-izgi' }); e('text', { x: sol - 8, y: y + 4, 'text-anchor': 'end', 'class': 'g-yazi' }, ayar.etiketle(v)); });
+    var n = noktalar.length, adim = n > 1 ? (G - sol - sag - 20) / (n - 1) : 0;
+    var xs = noktalar.map(function (_, k) { return n > 1 ? sol + 10 + k * adim : (sol + G - sag) / 2; });
+    var yol = '';
+    noktalar.forEach(function (p, k) { var y = yx(p.v); yol += (yol ? ' L' : 'M') + xs[k] + ' ' + y; });
+    if (n > 1) e('path', { d: yol, 'class': 'g-cizgi' });
+    noktalar.forEach(function (p, k) {
+      var y = yx(p.v);
+      e('circle', { cx: xs[k], cy: y, r: 5, 'class': p.bos ? 'g-nokta bos' : 'g-nokta' });
+      e('text', { x: xs[k], y: y - 10, 'text-anchor': 'middle', 'class': 'g-deger' }, p.yazi);
+      if (n <= 8 || k === 0 || k === n - 1 || k % 2 === 0) e('text', { x: xs[k], y: Y - 8, 'text-anchor': 'middle', 'class': 'g-yazi' }, p.t);
+    });
+    kutu.innerHTML = ''; kutu.appendChild(svg);
+  }
+  function gelisimCiz() {
+    var liste = gecmis.slice(0, 12).reverse();
+    var son = gecmis[0];
+    var sonraki = son ? new Date(new Date(son.baslangic).getTime() + 7 * 864e5) : null;
+    var ilkHarita = liste.find(function (o) { return o.harita_sonuclar; }), sonHarita = gecmis.find(function (o) { return o.harita_sonuclar; });
+    var not;
+    if (liste.length < 2) not = 'Bu ilk ölçümünüz. Her hafta otomatik olarak yeniden ölçüyoruz' + (sonraki ? ' (sıradaki: ' + kisaTarih(sonraki) + ')' : '') + '. Yaptığınız işlerin etkisini burada hafta hafta göreceksiniz.';
+    else {
+      var a = ilkHarita && ilkHarita.harita_sira, b = sonHarita && sonHarita.harita_sira;
+      var fark = a && b ? (a > b ? 'Haritalarda ' + (a - b) + ' sıra yükseldiniz.' : a < b ? 'Haritalarda ' + (b - a) + ' sıra geriye düştünüz.' : 'Haritalardaki sıranız değişmedi.') : (!a && b ? 'Haritalarda ilk 20’ye girdiniz, şu an ' + b + '. sıradasınız.' : (a && !b ? 'Haritalarda ilk 20’nin dışına düştünüz.' : 'Haritalarda henüz ilk 20’de değilsiniz.'));
+      not = kisaTarih(liste[0].baslangic) + ' tarihinden bu yana ' + liste.length + ' ölçüm. ' + fark + (sonraki ? ' Sıradaki otomatik ölçüm: ' + kisaTarih(sonraki) + '.' : '');
+    }
+    $('gelisim-not').textContent = not;
+    cizgiGrafik($('grafik-harita'), liste.filter(function (o) { return o.harita_sonuclar; }).map(function (o) {
+      return { v: o.harita_sira || 21, bos: !o.harita_sira, yazi: o.harita_sira ? o.harita_sira + '.' : 'yok', t: kisaTarih(o.baslangic) };
+    }), { min: 1, max: 21, ters: true, cizgiler: [1, 5, 10, 20], etiketle: function (v) { return v === 1 ? '1.' : v + '.'; }, etiket: 'Haritalardaki sıra' });
+    cizgiGrafik($('grafik-yz'), liste.filter(function (o) { return o.yz_soru_sayisi; }).map(function (o) {
+      var y = Math.round(100 * o.yz_gecen / o.yz_soru_sayisi); return { v: y, bos: !y, yazi: '%' + y, t: kisaTarih(o.baslangic) };
+    }), { min: 0, max: 100, cizgiler: [0, 50, 100], etiketle: function (v) { return '%' + v; }, etiket: 'Yapay zekâ önerme oranı' });
+  }
+  function payCiz(o, i) {
+    var kutu = $('yz-pay'); kutu.innerHTML = '';
+    var n = o.yz_soru_sayisi || 0;
+    $('yz-pay-kart').hidden = !n;
+    if (!n) return;
+    var satirlar = [{ ad: i.ad + ' (siz)', sayi: o.yz_gecen || 0, siz: true }].concat((o.yz_rakipler || []).map(function (r) { return { ad: r.ad, sayi: r.sayi }; }));
+    satirlar.sort(function (a, b) { return b.sayi - a.sayi || (b.siz ? 1 : 0) - (a.siz ? 1 : 0); });
+    satirlar.forEach(function (r) {
+      var d = el('div', null, 'pay-satir' + (r.siz ? ' siz' : ''));
+      d.appendChild(el('span', r.ad, 'pay-ad'));
+      var cubuk = el('span', null, 'pay-cubuk'); var dolu = el('i'); dolu.style.width = Math.max(2, Math.round(100 * r.sayi / n)) + '%'; cubuk.appendChild(dolu); d.appendChild(cubuk);
+      d.appendChild(el('span', r.sayi + ' / ' + n, 'pay-sayi'));
+      kutu.appendChild(d);
+    });
+    var onde = (o.yz_rakipler || []).filter(function (r) { return r.sayi > (o.yz_gecen || 0); });
+    $('yz-pay-not').textContent = 'Yapay zekâya müşteri gibi ' + n + ' soru sorduk ve cevaplarda hangi işletmelerin adı geçiyor saydık. ' +
+      (onde.length ? onde.length + ' rakibiniz sizden daha çok öneriliyor.' : (o.yz_gecen ? 'Rakiplerinizden daha çok öneriliyorsunuz.' : 'Rakiplerinizin adı da geçmiyorsa yapay zekâ bu bölgeyi henüz tanımıyor; ilk öne çıkan siz olabilirsiniz.'));
+  }
+
   function sonucCiz(o) {
     var i = isletme, b = o.isletme_bilgi || {};
     var isK = (i.is_turu || '').toLocaleLowerCase('tr');
-    $('olcum-tarih').textContent = 'Son ölçüm: ' + tarih(o.bitis || o.baslangic);
+    $('olcum-tarih').textContent = 'Son ölçüm: ' + tarih(o.bitis || o.baslangic) + (o.kaynak === 'haftalik' ? ' · otomatik' : '');
     var c;
     if (o.harita_sira) c = yerde(i.semt) + ' "' + o.harita_sorgu + '" aramasında Google Haritalar’da ' + o.harita_sira + '. sıradasınız.';
     else if (b.bulundu === false && b.baska_sube) c = yerde(i.semt) + ' "' + i.ad + '" profilini bulamadık. Google’da sadece "' + b.baska_sube.ad + '" görünüyor' + (b.baska_sube.adres ? ' (' + b.baska_sube.adres.split(',').slice(-2).join(',').trim() + ')' : '') + '.';
@@ -221,7 +282,7 @@
     var aOlculen = ks.filter(function (k) { return 'arama_sira' in k; });
     $('k-arama-not').textContent = aOlculen.length > 1 && !o.arama_sira && !as.yerel_kutuda ? aOlculen.length + ' aramada da ilk sonuçlarda değilsiniz' : o.arama_sira ? 'normal sonuçlarda' : (as.yerel_kutuda ? 'ama harita kutusunda ' + as.yerel_kutuda + '.' : (o.arama_sonuclar ? 'ilk sonuçlarda değilsiniz' : 'ölçülemedi'));
     $('k-yz').textContent = o.yz_soru_sayisi ? o.yz_gecen + ' / ' + o.yz_soru_sayisi : '-';
-    $('k-yz-not').textContent = o.yz_soru_sayisi ? 'cevapta adınız geçti' : 'ölçülemedi';
+    $('k-yz-not').textContent = o.yz_soru_sayisi ? 'cevapta adınız geçti (%' + Math.round(100 * o.yz_gecen / o.yz_soru_sayisi) + ')' : 'ölçülemedi';
     ['k-harita', 'k-arama', 'k-yz'].forEach(function (id) { $(id).className = ''; });
     if (o.harita_sira && o.harita_sira <= 3) $('k-harita').className = 'iyi';
     if (o.yz_gecen > 0) $('k-yz').className = 'iyi';
@@ -279,6 +340,8 @@
     isEkle($('olcum-isler'), olcumIsleri(o, i));
     if (!$('olcum-isler').children.length) isEkle($('olcum-isler'), [{ t: 'Belirgin bir eksik görmedik', n: 'Yine de aşağıdaki genel adımlara göz atın.' }]);
 
+    payCiz(o, i);
+    gelisimCiz();
     $('ilk').hidden = true; $('sonuc').hidden = false;
   }
 
@@ -338,6 +401,7 @@
       return r.data.olcum;
     }).then(function (o) {
       adimlariOynat(false);
+      if (o && o.durum === 'bitti') gecmis.unshift(o);
       sonucCiz(o);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }).catch(function (e) {
@@ -378,8 +442,9 @@
     isletme = i;
     genelCiz();
     kelimeFormuDoldur();
-    return A.sb.from('olcumler').select('*').eq('durum', 'bitti').order('baslangic', { ascending: false }).limit(1).maybeSingle().then(function (r) {
-      if (r.data) sonucCiz(r.data);
+    return A.sb.from('olcumler').select('*').eq('durum', 'bitti').order('baslangic', { ascending: false }).limit(12).then(function (r) {
+      gecmis = r.data || [];
+      if (gecmis.length) sonucCiz(gecmis[0]);
       $('yukleniyor').hidden = true; $('panel').hidden = false;
     });
   }).catch(function (err) {

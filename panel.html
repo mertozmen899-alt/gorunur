@@ -10,10 +10,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=6">
+<link rel="stylesheet" href="assets/style.css?v=7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/auth.js?v=4"></script>
-<script src="assets/panel.js?v=9" defer></script>
+<script src="assets/panel.js?v=10" defer></script>
 </head>
 <body>
 <header class="ust">
@@ -68,6 +68,15 @@
 </div>
 
 <div class="panel-izgara">
+<section class="kart genis" id="gelisim-kart">
+<div class="kart-bas"><h3>Gelişiminiz</h3><span class="pil pil-a" id="gelisim-pil">Her hafta otomatik</span></div>
+<p class="kart-alt" id="gelisim-not"></p>
+<div class="grafikler">
+<div class="grafik"><span class="grafik-baslik">Google Haritalar’daki en iyi sıranız</span><div id="grafik-harita"></div></div>
+<div class="grafik"><span class="grafik-baslik">Yapay zekânın sizi önerme oranı</span><div id="grafik-yz"></div></div>
+</div>
+</section>
+
 <section class="kart genis">
 <div class="kart-bas"><h3>Bu haftanın işleri</h3><span class="pil pil-a">Ölçüme göre</span></div>
 <p class="kart-alt">Ölçümde gördüklerimize göre önem sırasıyla.</p>
@@ -90,6 +99,12 @@
 <thead><tr><th>Sıra</th><th>İşletme</th><th>Puan</th><th>Yorum</th></tr></thead>
 <tbody id="rakip-tablo"></tbody>
 </table></div>
+</section>
+
+<section class="kart genis" id="yz-pay-kart">
+<h3>Yapay zekâ kimi öneriyor?</h3>
+<p class="kart-alt" id="yz-pay-not"></p>
+<div class="pay-liste" id="yz-pay"></div>
 </section>
 
 <section class="kart genis">
@@ -115,7 +130,7 @@
 <section class="kart">
 <h3>Size nasıl ulaşacağız?</h3>
 <p class="kart-alt" id="iletisim"></p>
-<p class="kart-alt" style="margin-top:10px">Haftalık otomatik ölçüm ve WhatsApp özeti <span class="pil pil-a" style="font-size:11px">yakında</span></p>
+<p class="kart-alt" style="margin-top:10px">Haftalık otomatik ölçüm açık. WhatsApp özeti <span class="pil pil-a" style="font-size:11px">yakında</span></p>
 <a href="kurulum.html?adim=5" class="btn btn-cizgi kucuk-btn" style="margin-top:14px">Değiştir</a>
 </section>
 
