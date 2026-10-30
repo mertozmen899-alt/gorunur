@@ -27,5 +27,23 @@
       }, 4000);
     }
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', kur); else kur();
+  // Giriş yapmış kişiye üst menüde "Giriş yap" yerine "Panelim" göster (oturum tarayıcıda kayıtlıysa)
+  function oturumVarMi() {
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (/^sb-.*-auth-token$/.test(k)) {
+          var v = JSON.parse(localStorage.getItem(k) || 'null');
+          if (v && (v.refresh_token || (v.currentSession && v.currentSession.refresh_token))) return true;
+        }
+      }
+    } catch (e) {}
+    return false;
+  }
+  function menuDuzelt() {
+    if (!oturumVarMi()) return;
+    document.querySelectorAll('a.erken[href="giris.html"]').forEach(function (a) { a.href = 'panel.html'; a.textContent = 'Panelim'; });
+  }
+  function hepsi() { kur(); menuDuzelt(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hepsi); else hepsi();
 })();
