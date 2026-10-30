@@ -61,6 +61,8 @@
     var m = x.match(/^.*?h*ttps?:\/\/+(?=[^\/]*\.)/i); if (m) x = x.slice(m[0].length);
     x = x.replace(/^(h*ttps?:\/*)+/i, '');
     if (!/^https?:\/\//i.test(x) && /\./.test(x)) x = 'https://' + x;
+    // Nokta içermeyen ya da http ile başlamayan yazı adres değildir: kaydetme
+    if (!/^https?:\/\/[^\/\s]+\.[^\/\s]+/i.test(x)) return null;
     return x.slice(0, 500);
   }
 
