@@ -14,11 +14,11 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap"></noscript>
 <script>(function(){var t;try{t=localStorage.getItem('gorunur_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t;if(t==='koyu'){var m=document.querySelector('meta[name="theme-color"]');if(m)m.content='#0F1217'}})()</script>
-<link rel="stylesheet" href="assets/style.css?v=31">
+<link rel="stylesheet" href="assets/style.css?v=32">
 <script src="assets/tema.js?v=1" defer></script>
 <script src="assets/iletisim.js?v=2" defer></script>
-<script src="assets/app.js?v=10" defer></script>
-<script src="assets/test.js?v=11" defer></script>
+<script src="assets/app.js?v=14" defer></script>
+<script src="assets/test.js?v=12" defer></script>
 <script src="assets/sayac.js?v=1" defer></script>
 <style>.t-yz-alt{margin:18px 0 6px;font-size:15px;font-weight:800}</style>
 </head>
@@ -167,6 +167,7 @@
 <div class="t-sonuc" id="t-ben-sonuc" role="status" aria-live="polite"></div>
 </div>
 </div>
+<div id="t-hata" class="t-kutu" role="status" hidden style="margin-top:24px"><h2>Ölçüm yapılamadı</h2><p class="t-not" style="font-size:15px;line-height:1.6"></p><p class="t-not" style="margin:10px 0 0">Ücretsiz hesap açarsanız ölçümü sizin için her hafta biz yaparız.</p></div>
 <div id="t-yedek" hidden>
 <div class="ucgrid" style="margin-top:24px">
 <div class="sonuc-kutu"><div style="font-size:13px;color:var(--soluk);font-weight:700">Google Haritalar</div><div style="font-family:var(--baslik);font-weight:800;font-size:26px;margin-top:6px">?. sıra</div></div>
@@ -174,23 +175,23 @@
 <div class="sonuc-kutu"><div style="font-size:13px;color:var(--soluk);font-weight:700">Yapay zekâ (Gemini)</div><div style="font-family:var(--baslik);font-weight:800;font-size:26px;margin-top:6px">% ?</div></div>
 </div>
 </div>
-<div class="form-koyu">
+<div style="margin-top:22px;background:var(--kart);border:1px solid var(--cizgi2);border-radius:20px;padding:20px"><b style="font-size:16px">Ücretsiz deneme açık: hesabınızı açın</b><p style="margin:6px 0 14px;color:var(--yazi3);font-size:14px">Her hafta sizin için ölçer, ne yapacağınızı sırayla yazarız. Cevaplarınız kuruluma aktarılır, aynı soruları tekrar sormayız.</p><a href="giris.html#kayit" class="btn btn-amber">Ücretsiz hesap açın</a></div>
+<div class="form-koyu" style="margin-top:22px">
 <form id="test-form" class="form" novalidate>
-<label class="b" for="t-eposta" style="font-size:15px">Görünür açılınca sizi her hafta ölçüp ne yapacağınızı yazalım</label>
+<label class="b" for="t-eposta" style="font-size:15px">Fiyatlar ve yeni özellikler açıklanınca haber alın</label>
 <div class="satir-form">
 <input id="t-eposta" type="email" autocomplete="email" inputmode="email" placeholder="ornek@isletmeniz.com" required>
-<button type="submit" class="btn btn-amber">Bekleme listesine katıl</button>
+<button type="submit" class="btn btn-amber">Haber listesine yazılın</button>
 </div>
-<label class="onay"><input type="checkbox"><span>Görünür açıldığında bana e-postayla haber verilmesini kabul ediyorum.</span></label>
+<label class="onay"><input type="checkbox"><span>Fiyatlar ve yeni özellikler açıklandığında bana e-postayla haber verilmesini kabul ediyorum.</span></label>
 <div class="uyari" role="alert" aria-live="assertive"></div>
 <div class="kucuk">Ayda en fazla 3 e-posta. İstediğiniz an çıkabilirsiniz. Ayrıntılar <a href="aydinlatma.html">aydınlatma metninde</a>.</div>
 </form>
 <div class="tesekkur" hidden>
-<strong>Teşekkürler, listedesiniz.</strong>
-<p style="margin:6px 0 0;font-size:15px">Görünür açılınca <span class="adres"></span> adresine yazacağız.</p>
+<strong>Son bir adım kaldı.</strong>
+<p style="margin:6px 0 0;font-size:15px"><span class="adres"></span> adresine bir onay bağlantısı gönderdik. Tıklayınca listeye eklenirsiniz.</p>
 </div>
 </div>
-<div style="margin-top:22px;background:var(--kart);border:1px solid var(--cizgi2);border-radius:20px;padding:20px"><b style="font-size:16px">Ya da hemen hesabınızı açın</b><p style="margin:6px 0 14px;color:var(--yazi3);font-size:14px">Cevaplarınız kuruluma aktarılır, aynı soruları tekrar sormayız.</p><a href="giris.html#kayit" class="btn btn-cizgi">Ücretsiz hesap aç</a></div>
 <a href="./" style="display:inline-block;margin-top:20px;font-weight:700">← Ana sayfaya dön</a>
 </section>
 
