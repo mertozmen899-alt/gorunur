@@ -1,11 +1,6 @@
 name: Android uygulaması sanal telefonda test
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/android-test.yml'
-      - 'android/emulator-test.sh'
   workflow_run:
     workflows: ['Android uygulaması (APK)']
     types: [completed]
@@ -55,4 +50,4 @@ jobs:
         run: |
           gh release view android-test --repo "$DEPO" > /dev/null 2>&1 || gh release create android-test --prerelease --title "Android test sonuçları" --notes "Sanal telefon testi çıktıları" --repo "$DEPO" || true
           cd "sonuc-$API"
-          for f in *; do cp "$f" "api$API-$f"; gh release upload android-test "api$API-$f" --clobber --repo "$DEPO"; done
+          for f in *; do [ -s "$f" ] || continue; cp "$f" "api$API-$f"; gh release upload android-test "api$API-$f" --clobber --repo "$DEPO"; done
