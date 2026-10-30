@@ -30,6 +30,12 @@
   ORNEK.yz_cevaplar=[]; ['Çorum’da iyi bir mobilya satıcısı önerir misin?','Çorum’da en çok tavsiye edilen mobilya satıcısı hangileri?','"çorum mobilya" diye arıyorum. Hangi işletmeleri önerirsin?'].forEach(function(q,qi){ for(var t=1;t<=3;t++) ORNEK.yz_cevaplar.push({soru:q,tekrar:t,geciyor:qi===0&&t<3||qi===2&&t===1,ozet:'Cevap '+qi+'-'+t+': Modalife, Loca Mobilya...'}); });
   for(var t=1;t<=3;t++) ['Soru 4','Soru 5','Soru 6'].forEach(function(q){ORNEK.yz_cevaplar.push({soru:q,tekrar:t,geciyor:false,ozet:'x'});}); ORNEK.harita_sira=6; ORNEK.kaynak='elle'; ORNEK.rehber_sayfalari=[{baslik:'Çorum Mobilya ve Ev Mağazaları Listesi | COM',alan:'ornekrehber.com',kelime:'çorum mobilya',sira:4}];
   ORNEK.yz_rakipler=[{ad:'Modalife Çorum',sayi:7},{ad:'Loca Mobilya',sayi:4},{ad:'Doğu Mobilya',sayi:1}];
+  // Google Yapay Zekâ Modu (gyz_*): 2 soru, biri adı geçiyor; ChatGPT (cg_*) henüz yok (null) -> panelde "yakında"
+  ORNEK.gyz_soru_sayisi=2; ORNEK.gyz_gecen=1;
+  ORNEK.gyz_cevaplar=[
+    {soru:'Çorum’da iyi bir mobilya satıcısı önerir misin?',tekrar:1,model:'google-ai-mode',aramali:true,geciyor:true,ozet:'Çorum’da mobilya için öne çıkan mağazalar geniş ürün yelpazesi ve teslimat hizmetiyle biliniyor.\nModalife Çorum\nMacitler Mobilya\nLoca Mobilya',isletmeler:['Modalife Çorum','Macitler Mobilya','Loca Mobilya']},
+    {soru:'Çorum’da en çok tavsiye edilen mobilya satıcısı hangileri?',tekrar:1,model:'google-ai-mode',aramali:true,geciyor:false,ozet:'Kullanıcı yorumlarına göre Modalife ve Doğu Mobilya sık tavsiye ediliyor.\nModalife Çorum\nDoğu Mobilya',isletmeler:['Modalife Çorum','Doğu Mobilya']}];
+  ORNEK.cg_soru_sayisi=null; ORNEK.cg_gecen=null; ORNEK.cg_cevaplar=null;
   GECMIS=[0,7,14,21].map(function(n,k){return Object.assign({},ORNEK,{baslangic:gun(n+1),bitis:gun(n+1),kaynak:'haftalik',harita_sira:[9,14,null,null][k],yz_gecen:[1,0,0,0][k]});});
   window.supabase = { createClient: function(){
     return {
