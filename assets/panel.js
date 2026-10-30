@@ -328,6 +328,19 @@
       ? 'Yapay zekâya sorduğumuz ' + o.yz_soru_sayisi + ' sorunun ' + o.yz_gecen + ' tanesinde adınız geçti.' + (b.bulundu && b.yorum != null ? ' Google’da ' + sayi(b.yorum) + ' yorumunuz ve ' + String(b.puan || '-').replace('.', ',') + ' puanınız var.' : '')
       : (b.bulundu && b.yorum != null ? 'Google’da ' + sayi(b.yorum) + ' yorumunuz ve ' + String(b.puan || '-').replace('.', ',') + ' puanınız var.' : '');
 
+    var onceki = gecmis.filter(function (x) { return x !== o && (!o.id || x.id !== o.id) && new Date(x.baslangic) < new Date(o.baslangic); })[0];
+    var dg = $('degisim');
+    if (onceki) {
+      var sirayaz = function (x) { return x.harita_sira ? x.harita_sira + '.' : 'ilk 20’de yok'; };
+      var oran = function (x) { return x.yz_soru_sayisi ? x.yz_gecen + '/' + x.yz_soru_sayisi : '-'; };
+      var hD = (onceki.harita_sira || 0) === (o.harita_sira || 0) ? 'değişmedi (' + sirayaz(o) + ')' : sirayaz(onceki) + ' → ' + sirayaz(o);
+      var yD = oran(onceki) === oran(o) ? 'değişmedi (' + oran(o) + ')' : oran(onceki) + ' → ' + oran(o);
+      var ayni = hD.indexOf('değişmedi') === 0 && yD.indexOf('değişmedi') === 0;
+      dg.textContent = 'Önceki ölçüme göre (' + tarih(onceki.baslangic) + '): Haritalar ' + hD + ', yapay zekâ ' + yD + '.' +
+        (ayni ? ' Sonuçlar aynı çünkü Google’daki durumunuz değişmedi. Aşağıdaki işleri yaptıkça burada değişim göreceksiniz; Google’ın bunu yansıtması genelde 1-4 hafta sürer.' : '');
+      dg.hidden = false;
+    } else dg.hidden = true;
+
     var ks = o.kelimeler || [];
     var hOlculen = ks.filter(function (k) { return !k.harita_hata && k.harita_bakilan != null; });
     var hCikan = hOlculen.filter(function (k) { return k.harita_sira; });
@@ -460,7 +473,8 @@
     }).then(function (o) {
       adimlariOynat(false);
       if (o && o.durum === 'bitti') gecmis.unshift(o);
-      sonucCiz(o);
+      return A.isletmeGetir().then(function (yeni) { if (yeni) isletme = yeni; }, function () {}).then(function () { sonucCiz(o); });
+    }).then(function () {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }).catch(function (e) {
       adimlariOynat(false);

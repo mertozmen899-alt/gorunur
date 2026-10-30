@@ -354,3 +354,4 @@ h1,h2,h3{margin:0}
 .site-liste a{font-weight:800;color:var(--amber)}
 .site-alan{color:var(--soluk);font-size:13px}
 .site-liste small{display:block;margin-top:3px;color:var(--yazi2);font-size:13px;line-height:1.5}
+.degisim{margin:12px 0 0;font-size:14px;line-height:1.55;color:var(--yazi2);background:var(--zemin2);border-left:3px solid var(--amber);border-radius:10px;padding:10px 12px;max-width:760px}

@@ -57,7 +57,7 @@ function tekillestir(liste: string[]): string[] {
   return sonuc;
 }
 // Google otomatik tamamlama: insanların en çok yazdığı aramalar (Google'ın kendi sırasıyla)
-const ALAKASIZ = /(iş ilan|is ilan|eleman|maaş|maas|nedir|nasıl yapılır|nasil yapilir|kariyer|staj|sahibinden|letgo|dolandırıcı|şikayet|sikayet|telefon numarası|haritası|wiki)/i;
+const ALAKASIZ = /(iş ilan|is ilan|eleman|maaş|maas|nedir|nasıl yapılır|nasil yapilir|kariyer|staj|sahibinden|letgo|dolandırıcı|şikayet|sikayet|telefon numarası|haritası|wiki|fuar|sergi|ihale|toptan)/i;
 async function populerAramalar(cekir: string, yer: string, anahtar: string): Promise<string[]> {
   const sorgular = yer ? [`${yer} ${cekir}`, `${cekir} ${yer}`] : [cekir];
   const sonuc = await Promise.allSettled(sorgular.map((q) => serp({ engine: "google_autocomplete", q, gl: "tr", hl: "tr" }, anahtar)));
