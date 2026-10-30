@@ -443,7 +443,7 @@ h1,h2,h3{margin:0}
   .liste-kutu{padding:32px 22px} .ekran{--ep:18px} .bolum{padding-top:72px;padding-bottom:72px} .hero{padding-top:48px;padding-bottom:72px}
   .izgara{gap:12px} .nokta{width:34px;height:34px}
 }
-@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 
 /* Giriş, kurulum ve panel */
 .sekmeler{display:flex;background:var(--kart);border:1px solid var(--cizgi2);border-radius:999px;padding:4px;margin-bottom:32px}
@@ -855,15 +855,9 @@ main:has(> .lp-hero){overflow-x:clip}
 
 @media (prefers-reduced-motion:no-preference){
   .lp-hero .lp-in{animation:lpRise .8s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * 90ms + 60ms)}
-  .lp-parla{animation:lpGlow 2.6s ease-in-out 1s 3}
-  .lp-gor.lp-sahne::before,.lp-gor .lp-cizim::before,.lp-promo-kart::before{animation:lpDrift 11s linear infinite}
+  .lp-promo-kart::before{animation:lpDrift 11s linear infinite}
   .lp-gor .lp-nokta-yesil::before{animation-duration:13s} .lp-gor .lp-nokta-lacivert::before{animation-duration:9s}
-  .lp-gor .lp-cip-a,.lp-gor .lp-yuz{animation:lpFloat 6s ease-in-out infinite}
-  .lp-gor .lp-cip-b,.lp-gor .lp-yuz2{animation:lpFloat2 7s ease-in-out .6s infinite}
-  .lp-gor .lp-cip-c{animation:lpFloat 6.5s ease-in-out 1.4s infinite}
   .lp-gor .lp-k2{animation-delay:1.2s} .lp-gor .lp-k4{animation-delay:.8s}
-  .lp-gor .lp-pin{animation:lpNefes 5s ease-in-out infinite}
-  .lp-gor .lp-cember{animation:lpDon 16s linear infinite}
   .lp-gor .lp-s1{animation:lpSoru 9s ease-out infinite both}
   .lp-gor .lp-s2{animation:lpYaz 9s linear infinite both}
   .lp-gor .lp-s3{animation:lpCevap 9s ease-out infinite both}
@@ -883,11 +877,8 @@ main:has(> .lp-hero){overflow-x:clip}
   .lp-mini-tel{animation:lpFloat 6s ease-in-out infinite}
   .lp-serit{animation:lpSerit .4s cubic-bezier(.2,.7,.2,1) both}
   /* v21: telefon, iş kartı, harita, paketler, SSS ve liste kutusu */
-  .lp-gor .lp-cip-d{animation:lpFloat 6.5s ease-in-out infinite}
-  .lp-gor .lp-cip-e{animation:lpFloat2 7s ease-in-out .8s infinite}
   .lp-gor .lp-cip-f{animation:lpFloat 6s ease-in-out .4s infinite}
   .lp-gor .lp-zarf{animation:lpFloat 6s ease-in-out infinite}
-  .lp-gor .lp-zarf i{animation:nabiz 1.8s ease-in-out infinite}
   .lp-sira>.wa-kart.lp-cikti .wa-simdi{animation:lpSimdi .6s cubic-bezier(.2,.7,.2,1) .3s backwards}
   .lp-sira>.wa-kart.lp-cikti .wa-artis{animation:lpRise .5s cubic-bezier(.2,.7,.2,1) .6s backwards}
   .lp-bekle .lp-yuksel,.lp-bekle .izgara .nokta{opacity:0}
@@ -1098,15 +1089,90 @@ body:has(.lp-promo:not([hidden])) .wa-dugme{opacity:0;pointer-events:none}
 @keyframes lp3Top{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 @keyframes lpEkrGel{from{opacity:0;transform:translateY(90px) rotate(calc(var(--r,0deg) * -2.2))}}
 @media (prefers-reduced-motion:no-preference){
-  .lp-durum.lp-gor i::after{animation:lpDalga 2s ease-out infinite}
-  .lp-kaydir.lp-gor .lp-fare::before{animation:lpTeker 2s cubic-bezier(.4,0,.2,1) infinite}
   .lp-gor .lp-kayan-ic{animation:lpKay 40s linear infinite}
-  .lp-gor .lp-3d-pin{animation:lp3Pin 5.5s ease-in-out infinite}
-  .lp-gor .lp-3d-golge{animation:lp3Golge 5.5s ease-in-out infinite}
-  .lp-gor .lp-3d-t1{animation:lp3Top 6.5s ease-in-out .8s infinite}
-  .lp-gor .lp-3d-t2{animation:lp3Top 5s ease-in-out 1.6s infinite}
   .lp-bekle .lp-ekr{opacity:0}
   .lp-geldi .lp-ekr{animation:lpEkrGel 1.05s cubic-bezier(.2,.75,.2,1) backwards;animation-delay:var(--d,0ms)}
   .lp-video.lp-gor .lp-oynat-halka{animation:lpDon 26s linear infinite}
-  .lp-video.lp-gor .lp-video-not i::after{animation:lpDalga 2s ease-out infinite}
+}
+
+/* ==== Tasarım düzeltmeleri (v26): içeriğe geç bağlantısı, ikincil hero bağlantısı, numaralı bölüm başlıkları, sakin hareket, dürüst paketler ==== */
+/* İçeriğe geç: yalnız klavyeyle odaklanınca görünür */
+.atla{position:absolute;left:12px;top:-80px;z-index:100;background:var(--siyah);color:var(--amber);border-radius:12px;padding:12px 18px;font-weight:800;text-decoration:none;box-shadow:0 10px 24px -10px rgba(0,0,0,.5)}
+.atla:focus,.atla:focus-visible{top:12px;color:var(--amber);outline:3px solid var(--amber);outline-offset:2px}
+#icerik:focus{outline:none}
+
+/* Hero: ana düğmenin altında küçük ikincil bağlantı */
+.lp-ikincil{margin:14px 0 0;font-size:14.5px;line-height:1.5;color:var(--soluk)}
+.lp-ikincil a{color:var(--vurgu);font-weight:700;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px}
+.lp-ikincil a:hover{color:var(--vurgu2)}
+.lp-hero .tikler{margin-top:18px}
+@media (max-width:560px){.lp-hero .dugmeler .btn{width:100%}.lp-ikincil{text-align:center}}
+
+/* Numaralı bölüm başlığı (küçük sarı numara + etiket) */
+.lp-bolum-bas{display:flex;align-items:center;gap:10px;margin:0;font-size:12.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--yazi3)}
+.lp-bolum-no{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:22px;padding:0 8px;border-radius:999px;background:var(--amber);color:var(--siyah);font-size:11.5px;font-weight:800;letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.lp-sss-sol .h2{margin-top:12px}
+
+/* Paketler: henüz hazır olmayanlar tek küçük notta */
+.pk-yakinda{margin:0;padding-top:12px;border-top:1px dashed var(--cizgi3);font-size:13.5px;line-height:1.5;color:var(--soluk)}
+.pk-yakinda span.yakinda{margin:0 8px 0 0}
+.paket .bas .pil.lp-tavsiye{font-size:11.5px}
+
+/* Video kapağı: oynat düğmesi ve yazılar her temada okunsun diye hafif karartma */
+.lp-video-kapak.lp-kapakli::after{display:block;top:0;height:auto;background:linear-gradient(180deg,rgba(8,10,14,.22) 0%,rgba(8,10,14,.38) 55%,rgba(8,10,14,.58) 100%)}
+.lp-video-orta{background:radial-gradient(closest-side,rgba(8,10,14,.35),transparent 100%) center/clamp(200px,28vw,320px) clamp(200px,28vw,320px) no-repeat}
+[data-tema="koyu"] .lp-video-kapak.lp-kapakli::after{background:linear-gradient(180deg,rgba(8,10,14,.32) 0%,rgba(8,10,14,.48) 55%,rgba(8,10,14,.66) 100%)}
+.lp-oynat-yazi{position:absolute;left:50%;top:calc(50% + clamp(56px,7.5vw,86px));translate:-50% 0;color:#F3F5F8;font-size:13px;font-weight:800;letter-spacing:.06em;text-shadow:0 1px 8px rgba(0,0,0,.6);white-space:nowrap}
+
+/* Özellik kartları: geniş ekranda kart üzerine gelince oynar, yoksa sakin durur (aynı anda tek hareket) */
+@media (min-width:900px) and (hover:hover){
+  .lp-kart:not(:hover):not(:focus-within) *{animation:none!important}
+}
+
+/* WhatsApp telefonu: yazı çubuğu mesajların üstüne binmez, telefon ekrana göre küçülür */
+.lp-wa-sahne .telefon{width:min(272px,100%)}
+.lp-wa .tel-sohbet{height:340px}
+@media (max-width:400px){.lp-wa .tel-sohbet{height:320px}}
+
+/* Telefonda sayfa boyu: boşlukları daralt, içerik aynı kalsın */
+@media (max-width:560px){
+  .bolum{padding-top:56px;padding-bottom:56px}
+  .hero{padding-top:32px}
+  .lp-hero{padding-bottom:40px}
+  .lp-hero .alt{font-size:17px;margin-top:18px}
+  .dugmeler{margin-top:24px}
+  .ekran{min-height:0}
+  #olcum .iki{margin-top:28px!important}
+  .lp-ozellik{padding-bottom:48px}
+  .lp-cizim{height:206px;margin:10px 0 14px}
+  .lp-gorev{top:24px}
+  .lp-sohbet{top:14px}
+  .lp-video-bolum{padding-top:56px}
+  .paketler{margin-top:28px}
+  .paket{padding:22px;gap:12px}
+  .site-teklif .site-mock{display:none}
+  .site-teklif>div[aria-hidden="true"]{display:none}
+  #liste{padding-top:40px!important;padding-bottom:56px!important}
+  .sss summary{padding:15px 0;font-size:16px}
+  .lp-bant{padding-bottom:48px}
+  .lp-bant-ic{padding-top:32px;gap:32px}
+}
+@media (max-width:560px){
+  /* Sarı bantta örnek ekranlar telefonda gizli: aynı örnekler hero kartında ve aşağıdaki kartlarda zaten var */
+  .lp-vitrin{display:none}
+  .lp-bant-ic{padding-top:28px}
+  /* Paketler telefonda yana kaydırılır; sonraki kartın kenarı görünür */
+  .paketler{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;margin:20px -24px 0;padding:16px 24px 12px;scroll-padding:0 24px;-webkit-overflow-scrolling:touch}
+  .paket{flex:0 0 86%;scroll-snap-align:start}
+  .paket:hover{transform:none}
+  .lp-kaydir-ipucu{display:block}
+}
+.lp-kaydir-ipucu{display:none;margin:14px 0 0;font-size:13px;font-weight:700;color:var(--soluk)}
+@media (max-width:560px){
+  .alt{font-size:16.5px;margin-top:14px}
+  .lp-maddeler{margin-top:18px;gap:10px}
+  .iskart{padding:20px 18px}
+  .harita{padding:16px}
+  .liste-kutu{padding:26px 20px}
+  .lp-ozellik .lp-kartlar{margin-top:20px}
 }
