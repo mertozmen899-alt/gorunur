@@ -57,6 +57,9 @@
 
   function temizUrl(x) {
     x = (x || '').trim(); if (!x) return null;
+    // Yanlışlıkla iki kez yazılan başlığı temizle (örn. https://hhttps://site.com)
+    var m = x.match(/^.*?h*ttps?:\/\/+(?=[^\/]*\.)/i); if (m) x = x.slice(m[0].length);
+    x = x.replace(/^(h*ttps?:\/*)+/i, '');
     if (!/^https?:\/\//i.test(x) && /\./.test(x)) x = 'https://' + x;
     return x.slice(0, 500);
   }
