@@ -34,17 +34,124 @@
     td.textContent = sira ? sira + '.' : 'yok'; td.className = sira ? (sira <= 3 ? 'sira-iyi' : '') : 'sira-yok';
   }
 
+  // Bir işi çizer: başlık, süre, açıklama, madde madde yapılacaklar, kopyalanabilir hazır metin
   function isEkle(kutu, isler) {
     kutu.innerHTML = '';
     isler.forEach(function (x, k) {
       var d = el('div', null, 'is-satir');
       d.appendChild(el('span', String(k + 1), 'is-no'));
       var g = el('div', null, 'is-govde');
-      g.appendChild(el('b', x.t)); if (x.s) g.appendChild(el('small', x.s)); g.appendChild(el('p', x.n));
+      g.appendChild(el('b', x.t)); if (x.s) g.appendChild(el('small', x.s)); if (x.n) g.appendChild(el('p', x.n));
+      if (x.adimlar && x.adimlar.length) {
+        var ol = el('ol', null, 'adim-liste');
+        x.adimlar.forEach(function (a) { ol.appendChild(el('li', a)); });
+        g.appendChild(ol);
+      }
+      if (x.metin) {
+        var hm = el('div', null, 'hazir-metin');
+        hm.appendChild(el('span', x.metin.baslik, 'hazir-baslik'));
+        hm.appendChild(el('p', x.metin.yazi));
+        var kb = el('button', 'Kopyala', 'btn btn-cizgi kucuk-btn'); kb.type = 'button';
+        kb.addEventListener('click', function () {
+          var bitti = function () { kb.textContent = 'Kopyalandı'; setTimeout(function () { kb.textContent = 'Kopyala'; }, 1800); };
+          if (navigator.clipboard) navigator.clipboard.writeText(x.metin.yazi).then(bitti, function () {}); else bitti();
+        });
+        hm.appendChild(kb); g.appendChild(hm);
+      }
+      if (x.sonuc) g.appendChild(el('p', 'Ne kazanırsınız: ' + x.sonuc, 'is-sonuc'));
       if (x.l) { var a = el('a', x.lm + ' →'); a.href = x.l; if (/^http/.test(x.l)) { a.target = '_blank'; a.rel = 'noopener'; } g.appendChild(a); }
       d.appendChild(g); kutu.appendChild(d);
     });
   }
+
+  function yerAdi(i) { return i.semt === 'Türkiye geneli' ? 'Türkiye' : (i.semt || '').split(',')[0].trim(); }
+
+  // Hazır işler: dükkân sahibinin anlayacağı dille, madde madde
+  var IS = {
+    googleProfil: function (i, b) {
+      var yer = yerAdi(i);
+      return { t: yer + ' mağazanız için Google’da kendi profilinizi açın', s: 'En önemli iş · 30 dakika · ücretsiz',
+        n: b && b.baska_sube ? 'Google’da "' + i.ad + '" diye arayınca sadece "' + b.baska_sube.ad + '" çıkıyor' + (b.baska_sube.adres ? ' (' + b.baska_sube.adres.split(',').slice(-2).join(',').trim() + ')' : '') + '. ' + yer + ' mağazanız haritada yok gibi görünüyor, müşteri sizi bulamıyor.' : 'Google Haritalar’da "' + i.ad + '" adıyla ' + yer + ' bölgesinde bir işletme bulamadık. Müşteri sizi haritada göremiyor.',
+        adimlar: [
+          'Önce telefonunuzda Google Haritalar’ı açıp mağazanızın adını yazın. Mağazanız çıkıyorsa altındaki "Bu işletmenin sahibi misiniz?" yazısına basıp sahiplenin, sonra 4. adıma geçin.',
+          'Çıkmıyorsa bilgisayardan ya da telefondan business.google.com adresine Gmail hesabınızla girip "İşletme ekle" deyin.',
+          'İşletme adını tabelanızdaki gibi yazın (örnek: "' + i.ad + ' ' + yer + '"). Kategori olarak işinize en yakın olanı seçin (örnek: "' + (i.is_turu || 'Mağaza') + '").',
+          'Adresi, telefonu ve çalışma saatlerini girin. Telefon, müşterinin sizi aradığı numara olsun.',
+          'Google sizden doğrulama isteyecek. Genelde dükkânınızı, tabelanızı ve içeriyi gösteren kısa bir video çekmenizi ister. Telefonla çekip gönderin.',
+          'Onay gelince en az 10 fotoğraf ekleyin: tabela, vitrin, içerisi, ürünler, siz ve çalışanlarınız.'
+        ],
+        sonuc: 'Haritada "' + yer + ' ' + (i.is_turu || '').toLocaleLowerCase('tr') + '" arayanlar sizi görmeye başlar. Diğer bütün adımlar bu profilin üstüne kurulur.',
+        l: 'https://business.google.com', lm: 'Google İşletme Profili' };
+    },
+    yorum: function (i, benim, ort) {
+      return { t: 'Her hafta 3-5 yeni Google yorumu toplayın', s: 'Her hafta · 10 dakika',
+        n: benim != null ? 'Sizin ' + sayi(benim) + ' yorumunuz var, haritada öndeki 3 işletmenin ortalaması ' + sayi(ort) + '. Google ve yapay zekâ, çok ve yeni yorumu olan işletmeyi öne çıkarıyor.' : 'Google ve yapay zekâ, çok ve yeni yorumu olan işletmeyi öne çıkarıyor.',
+        adimlar: [
+          'Google İşletme Profilinize girin ve "Yorum iste" ya da "Yorum bağlantısını paylaş" yazan yerden bağlantınızı kopyalayın.',
+          'Satıştan veya teslimattan sonra memnun kalan müşterinize aşağıdaki mesajı WhatsApp’tan gönderin. Mesajdaki [yorum bağlantınız] yazan yere kopyaladığınız bağlantıyı yapıştırın.',
+          'Aynı bağlantıyı bir QR koda çevirip kasanın yanına koyun. "QR kod oluştur" diye aratırsanız ücretsiz siteler çıkar.',
+          'Gelen her yoruma 2 gün içinde kısa bir teşekkürle cevap verin. Kötü yorumlara tartışmadan, çözüm teklif ederek cevap verin.'
+        ],
+        metin: { baslik: 'Müşteriye gönderilecek hazır mesaj', yazi: 'Merhaba, ' + i.ad + ' olarak bizi tercih ettiğiniz için teşekkür ederiz. Memnun kaldıysanız Google’da 1 dakikanızı ayırıp kısa bir yorum yazar mısınız? Bu bize çok yardımcı oluyor: [yorum bağlantınız]' },
+        sonuc: 'Haritada öne geçmenin en hızlı yolu. Yapay zekâ da önerirken yorum sayısına ve puana bakıyor.' };
+    },
+    puan: function (i, benim, ort) {
+      return { t: 'Puanınızı yükseltin', s: '20 dakika, sonra haftada 5 dakika',
+        n: 'Puanınız ' + String(benim).replace('.', ',') + ', öndekilerin ortalaması ' + ort.toFixed(1).replace('.', ',') + '.',
+        adimlar: [
+          'Google İşletme Profilinizdeki yorumlar bölümünü açın.',
+          'Cevapsız kalan bütün yorumlara cevap yazın. İyi yorumlara teşekkür edin.',
+          'Kötü yorumlarda özür dileyin ve çözüm teklif edin. Örnek: "Yaşadığınız sorun için üzgünüz, 05xx numaramızdan bize ulaşırsanız hemen ilgilenelim."',
+          'Sorunu çözdüğünüz müşteriden yorumunu güncellemesini rica edin.'
+        ],
+        sonuc: 'Puanı düşük işletmeyi hem müşteri hem yapay zekâ atlıyor. Cevap verilen kötü yorumlar güven verir.' };
+    },
+    siteBaslik: function (i, sorgu) {
+      var yer = yerAdi(i);
+      return { t: 'Sitenizin Google’da görünen başlığını düzeltin', s: '15 dakika (sitenizi yapan kişi için)',
+        n: '"' + sorgu + '" aramasında sitenizi ilk sonuçlarda göremedik. Google, sitenizin başlığında işinizi ve şehrinizi görmek istiyor.',
+        adimlar: [
+          'Sitenizi kim yaptıysa (ajans, tanıdık, siz) aşağıdaki mesajı ona gönderin.',
+          'Değişiklik yapılınca 2-4 hafta bekleyin. Görünür bir sonraki ölçümlerde farkı gösterecek.'
+        ],
+        metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemizin ana sayfa başlığını (title) ve açıklamasını (meta description) şöyle değiştirebilir misiniz? Başlık: "' + i.ad + ' | ' + yer + ' ' + (i.is_turu || '') + '". Açıklama: "' + i.ad + ', ' + yer + ' bölgesinde ' + (i.is_turu || 'hizmet').toLocaleLowerCase('tr') + '. Adres, telefon ve çalışma saatlerimiz sitemizde." Ayrıca ana sayfada adresimiz, telefonumuz ve çalışma saatlerimiz yazı olarak (resim değil) görünsün. Teşekkürler.' },
+        sonuc: 'Google aramasında sitenizin çıkma şansı artar.' };
+    },
+    siteYok: function (i) {
+      return { t: 'Tek sayfalık basit bir web sitesi açın', s: 'Yarım gün · ücretsiz veya düşük ücretli',
+        n: 'Siteniz yok. Google aramasında ve yapay zekâ cevaplarında en çok kaynak gösterilen şey işletmelerin kendi siteleri.',
+        adimlar: [
+          'Google İşletme Profilinizin içinden ücretsiz basit site açılabiliyor mu bakın. Açılamıyorsa Wix, Ticimax veya bir tanıdığınızdan tek sayfalık site yaptırın.',
+          'Sayfada şunlar yazı olarak olsun: ne sattığınız veya hangi hizmeti verdiğiniz, açık adres, telefon, çalışma saatleri.',
+          'Müşterilerin en çok sorduğu 5 soruyu ve cevaplarını ekleyin (örnek: "Teslimat var mı?", "Taksit yapıyor musunuz?").',
+          'Sitenin adresini Google İşletme Profilinize ve Instagram’ınıza ekleyin.'
+        ],
+        sonuc: 'Google aramasında çıkmaya başlarsınız ve yapay zekâ sizin hakkınızda okuyacak bir kaynak bulur.' };
+    },
+    bing: function (i) {
+      return { t: 'Bing Haritalar’da işletme hesabı açın', s: '15 dakika · ücretsiz',
+        n: 'ChatGPT, işletme bilgilerini büyük ölçüde Bing Haritalar’dan alıyor. Bing’de yoksanız ChatGPT sizi pek bilmiyor.',
+        adimlar: [
+          'bingplaces.com adresine girin. Gmail ya da Hotmail/Outlook hesabınızla giriş yapın.',
+          'Google İşletme Profiliniz varsa "Google’dan içe aktar" seçeneğini seçin. Bilgileriniz kendiliğinden gelir.',
+          'Profiliniz yoksa işletmenizi elle ekleyin. Adı, adresi ve telefonu Google’daki ile harfi harfine aynı yazın.',
+          'Bing sizden doğrulama ister (telefon, e-posta ya da kod). İstenen kodu girin.'
+        ],
+        sonuc: 'ChatGPT’ye "' + yerAdi(i) + ' ' + (i.is_turu || '').toLocaleLowerCase('tr') + '" sorulduğunda listeye girme şansınız doğar.',
+        l: 'https://www.bingplaces.com', lm: 'Bing Places' };
+    },
+    digerHaritalar: function () {
+      return { t: 'Apple Haritalar ve Yandex Haritalar’a ekleyin', s: '20 dakika · ücretsiz',
+        n: 'iPhone kullananlar ve Siri Apple Haritalar’a, Türkiye’de birçok kişi Yandex Haritalar’a bakıyor.',
+        adimlar: [
+          'Apple için businessconnect.apple.com adresine Apple kimliğinizle (iPhone’unuzdaki hesap) girin, "İşletme ekle" deyin, bilgilerinizi girin.',
+          'Yandex için Google’a "Yandex işletme ekle" yazın, çıkan Yandex Business sayfasından ücretsiz kayıt olun.',
+          'Her yerde adı, adresi ve telefonu Google’daki ile aynı yazın. Farklı yazılmış bilgi yapay zekânın kafasını karıştırır.'
+        ],
+        sonuc: 'Yapay zekâ sizi ne kadar çok yerde aynı bilgiyle görürse size o kadar güveniyor.',
+        l: 'https://businessconnect.apple.com', lm: 'Apple Business Connect' };
+    }
+  };
 
   // Ölçüm sonucundan yapılacaklar çıkarır (sadece ölçülen farka dayanır)
   function olcumIsleri(o, i) {
@@ -53,27 +160,14 @@
     var ilk3 = (o.harita_sonuclar || []).filter(function (r) { return !r.siz; }).slice(0, 3);
     var ortYorum = ilk3.length ? Math.round(ilk3.reduce(function (t, r) { return t + (r.yorum || 0); }, 0) / ilk3.length) : null;
     var ortPuan = ilk3.length ? ilk3.reduce(function (t, r) { return t + (r.puan || 0); }, 0) / ilk3.length : null;
-    if (b.bulundu === false && b.baska_sube) {
-      isler.push({ t: (i.semt || '').split(',')[0] + ' için ayrı Google profili açın', s: 'En önemli iş · 20 dakika', n: 'Google Haritalar’da "' + i.ad + '" adıyla sadece ' + (b.baska_sube.adres ? b.baska_sube.adres.split(',').slice(-2).join(',').trim() + ' adresindeki ' : '') + '"' + b.baska_sube.ad + '" profili çıkıyor. ' + (i.semt || '').split(',')[0] + ' mağazanızın kendi profili yoksa müşteriler sizi haritada göremez. Varsa adı farklı yazılmış olabilir; Google Haritalar’da mağazanızı açıp adını kurulumdaki adla aynı yapın.', l: 'https://business.google.com', lm: 'Google İşletme Profili' });
-    } else if (b.bulundu === false) {
-      isler.push({ t: 'Google’da işletme profilinizi bulamadık', s: 'En önemli iş · 15 dakika', n: '"' + i.ad + '" adıyla Google Haritalar’da bir profil göremedik. Profil yoksa business.google.com’dan ücretsiz açın. Varsa adı farklı yazılmış olabilir; kurulumdaki işletme adını Google’daki adla aynı yapın.', l: 'https://business.google.com', lm: 'Google İşletme Profili' });
-    }
-    if (b.bulundu && ortYorum != null && (b.yorum || 0) < ortYorum) {
-      isler.push({ t: 'Yorum farkını kapatın', s: 'Her hafta · 10 dakika', n: 'Sizin ' + sayi(b.yorum || 0) + ' yorumunuz var, haritada ilk 3’teki işletmelerin ortalaması ' + sayi(ortYorum) + '. Memnun müşterilerinize Google yorum linkinizi WhatsApp’tan gönderin; haftada 3-5 yeni yorum farkı kapatmaya başlar.' });
-    }
-    if (b.bulundu && b.puan != null && ortPuan != null && b.puan + 0.1 < ortPuan) {
-      isler.push({ t: 'Puanınızı yükseltin', s: '20 dakika', n: 'Puanınız ' + String(b.puan).replace('.', ',') + ', öndekilerin ortalaması ' + ortPuan.toFixed(1).replace('.', ',') + '. Önce cevapsız yorumlara kısa ve kibar cevaplar yazın, olumsuz yorumlarda çözüm teklif edin.' });
-    }
-    if (o.arama_sira == null && !i.site) {
-      isler.push({ t: 'Google aramasında görünmüyorsunuz', s: 'Orta vadeli', n: '"' + o.arama_sorgu + '" aramasında ilk sonuçlarda yoksunuz ve web siteniz yok. Tek sayfalık basit bir site bile (hizmetler, adres, telefon) aramada çıkma şansınızı artırır.' });
-    } else if (o.arama_sira == null && i.site) {
-      isler.push({ t: 'Sitenizin başlığını aramaya uydurun', s: '15 dakika', n: '"' + o.arama_sorgu + '" aramasında sitenizi ilk sonuçlarda göremedik. Ana sayfa başlığında hem işinizi hem semtinizi yazın (örnek: "' + i.ad + ' | ' + (i.is_turu || '') + ' ' + (i.semt || '').split(',')[0] + '").' });
-    }
-    if (o.yz_soru_sayisi && o.yz_gecen === 0) {
-      isler.push({ t: 'Yapay zekâ sizi henüz önermiyor', s: 'Birkaç hafta sürer', n: 'Sorduğumuz ' + o.yz_soru_sayisi + ' sorunun hiçbirinde adınız geçmedi. İlk adım olarak ChatGPT’nin baktığı Bing Haritalar’a kaydolun; diğer adımlar aşağıdaki "Yapay zekâda önerilmek için" kartında.', l: '#yz-yol-kart', lm: 'Adımları gör' });
-    }
+    if (b.bulundu === false) isler.push(IS.googleProfil(i, b));
+    if (b.bulundu && ortYorum != null && (b.yorum || 0) < ortYorum) isler.push(IS.yorum(i, b.yorum || 0, ortYorum));
+    if (b.bulundu && b.puan != null && ortPuan != null && b.puan + 0.1 < ortPuan) isler.push(IS.puan(i, b.puan, ortPuan));
+    if (o.arama_sira == null && !i.site) isler.push(IS.siteYok(i));
+    else if (o.arama_sira == null && i.site) isler.push(IS.siteBaslik(i, o.arama_sorgu || ''));
+    if (o.yz_soru_sayisi && o.yz_gecen === 0) isler.push(IS.bing(i));
     if (o.harita_sira && o.harita_sira <= 3 && o.yz_gecen > 0) {
-      isler.push({ t: 'İyi durumdasınız, yerinizi koruyun', s: 'Her hafta', n: 'Haritalarda ilk 3’tesiniz ve yapay zekâ sizi öneriyor. Yeni yorum gelmeye devam etsin, profilinize ayda 2-3 güncel fotoğraf ekleyin.' });
+      isler.push({ t: 'İyi durumdasınız, yerinizi koruyun', s: 'Her hafta', n: 'Haritalarda ilk 3’tesiniz ve yapay zekâ sizi öneriyor. Bunu korumak için:', adimlar: ['Her hafta birkaç yeni Google yorumu toplamaya devam edin.', 'Ayda 2-3 yeni fotoğraf ekleyin.', 'Kampanya veya yeni ürün olunca Google profilinizde "Güncelleme" paylaşın.'] });
     }
     return isler.slice(0, 4);
   }
@@ -81,24 +175,22 @@
   // Yapay zekâda önerilmek için somut adımlar; sektöre göre rehber önerir
   function yzYolu(o, i) {
     var t = sadeK(i.is_turu || '');
-    var yer = (i.semt || '').split(',')[0].trim();
-    var cek = (i.is_turu || 'işletme').toLocaleLowerCase('tr');
-    var adimlar = [
-      { t: 'Bing Haritalar’a kaydolun', s: '15 dakika · ücretsiz', n: 'ChatGPT yerel işletme bilgisini büyük ölçüde Bing’den alıyor. Google profiliniz varsa Bing Places’te "Google’dan içe aktar" ile bilgileriniz birkaç tıkla taşınır.', l: 'https://www.bingplaces.com', lm: 'Bing Places' },
-      { t: 'Apple Haritalar ve Yandex Haritalar’a ekleyin', s: '20 dakika · ücretsiz', n: 'iPhone kullanıcıları ve Siri Apple Haritalar’a, Türkiye’de birçok kişi Yandex’e bakıyor. Adı, adresi ve telefonu Google’daki ile birebir aynı yazın.', l: 'https://businessconnect.apple.com', lm: 'Apple Business Connect' }
-    ];
+    var yer = yerAdi(i);
+    var isK = (i.is_turu || 'işletme').toLocaleLowerCase('tr');
+    var cek = isK.split(/\s+/).filter(function (k) { return k && EKLER.indexOf(k) < 0; }).join(' ') || isK;
+    var adimlar = [IS.bing(i), IS.digerHaritalar(i)];
     if (/(dis|doktor|hekim|klinik|psikolog|diyetisyen|fizyoterap|estetik|saglik)/.test(t) && !/veteriner/.test(t))
-      adimlar.push({ t: 'Doktortakvimi’nde profil açın', s: '20 dakika', n: 'Sağlık alanında yapay zekâ ve Google en çok Doktortakvimi profillerini ve yorumlarını gösteriyor. Uzmanlık alanlarınızı ve ' + yer + ' adresinizi ekleyin.', l: 'https://www.doktortakvimi.com', lm: 'Doktortakvimi' });
+      adimlar.push({ t: 'Doktortakvimi’nde profil açın', s: '20 dakika', n: 'Sağlık alanında Google ve yapay zekâ en çok Doktortakvimi profillerini ve yorumlarını gösteriyor.', adimlar: ['doktortakvimi.com adresine girip "Doktor musunuz?" ya da "Klinik ekle" bölümünden ücretsiz kayıt olun.', 'Uzmanlık alanlarınızı, ' + yer + ' adresinizi ve muayene ücretinizi ekleyin.', 'Hastalarınızdan orada da yorum isteyin.'], l: 'https://www.doktortakvimi.com', lm: 'Doktortakvimi' });
     else if (/(tadilat|temizlik|nakliyat|boya|tesisat|elektrik|usta|montaj|tamir|tamirat|ders|fotograf|dugun|organizasyon|bahce|klima|cilingir)/.test(t))
-      adimlar.push({ t: 'Armut’ta hizmet profili açın', s: '20 dakika', n: 'Hizmet işlerinde Armut profilleri ve yorumları aramalarda ve yapay zekâ cevaplarında sık geçiyor. ' + yer + ' bölgesini ve verdiğiniz her hizmeti seçin.', l: 'https://armut.com', lm: 'Armut' });
+      adimlar.push({ t: 'Armut’ta hizmet veren hesabı açın', s: '20 dakika', n: 'Hizmet işlerinde Armut profilleri ve yorumları aramalarda ve yapay zekâ cevaplarında sık geçiyor.', adimlar: ['armut.com adresine girip "Hizmet veren ol" bölümünden kayıt olun.', 'Verdiğiniz her hizmeti ayrı ayrı seçin ve ' + yer + ' bölgesini işaretleyin.', 'İşlerinizin fotoğraflarını ekleyin, işi bitirdiğiniz müşterilerden Armut’ta yorum isteyin.'], l: 'https://armut.com', lm: 'Armut' });
     else if (/(restoran|kafe|cafe|lokanta|pastane|otel|pansiyon|bar|meyhane|kebap|doner|pide|balik)/.test(t))
-      adimlar.push({ t: 'Tripadvisor’da işletmenizi sahiplenin', s: '15 dakika', n: 'Yeme-içme ve konaklamada yapay zekâ Tripadvisor yorumlarını sıkça kaynak gösteriyor. Menü, fotoğraf ve çalışma saatlerini ekleyin.', l: 'https://www.tripadvisor.com.tr/Owners', lm: 'Tripadvisor işletme' });
+      adimlar.push({ t: 'Tripadvisor’da işletmenizi sahiplenin', s: '15 dakika', n: 'Yeme-içme ve konaklamada yapay zekâ Tripadvisor yorumlarını sıkça kaynak gösteriyor.', adimlar: ['Google’a "Tripadvisor işletme sahiplen" yazın ve çıkan sayfadan işletmenizi arayın.', 'Çıkarsa "Sahiplen", çıkmazsa "İşletme ekle" deyin.', 'Menü, fotoğraf ve çalışma saatlerini ekleyin. Yorumlara cevap verin.'], l: 'https://www.tripadvisor.com.tr/Owners', lm: 'Tripadvisor işletme' });
     else
-      adimlar.push({ t: 'Şikayetvar’da şikâyetlere cevap verin', s: 'Haftada 10 dakika', n: 'Yapay zekâ "güvenilir mi?" sorularında Şikayetvar’a bakıyor. Markanızın sayfası varsa cevapsız şikâyetlere kısa, çözüm odaklı cevap yazın; çözülenler puanınızı yükseltir.', l: 'https://www.sikayetvar.com', lm: 'Şikayetvar' });
+      adimlar.push({ t: 'Şikayetvar’daki şikâyetlere cevap verin', s: 'Haftada 10 dakika', n: 'Müşteriler ve yapay zekâ "güvenilir mi?" sorusunda Şikayetvar’a bakıyor.', adimlar: ['Google’a "Şikayetvar ' + i.ad + '" yazın. Markanızın sayfası çıkıyorsa Şikayetvar’ın "Marka girişi" bölümünden kurumsal hesap açın.', 'Cevapsız şikâyetlere kısa, kibar ve çözüm teklif eden cevaplar yazın.', 'Sorunu çözünce müşteriden şikâyeti "çözüldü" olarak işaretlemesini rica edin.'], l: 'https://www.sikayetvar.com', lm: 'Şikayetvar' });
     adimlar.push(i.site
-      ? { t: 'Sitenize "' + yer + ' ' + cek + '" sayfası ekleyin', s: '1-2 saat', n: 'Gemini önerirken en çok işletmelerin kendi sitelerini kaynak gösteriyor. Tek sayfada şunlar olsun: hangi hizmetleri verdiğiniz, ' + yer + ' adresiniz, telefon, çalışma saatleri ve müşterilerin sık sorduğu 5 soru ile cevapları.' }
-      : { t: 'Basit bir web sitesi açın', s: 'Yarım gün', n: 'Gemini önerirken en çok işletmelerin kendi sitelerini kaynak gösteriyor. Tek sayfalık bir site yeter: hizmetler, ' + yer + ' adresi, telefon, çalışma saatleri ve sık sorulan sorular.' });
-    adimlar.push({ t: 'Yerel listelerde ve haberlerde adınız geçsin', s: 'Ayda 1 deneme', n: '"' + yer + '’un en iyi ' + cek + ' yerleri" gibi yazılar ve yerel haber siteleri yapay zekânın en sevdiği kaynaklar. Yerel gazetelere, şehir bloglarına ve Instagram sayfalarına ulaşıp işletmenizi tanıtmalarını isteyin.' });
+      ? { t: 'Sitenize "' + yer + ' ' + cek + '" sayfası ekletin', s: '1-2 saat (sitenizi yapan kişi için)', n: 'Gemini önerirken en çok işletmelerin kendi sitelerini kaynak gösteriyor.', adimlar: ['Sitenizi kim yaptıysa aşağıdaki mesajı ona gönderin.', 'Sayfa yayına girince bağlantısını Google İşletme Profilinize ekleyin.'], metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemize "' + yer + ' ' + cek + '" başlıklı yeni bir sayfa ekleyebilir misiniz? Sayfada şunlar yazı olarak olsun: ' + yer + ' mağazamızın açık adresi, telefonu, çalışma saatleri, sattığımız ürün grupları veya verdiğimiz hizmetler, teslimat/servis bölgelerimiz ve müşterilerin sık sorduğu 5 soru ile cevapları. Sayfa başlığı: "' + i.ad + ' ' + yer + ' | ' + (i.is_turu || '') + '". Teşekkürler.' } }
+      : IS.siteYok(i));
+    adimlar.push({ t: 'Şehrinizdeki listelerde ve haberlerde adınız geçsin', s: 'Ayda 1 deneme', n: '"En iyi ' + cek + ' yerleri" gibi yazılar ve yerel haber siteleri yapay zekânın en çok okuduğu kaynaklar arasında.', adimlar: ['Google’a "' + yer + ' en iyi ' + cek + '" yazın. Çıkan liste yazılarını ve yerel haber sitelerini not edin.', 'Bu sitelere ve şehrinizin popüler Instagram sayfalarına telefonla veya mesajla ulaşın, işletmenizi tanıtmalarını isteyin.', 'Açılış, kampanya veya yardım kampanyası gibi haber olacak bir şey yaptığınızda yerel gazetelere haber verin.'] });
     return adimlar;
   }
 
@@ -212,9 +304,9 @@
     $('iletisim').textContent = ilet;
 
     var isler = [
-      { t: 'Adres ve telefonunuzu her yerde aynı yazın', s: '15 dakika', n: 'Google profilinizde, sitenizde ve Instagram’da adres ve telefon birebir aynı olmalı. Yapay zekâ farklı yazılmış bilgiye daha az güveniyor.' },
-      { t: 'Google profilinizdeki hizmet listesini doldurun', s: '20 dakika', n: 'Yapay zekâ ve Google, ne iş yaptığınızı bu listeden anlıyor. Verdiğiniz her hizmeti ayrı satır olarak ekleyin.' },
-      { t: 'Ayda 2-3 güncel fotoğraf ekleyin', s: '5 dakika', n: 'Güncel fotoğrafı olan profiller daha canlı görünür ve daha çok tıklanır.' }
+      { t: 'Adınızı, adresinizi ve telefonunuzu her yerde aynı yazın', s: '15 dakika', n: 'Yapay zekâ farklı yazılmış bilgiye daha az güveniyor.', adimlar: ['Google profilinizdeki adı, adresi ve telefonu bir kâğıda yazın.', 'Instagram, Facebook, web siteniz ve kayıtlı olduğunuz diğer sitelerde aynı bilgiler mi, bakın.', 'Farklı olanları Google’daki ile birebir aynı yapın.'] },
+      { t: 'Google profilinizdeki ürün ve hizmet listesini doldurun', s: '20 dakika', n: 'Google ve yapay zekâ ne iş yaptığınızı bu listeden anlıyor.', adimlar: ['Google İşletme Profilinize girip "Ürünler" ya da "Hizmetler" bölümünü açın.', 'Sattığınız her ürün grubunu veya verdiğiniz her hizmeti ayrı satır olarak ekleyin.', 'Her birine bir cümle açıklama ve varsa fotoğraf ekleyin.'] },
+      { t: 'Ayda 2-3 güncel fotoğraf ekleyin', s: '5 dakika', n: 'Güncel fotoğrafı olan profiller daha canlı görünür ve daha çok tıklanır.', adimlar: ['Telefonla yeni ürünlerin, vitrinin veya yaptığınız işin fotoğrafını çekin.', 'Google İşletme Profilinizde "Fotoğraf ekle" deyip yükleyin.'] }
     ];
     isEkle($('isler'), isler);
   }
