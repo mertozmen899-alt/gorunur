@@ -7,7 +7,8 @@
 //   Ayrıca tüm sistem için SerpApi bütçesi: public.serp_harca (günlük SERP_GUNLUK_SINIR, varsayılan 25;
 //   aylık SERPAPI_AYLIK_SINIR, varsayılan 230).
 // Deneme yolu: x-gorunur-cron başlığı cron_ayar.olcum_anahtari ile aynıysa ve gövdede deneme_isletme_id varsa
-// işlem o işletme için (oturum olmadan) yapılır.
+// işlem o işletme için (oturum olmadan) yapılır. Aynı başlıkla gövde {islem:'site', deneme_site:'<adres>'} ise
+// o adres veri tabanına yazılmadan taranır ve sonuç döndürülür.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const CORS = {
@@ -138,6 +139,42 @@ async function guvenliGetir(adres: string | URL, ms: number, headers: Record<str
 
 // ---------------- Site sağlığı ----------------
 type Kontrol = { kod: string; ad: string; tamam: boolean; agirlik: number; detay: string; oneri: string };
+const ULASILAMADI = "Sitenize ulaşamadık. Tarayıcıda açılıyorsa bize WhatsApp'tan yazın; bazı siteler otomatik kontrolleri engelliyor.";
+const TARAYICI = { "User-Agent": "Mozilla/5.0 (compatible; GorunurSiteSagligi/1.0; +https://mertozmen899-alt.github.io/gorunur/)", "Accept-Language": "tr-TR,tr;q=0.9" };
+// Kesin olumsuz cümle kurmadan önce ikinci yol: https adresi bağlantı düzeyinde açılmazsa (sertifika hatası,
+// zaman aşımı, bağlantı reddi) aynı adres bir kez http ile denenir. İkinci deneme de guvenliGetir'den geçer
+// (SSRF denetimi, en fazla 3 yönlendirme). Alan adı hiç çözülmüyorsa ya da güvenlik engeli varsa ikinci deneme yapılmaz.
+async function yedekliGetir(adres: string | URL, ms: number, headers: Record<string, string> = {}) {
+  const t0 = Date.now();
+  try {
+    const g = await guvenliGetir(adres, ms, headers);
+    return { ...g, yedek: false, sure: Date.now() - t0 };
+  } catch (e) {
+    if (e instanceof GuvenlikHatasi) throw e;
+    let u: URL;
+    try { u = new URL(String(adres)); } catch { throw e; }
+    if (u.protocol !== "https:" || /Alan adı çözülemedi/.test(String(e))) throw e;
+    u.protocol = "http:";
+    if (u.port === "443") u.port = "";
+    console.log("site: https açılmadı, http deneniyor", String(adres), String(e).slice(0, 160));
+    const t1 = Date.now();
+    try {
+      const g = await guvenliGetir(u, ms, headers);
+      return { ...g, yedek: true, sure: Date.now() - t1 };
+    } catch (e2) {
+      if (e2 instanceof GuvenlikHatasi) throw e2;
+      console.log("site: http de açılmadı", u.toString(), String(e2).slice(0, 160));
+      throw e;
+    }
+  }
+}
+function ulasilamadiSonuc(adres: string, sure: number, durum_kodu?: number) {
+  return {
+    adres, acildi: false, ulasilamadi: true, durum_kodu: durum_kodu ?? null, puan: null, sure_ms: sure,
+    kontroller: [{ kod: "ulasilamadi", ad: "Siteye ulaşılabiliyor mu?", tamam: false, agirlik: 0, detay: ULASILAMADI,
+      oneri: "Siteniz tarayıcıda açılıyorsa bir şey yapmanız gerekmez; bize WhatsApp'tan yazın, elle kontrol edelim. Tarayıcıda da açılmıyorsa sitenizi yapan kişiye haber verin." }],
+  };
+}
 async function siteTara(isl: Record<string, any>) {
   let adres = String(isl.site || "").trim();
   if (!adres) throw new Error("Kurulumda web sitesi girilmemiş.");
@@ -146,15 +183,23 @@ async function siteTara(isl: Record<string, any>) {
   const t0 = Date.now();
   let r: Response;
   let son = adres;
+  let sure = 0;
+  let yedek = false;
   try {
-    const g = await guvenliGetir(adres, 15000, { "User-Agent": "Mozilla/5.0 (compatible; GorunurSiteSagligi/1.0; +https://mertozmen899-alt.github.io/gorunur/)", "Accept-Language": "tr-TR,tr;q=0.9" });
-    r = g.r; son = g.son;
+    const g = await yedekliGetir(adres, 15000, TARAYICI);
+    r = g.r; son = g.son; sure = g.sure; yedek = g.yedek;
   } catch (e) {
     if (e instanceof GuvenlikHatasi) throw new Error(e.message);
-    return { adres, acildi: false, puan: 0, sure_ms: Date.now() - t0, kontroller: [{ kod: "acilmiyor", ad: "Site açılıyor mu?", tamam: false, agirlik: 100, detay: /timed out|abort/i.test(String(e)) ? "Site 15 saniyede açılmadı." : "Siteye bağlanılamadı.", oneri: "Sitenizi yapan kişiye sitenin açılmadığını bildirin. Kapalı bir site hem Google'da hem yapay zekâda sizi geriye düşürür." }] };
+    return ulasilamadiSonuc(adres, Date.now() - t0);
   }
-  const sure = Date.now() - t0;
-  const html = (await r.text().catch(() => "")).slice(0, 1_500_000);
+  // Hata sayfası (403 bot engeli, 5xx vb.) üzerinde içerik kontrolü yapılırsa "telefon yok, başlık yok" gibi
+  // yanlış olumsuz cümleler çıkar. Bu durumda kesin konuşmuyoruz.
+  if (!r.ok) {
+    await r.body?.cancel().catch(() => {});
+    return ulasilamadiSonuc(son, sure, r.status);
+  }
+  let html: string;
+  try { html = (await r.text()).slice(0, 1_500_000); } catch { return ulasilamadiSonuc(son, sure, r.status); }
   const kok = new URL(son);
   const bul = (re: RegExp) => (html.match(re) || [])[1] || "";
   const temiz = (x: string) => x.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
@@ -178,10 +223,32 @@ async function siteTara(isl: Record<string, any>) {
   const titleSade = sade(title);
   const titleYer = isl.semt === "Türkiye geneli" || parca.some((p: string) => titleSade.includes(p));
   const titleIs = isK.some((t) => titleSade.includes(t.slice(0, Math.max(4, t.length - 2))));
-  const ek = async (yol: string) => { try { const { r: x } = await guvenliGetir(new URL(yol, kok.origin), 6000); const t = await x.text(); return x.ok && t.length > 20 && !/<html/i.test(t.slice(0, 300)); } catch { return false; } };
-  const [sitemap, robots] = await Promise.all([ek("/sitemap.xml"), ek("/robots.txt")]);
+  // Ek dosya getirme: null = ulaşılamadı (bilinmiyor), aksi hâlde gerçek cevap. Ulaşılamayan dosya için
+  // "yok" demiyoruz; https bağlantı düzeyinde açılmazsa http ile bir kez daha deneniyor.
+  const ek = async (yol: string | URL): Promise<{ var: boolean; metin: string } | null> => {
+    try {
+      const { r: x } = await yedekliGetir(new URL(yol, kok.origin), 6000, TARAYICI);
+      if (!x.ok) { await x.body?.cancel().catch(() => {}); return { var: false, metin: "" }; }
+      const t = (await x.text()).slice(0, 300000);
+      return { var: t.length > 20 && !/<html/i.test(t.slice(0, 300)), metin: t };
+    } catch { return null; }
+  };
+  const [smAna, robots] = await Promise.all([ek("/sitemap.xml"), ek("/robots.txt")]);
+  // sitemap.xml yoksa robots.txt içinde bildirilen ya da yaygın diğer adlara da bakılır (WordPress, Yoast vb.)
+  let sitemap: boolean | null = smAna ? smAna.var : null;
+  if (!sitemap) {
+    const adaylar = [
+      ...((robots?.var ? robots.metin : "").match(/^\s*sitemap\s*:\s*(\S+)/gim) || []).map((x) => x.replace(/^\s*sitemap\s*:\s*/i, "").trim()),
+      "/sitemap_index.xml", "/wp-sitemap.xml",
+    ].filter((x, i, a) => a.indexOf(x) === i && x !== "/sitemap.xml").slice(0, 4);
+    for (const a of adaylar) {
+      const s2 = await ek(a);
+      if (s2?.var) { sitemap = true; break; }
+      if (s2 && sitemap === null) sitemap = false;
+    }
+  }
   const K: Kontrol[] = [
-    { kod: "https", ad: "Güvenli bağlantı (https)", tamam: kok.protocol === "https:", agirlik: 10, detay: kok.protocol === "https:" ? "Siteniz güvenli bağlantıyla açılıyor." : "Siteniz güvenli bağlantı (kilit simgesi) olmadan açılıyor.", oneri: "Sitenizi yapan kişiden ücretsiz SSL sertifikası kurmasını isteyin. Tarayıcılar kilitsiz sitelerde 'Güvenli değil' uyarısı gösteriyor." },
+    { kod: "https", ad: "Güvenli bağlantı (https)", tamam: kok.protocol === "https:", agirlik: 10, detay: kok.protocol === "https:" ? "Siteniz güvenli bağlantıyla açılıyor." : "Siteniz açılıyor ama güvenli bağlantı (https) yok. Ziyaretçiler tarayıcıda 'Güvenli değil' uyarısı görüyor.", oneri: "Barındırma firmanızdan ücretsiz SSL sertifikası (Let's Encrypt) kurmasını isteyin." },
     { kod: "hiz", ad: "Açılış hızı", tamam: sure < 3000, agirlik: 10, detay: `Ana sayfa ${(sure / 1000).toFixed(1).replace(".", ",")} saniyede geldi.`, oneri: "Sitenizi yapan kişiden resimleri küçültmesini ve sayfayı hızlandırmasını isteyin. 3 saniyeden uzun açılan sitelerden müşterilerin çoğu çıkıp gidiyor." },
     { kod: "mobil", ad: "Telefonda düzgün görünüm", tamam: viewport, agirlik: 12, detay: viewport ? "Sayfa telefon ekranına uyacak şekilde ayarlanmış." : "Sayfada telefon ekranı ayarı (viewport) yok; telefonda küçük ve bozuk görünebilir.", oneri: "Sitenizi yapan kişiden sitenin telefona uyumlu (mobil uyumlu) hâle getirilmesini isteyin. Aramaların çoğu telefondan yapılıyor." },
     { kod: "baslik", ad: "Sayfa başlığında iş ve yer", tamam: !!title && titleYer && titleIs, agirlik: 14, detay: title ? `Google'da görünen başlık: "${title.slice(0, 90)}"` : "Sayfanın Google'da görünen başlığı yok.", oneri: `Başlık şöyle olsun: "${isl.ad} | ${isl.semt === "Türkiye geneli" ? "" : String(isl.semt || "").split(",")[0].trim() + " "}${isl.is_turu || ""}". Google bir sayfanın ne hakkında olduğunu önce başlığından anlıyor.` },
@@ -193,13 +260,13 @@ async function siteTara(isl: Record<string, any>) {
     { kod: "sema", ad: "Yerel işletme işaretlemesi", tamam: yerelSema, agirlik: 8, detay: yerelSema ? "Sayfada Google'ın okuyabildiği işletme bilgisi (yapılandırılmış veri) var." : "Sayfada Google ve yapay zekânın kolayca okuyabildiği işletme bilgisi kartı (LocalBusiness yapılandırılmış veri) yok.", oneri: "Sitenizi yapan kişiye 'ana sayfaya LocalBusiness schema (JSON-LD) ekler misin? İçinde işletme adı, adres, telefon, çalışma saatleri ve Google Haritalar linki olsun' diye yazın." },
     { kod: "harita", ad: "Google Haritalar bağlantısı", tamam: haritaVar, agirlik: 4, detay: haritaVar ? "Sitede Google Haritalar bağlantısı ya da haritası var." : "Sitede Google Haritalar bağlantısı yok.", oneri: "İletişim bölümüne Google Haritalar'daki işletme profilinizin haritasını ya da bağlantısını eklettirin." },
     { kod: "indeks", ad: "Google'a açık", tamam: !noindex, agirlik: 6, detay: noindex ? "Sayfada 'Google listelemesin' (noindex) işareti var! Google bu sayfayı göstermez." : "Sayfa Google'a açık.", oneri: "Sitenizi yapan kişiye ACİL olarak 'noindex' işaretini kaldırmasını söyleyin. Bu işaret varken Google sitenizi hiç göstermez." },
-    { kod: "sitemap", ad: "Site haritası (sitemap)", tamam: sitemap, agirlik: 0, detay: sitemap ? "sitemap.xml var." : "sitemap.xml bulunamadı.", oneri: "Sitenizi yapan kişiden sitemap.xml oluşturup Google Search Console'a eklemesini isteyin." },
     { kod: "resim", ad: "Resim açıklamaları", tamam: !resimler.length || altsiz / resimler.length <= 0.3, agirlik: 0, detay: resimler.length ? `${resimler.length} resmin ${altsiz} tanesinde açıklama (alt yazısı) yok.` : "Ana sayfada resim yok.", oneri: "Resimlere ne gösterdiklerini anlatan kısa açıklamalar (alt metni) eklettirin; örn. 'Dükkânımızın vitrini' ya da 'Yeni gelen ürünlerimiz'." },
   ];
-  void robots;
+  // Site haritasına hiç ulaşılamadıysa (sunucu cevap vermedi) "yok" demiyoruz; bu madde listelenmez.
+  if (sitemap !== null) K.push({ kod: "sitemap", ad: "Site haritası (sitemap)", tamam: sitemap, agirlik: 0, detay: sitemap ? "Site haritası (sitemap) var." : "Site haritası (sitemap.xml) bulunamadı.", oneri: "Sitenizi yapan kişiden sitemap.xml oluşturup Google Search Console'a eklemesini isteyin." });
   const top = K.reduce((t, k) => t + k.agirlik, 0) || 1;
   const puan = Math.round(100 * K.filter((k) => k.tamam).reduce((t, k) => t + k.agirlik, 0) / top);
-  return { adres: son, acildi: r.ok, durum_kodu: r.status, puan, sure_ms: sure, title, kontroller: K };
+  return { adres: son, acildi: true, durum_kodu: r.status, puan, sure_ms: sure, title, kontroller: K, ...(yedek ? { http_ile_acildi: true } : {}) };
 }
 
 // ---------------- SerpApi ----------------
@@ -402,6 +469,15 @@ Deno.serve(async (req) => {
   let deneme = false;
   // Deneme yolu (sadece sunucu tarafı anahtarla): oturum olmadan belirli işletme için çalıştırır
   const cronBaslik = req.headers.get("x-gorunur-cron") || "";
+  // Deneme taraması: herhangi bir adresi veri tabanına yazmadan tarar (sadece sunucu tarafı anahtarla)
+  if (cronBaslik && govde.islem === "site" && govde.deneme_site) {
+    const { data: ayar } = await db.from("cron_ayar").select("deger").eq("ad", "olcum_anahtari").maybeSingle();
+    if (!ayar?.deger || ayar.deger !== cronBaslik) return json({ hata: "Yetkisiz." }, 401);
+    try {
+      const sahte = { site: String(govde.deneme_site).slice(0, 300), ad: String(govde.ad || ""), semt: String(govde.semt || ""), is_turu: String(govde.is_turu || "") };
+      return json({ deneme: true, site: { ...(await siteTara(sahte)), tarih: new Date().toISOString() } });
+    } catch (e) { return json({ hata: String((e as Error).message) }, 400); }
+  }
   if (cronBaslik && govde.deneme_isletme_id) {
     const { data: ayar } = await db.from("cron_ayar").select("deger").eq("ad", "olcum_anahtari").maybeSingle();
     if (!ayar?.deger || ayar.deger !== cronBaslik) return json({ hata: "Yetkisiz." }, 401);
@@ -469,6 +545,8 @@ Deno.serve(async (req) => {
     if (!(await harca("site", 1, 5))) return json({ hata: "Bugün sitenizi 5 kez taradık. Yarın tekrar deneyin.", site: onceki }, 429);
     try {
       const sonuc = { ...(await siteTara(isl)), tarih: new Date().toISOString() };
+      // Siteye iki yoldan da ulaşılamadıysa kesin hüküm kaydetmiyoruz: önceki sonuç kalır, kullanıcıya yumuşak mesaj gider.
+      if ((sonuc as Record<string, any>).ulasilamadi) return json({ hata: ULASILAMADI, site: onceki, ulasilamadi: true, durum_kodu: (sonuc as Record<string, any>).durum_kodu }, 502);
       await db.from("isletmeler").update({ site_saglik: sonuc, site_saglik_tarih: sonuc.tarih }).eq("id", isl.id);
       return json({ site: sonuc });
     } catch (e) { return json({ hata: String((e as Error).message) }, 400); }
