@@ -17,6 +17,7 @@
     'Password should be at least 6 characters': 'Şifre en az 8 karakter olmalı.',
     'Unable to validate email address: invalid format': 'Lütfen geçerli bir e-posta adresi yazın.',
     'Email rate limit exceeded': 'Çok fazla deneme yapıldı. Biraz sonra tekrar deneyin.',
+    'New password should be different from the old password': 'Yeni şifreniz eskisiyle aynı. Farklı bir şifre yazın ya da eski şifrenizle giriş yapın.',
     'Error sending confirmation email': 'Onay e-postası gönderilemedi. Biraz sonra tekrar deneyin ya da bize yazın.'
   };
   function hataMetni(e) {
