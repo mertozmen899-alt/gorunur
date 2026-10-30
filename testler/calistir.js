@@ -8,7 +8,10 @@ const TUR = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascrip
 const sunucu = http.createServer((q, r) => {
   const yol = path.join(KOK, decodeURIComponent(q.url.split('?')[0].split('#')[0]) === '/' ? 'index.html' : decodeURIComponent(q.url.split('?')[0]));
   if (!yol.startsWith(KOK) || !fs.existsSync(yol) || fs.statSync(yol).isDirectory()) { r.writeHead(404); return r.end('yok'); }
-  r.writeHead(200, { 'Content-Type': TUR[path.extname(yol)] || 'application/octet-stream' }); fs.createReadStream(yol).pipe(r);
+  r.writeHead(200, { 'Content-Type': TUR[path.extname(yol)] || 'application/octet-stream' });
+  // supabase-js SRI (integrity) ile yükleniyor; testte yerine sahte-supabase.js verildiği için yerel sunucu bu özelliği kaldırır
+  if (path.extname(yol) === '.html') return r.end(fs.readFileSync(yol, 'utf8').replace(/ integrity="sha384-[^"]+" crossorigin="anonymous"/g, ''));
+  fs.createReadStream(yol).pipe(r);
 }).listen(0);
 const ADRES = 'http://127.0.0.1:' + sunucu.address().port;
 const SAHTE = fs.readFileSync(path.join(__dirname, 'sahte-supabase.js'), 'utf8');
@@ -21,7 +24,7 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
   const b = await chromium.launch();
   for (const [cihaz, vp] of [['masaüstü', { width: 1280, height: 900 }], ['telefon', { width: 375, height: 780 }]]) {
     const ctx = await b.newContext({ viewport: vp });
-    await ctx.route('**/supabase.min.js', (r) => r.fulfill({ body: SAHTE, contentType: 'application/javascript' }));
+    await ctx.route('**/assets/vendor/supabase-js-*.js', (r) => r.fulfill({ body: SAHTE, contentType: 'application/javascript' }));
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     // Haber listesi kaydı ve e-posta işlemleri (onay, çıkış): gerçek sunucuya gitmez
     await ctx.route('**/rest/v1/rpc/katil_bekleme_listesi', (r) => r.fulfill({ body: '"tamam"', contentType: 'application/json' }));
@@ -173,6 +176,11 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     await p.emulateMedia({ colorScheme: 'light' });
     await p.evaluate(() => localStorage.clear());
     await ctx.close();
+  }
+  // Dosya denetimi: supabase-js yükleyen her sayfa SRI (integrity) ile yüklüyor
+  for (const s of fs.readdirSync(KOK).filter((f) => f.endsWith('.html'))) {
+    const etiketler = fs.readFileSync(path.join(KOK, s), 'utf8').match(/<script[^>]+supabase-js[^>]*>/g) || [];
+    if (etiketler.length) kontrol(s + ' supabase-js integrity ile yükleniyor', etiketler.every((e) => /integrity="sha384-[A-Za-z0-9+/=]{64}"/.test(e) && /crossorigin="anonymous"/.test(e)), etiketler.join(' '));
   }
   await b.close(); sunucu.close();
   console.log(JSON.stringify(sonuc, null, 2));

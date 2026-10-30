@@ -1264,3 +1264,16 @@ body:has(.lp-promo:not([hidden])) .wa-dugme{opacity:0;pointer-events:none}
 }
 /* Dokunma hedefleri: tek başına duran metin bağlantıları en az 24px yüksekliğinde */
 .platform>a,#vazgec,.metin-bag,.alt-bilgi:not(.lp-alt) .kap span a{display:inline-flex;align-items:center;min-height:24px;padding-block:2px}
+
+/* v33: telefonda WhatsApp düğmesi */
+@media (max-width:720px){
+  /* Alttaki yapışkan "Durumunuzu 1 dakikada görün" şeridi açıkken düğme gizlenir (iki düğme üst üste binmesin) */
+  body.alt-cta-acik .wa-dugme,body:has(.lp-serit:not([hidden])) .wa-dugme{opacity:0;visibility:hidden;pointer-events:none}
+  /* Hızlı test sonuç ekranı: sağ alttaki düğme son sonuç satırlarını örtmesin */
+  #s5{padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+}
+/* "Dilerseniz bize..." balonu telefonda ve dokunmatik ekranlarda hiç gösterilmez */
+@media (max-width:720px),(hover:none){.wa-balon{display:none}}
+/* Dokunma hedefleri: üst menü bağlantıları ve panel kart bağlantıları ("Tüm işler →", "Google İşletme Profili →") en az 24px */
+@media (min-width:721px){.menu a{display:inline-flex;align-items:center;min-height:24px}}
+.menu a.erken,.kart-bas a,.is-govde>a{display:inline-flex;align-items:center;min-height:24px}
