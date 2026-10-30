@@ -4,14 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kurulum | Görünür</title>
+<meta name="description" content="Görünür kurulumu: işletmenizi birkaç kısa soruyla tanıtın.">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#FFFFFF">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Yazı tipleri sayfanın çizilmesini bekletmez: önce sistem yazısıyla açılır, Google Fonts gelince yerine geçer -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap"></noscript>
 <script>(function(){var t;try{t=localStorage.getItem('gorunur_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t;if(t==='koyu'){var m=document.querySelector('meta[name="theme-color"]');if(m)m.content='#0F1217'}})()</script>
-<link rel="stylesheet" href="assets/style.css?v=24">
+<link rel="stylesheet" href="assets/style.css?v=28">
 <script src="assets/tema.js?v=1" defer></script>
 <script src="assets/iletisim.js?v=1" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -21,6 +24,7 @@
 <script src="assets/sayac.js?v=1" defer></script>
 </head>
 <body>
+<a class="atla" href="#kurulum">İçeriğe geç</a>
 <div class="test-govde">
 <div class="kap" style="width:100%">
 <div class="test-ust">
@@ -36,7 +40,7 @@
 <div class="ilerleme" role="progressbar" aria-label="Kurulum ilerlemesi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="20"><i id="ilerleme" style="width:20%"></i></div>
 </div>
 
-<main class="test" id="kurulum" hidden>
+<main class="test" id="kurulum" tabindex="-1" hidden>
 
 <section data-adim="1">
 <h1 tabindex="-1">Müşterileriniz sizi nasıl buluyor?</h1>
@@ -84,14 +88,14 @@
 
 <section data-adim="5" hidden>
 <h1 tabindex="-1">Size nereden yazalım?</h1>
-<p class="acik">Haftalık sonucunuzu ve sıradaki işinizi buradan göndereceğiz.</p>
+<p class="acik">Haftalık özeti şimdilik panelinizden görürsünüz. WhatsApp ve e-postayla gönderim yakında. Tercihinizi şimdiden kaydedin, açılınca buna göre yazarız.</p>
 <label for="whatsapp" class="etk" style="margin-top:28px">WhatsApp numaranız (isteğe bağlı)</label>
 <input id="whatsapp" class="girdi" type="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx" maxlength="20">
 <fieldset class="secimler">
-<legend class="etk" style="margin-top:22px">Ne sıklıkla yazalım?</legend>
-<label class="radyo"><input type="radio" name="siklik" value="haftalik" checked><span><b>Her hafta kısa özet</b><small>Pazartesi sabahı, 3-4 cümle.</small></span></label>
+<legend class="etk" style="margin-top:22px">Ne sıklıkla yazalım? <span class="yakinda">yakında</span></legend>
+<label class="radyo"><input type="radio" name="siklik" value="haftalik" checked><span><b>Her hafta kısa özet</b><small>Gönderim açılınca haftada bir, 3-4 cümle.</small></span></label>
 <label class="radyo"><input type="radio" name="siklik" value="onemli"><span><b>Sadece önemli bir şey olunca</b><small>Sıranız değişince ya da rakibiniz bir şey yapınca.</small></span></label>
-<label class="radyo"><input type="radio" name="siklik" value="yok"><span><b>Mesaj istemiyorum</b><small>Sadece panelden bakarım, e-posta yeter.</small></span></label>
+<label class="radyo"><input type="radio" name="siklik" value="yok"><span><b>Mesaj istemiyorum</b><small>Sadece panelden bakarım.</small></span></label>
 </fieldset>
 <p style="font-size:13px;color:var(--soluk);margin:14px 0 0">Bunu sonra panelden değiştirebilirsiniz.</p>
 </section>
