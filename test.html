@@ -10,9 +10,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=18">
+<script>(function(){var t;try{t=localStorage.getItem('gorunur_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t;if(t==='koyu'){var m=document.querySelector('meta[name="theme-color"]');if(m)m.content='#0F1217'}})()</script>
+<link rel="stylesheet" href="assets/style.css?v=19">
+<script src="assets/tema.js?v=1" defer></script>
 <script src="assets/app.js?v=6" defer></script>
-<script src="assets/test.js?v=5" defer></script>
+<script src="assets/test.js?v=6" defer></script>
 <script src="assets/sayac.js?v=1" defer></script>
 </head>
 <body>
@@ -23,7 +25,7 @@
 <span class="logo-isaret"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span>
 <span class="logo-ad">Görünür</span>
 </a>
-<div style="display:flex;align-items:center;gap:18px">
+<div class="test-sag">
 <span id="adim-etiket" style="font-size:14px;font-weight:700;color:var(--yazi3)">Soru 1 / 3</span>
 <a href="./" style="font-size:14px;font-weight:600;color:var(--soluk)">Vazgeç</a>
 </div>
@@ -84,26 +86,62 @@
 <h1 tabindex="-1" style="font-size:clamp(30px,4.5vw,38px);margin-top:24px">"<span class="is-adi"></span>" için ekranınızı hazırlıyoruz</h1>
 <div class="adimlar" id="adimlar" aria-live="polite">
 <div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Google Haritalar'a bakıyoruz</div>
-<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Google aramalarına bakıyoruz</div>
-<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Yapay zekâ cevaplarını kontrol ediyoruz</div>
+<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Yapay zekâya müşteri gibi soruyoruz</div>
+<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Cevaplarda kimlerin geçtiğine bakıyoruz</div>
 <div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Sizden önce çıkanları buluyoruz</div>
-<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Yapılacaklar listenizi yazıyoruz</div>
+<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Sonucunuzu hazırlıyoruz</div>
 </div>
+<p style="margin:18px 0 0;font-size:14px;color:var(--soluk)">Gerçek arama yapıyoruz, 20-30 saniye sürebilir.</p>
 </section>
 
 <!-- Sonuç -->
 <section id="s5" hidden>
-<span class="pil pil-a" style="text-transform:uppercase;letter-spacing:.04em">Örnek ekranınız</span>
-<h1 tabindex="-1" style="font-size:clamp(28px,4.5vw,38px);line-height:1.15;margin-top:18px"><span class="yer"></span> <span class="is-kucuk"></span> arayanlara verilen her 100 yapay zekâ cevabının <span style="color:var(--vurgu)">kaçında</span> adınız geçiyor?</h1>
-<p style="font-size:16px;color:var(--yazi3);margin:14px 0 0;line-height:1.6">Görünür açılınca bunu sizin için ölçüp tek bir sayıyla söyleyeceğiz. Yanında da bu hafta yapmanız gereken 3 işi sıralayacağız.</p>
+<style>
+.t-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:22px}
+@media (max-width:640px){.t-grid{grid-template-columns:1fr}}
+.t-kutu{background:var(--kart);border:1px solid var(--cizgi2);border-radius:18px;padding:16px 18px}
+.t-kutu h2{font-size:15px;margin:0 0 4px}
+.t-kutu .t-not{font-size:13px;color:var(--soluk);margin:0 0 10px;line-height:1.5}
+.t-liste{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.t-liste li{display:flex;gap:10px;align-items:baseline;font-size:14px;line-height:1.4;padding:8px 10px;border-radius:10px;background:var(--kart2)}
+.t-liste li b.t-no{flex:none;min-width:22px;color:var(--vurgu);font-family:var(--baslik)}
+.t-liste li span{flex:1;min-width:0;overflow-wrap:anywhere}
+.t-liste li small{display:block;color:var(--soluk);font-size:12px;font-weight:500;margin-top:2px}
+.t-liste li.t-siz{background:var(--amberkoyu);outline:2px solid var(--amber)}
+.t-liste li.t-siz span{font-weight:800}
+.t-ben{margin-top:12px}
+.t-ben label{display:block;font-weight:700;font-size:15px;margin-bottom:10px}
+.t-ben .satir-form input{border:1.5px solid var(--cizgi3);background:var(--zemin2);color:var(--yazi)}
+.t-sonuc{margin:12px 0 0;font-size:15px;line-height:1.6;font-weight:600}
+.t-sonuc{font-weight:500;color:var(--yazi2)} .t-sonuc b.iyi{color:var(--yesil)} .t-sonuc b.kotu{color:var(--kirmizi)}
+.t-yukleniyor{margin-top:22px;color:var(--soluk);font-size:15px}
+</style>
+<span class="pil pil-a" style="text-transform:uppercase;letter-spacing:.04em" id="t-etiket">Sonucunuz</span>
+<h1 tabindex="-1" style="font-size:clamp(28px,4.5vw,38px);line-height:1.15;margin-top:18px"><span class="yer"></span> <span class="is-kucuk"></span> arayanlar bugün kimi görüyor?</h1>
+<p style="font-size:16px;color:var(--yazi3);margin:14px 0 0;line-height:1.6" id="t-aciklama">Az önce Google Haritalar'a ve yapay zekâya bir müşteri gibi sorduk. Bunlar gerçek sonuçlar.</p>
+<div id="t-gercek">
+<div class="t-grid">
+<div class="t-kutu" id="t-harita-kutu"><h2>Google Haritalar'da ilk 5</h2><p class="t-not" id="t-harita-not"></p><ol class="t-liste" id="t-harita"></ol></div>
+<div class="t-kutu" id="t-yz-kutu"><h2>Yapay zekânın önerdikleri (Gemini)</h2><p class="t-not" id="t-yz-soru"></p><ol class="t-liste" id="t-yz"></ol><p class="t-not" style="margin:10px 0 0">Yapay zekâ bazen gerçekte olmayan işletmeleri de önerebilir. Doğru bilgiyle her yerde görünen işletmeyi daha çok önerir.</p></div>
+</div>
+<div class="t-kutu t-ben">
+<form id="t-ben-form" novalidate>
+<label for="t-ad">Siz bu listelerde var mısınız? İşletmenizin adını yazın</label>
+<div class="satir-form"><input id="t-ad" type="text" autocomplete="organization" placeholder="Örnek: Pati Veteriner" maxlength="80"><button type="submit" class="btn btn-amber">Bakalım</button></div>
+</form>
+<p class="t-sonuc" id="t-ben-sonuc" role="status" aria-live="polite"></p>
+</div>
+</div>
+<div id="t-yedek" hidden>
 <div class="ucgrid" style="margin-top:24px">
 <div class="sonuc-kutu"><div style="font-size:13px;color:var(--soluk);font-weight:700">Google Haritalar</div><div style="font-family:var(--baslik);font-weight:800;font-size:26px;margin-top:6px">?. sıra</div></div>
 <div class="sonuc-kutu"><div style="font-size:13px;color:var(--soluk);font-weight:700">Google arama</div><div style="font-family:var(--baslik);font-weight:800;font-size:26px;margin-top:6px">?. sıra</div></div>
 <div class="sonuc-kutu"><div style="font-size:13px;color:var(--soluk);font-weight:700">Yapay zekâ (Gemini)</div><div style="font-family:var(--baslik);font-weight:800;font-size:26px;margin-top:6px">% ?</div></div>
 </div>
+</div>
 <div class="form-koyu">
 <form id="test-form" class="form" novalidate>
-<label class="b" for="t-eposta" style="font-size:15px">Gerçek sonucunuz hazır olunca size yazalım</label>
+<label class="b" for="t-eposta" style="font-size:15px">Görünür açılınca sizi her hafta ölçüp ne yapacağınızı yazalım</label>
 <div class="satir-form">
 <input id="t-eposta" type="email" autocomplete="email" inputmode="email" placeholder="ornek@isletmeniz.com" required>
 <button type="submit" class="btn btn-amber">Bekleme listesine katıl</button>
@@ -114,7 +152,7 @@
 </form>
 <div class="tesekkur" hidden>
 <strong>Teşekkürler, listedesiniz.</strong>
-<p style="margin:6px 0 0;font-size:15px">Sonucunuz hazır olunca <span class="adres"></span> adresine yazacağız.</p>
+<p style="margin:6px 0 0;font-size:15px">Görünür açılınca <span class="adres"></span> adresine yazacağız.</p>
 </div>
 </div>
 <div style="margin-top:22px;background:var(--kart);border:1px solid var(--cizgi2);border-radius:20px;padding:20px"><b style="font-size:16px">Ya da hemen hesabınızı açın</b><p style="margin:6px 0 14px;color:var(--yazi3);font-size:14px">Cevaplarınız kuruluma aktarılır, aynı soruları tekrar sormayız.</p><a href="giris.html#kayit" class="btn btn-cizgi">Ücretsiz hesap aç</a></div>
