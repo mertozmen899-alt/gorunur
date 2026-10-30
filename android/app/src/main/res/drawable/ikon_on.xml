@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sitedeki favicon ile aynı işaret: ortada halka, dört yönde kısa çizgi -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M46,54 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0 M54,30 L54,38 M54,70 L54,78 M30,54 L38,54 M70,54 L78,54"
+        android:strokeColor="@color/ikon_cizgi"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+</vector>

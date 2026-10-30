@@ -1,0 +1,58 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Her GitHub derlemesi bir öncekinden büyük sürüm numarası alır, böylece yeni APK eskisinin üstüne kurulur.
+def derlemeNo = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as Integer
+def anahtarDosyasi = System.getenv('GORUNUR_KEYSTORE')
+
+android {
+    namespace 'com.gorunur.app'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.gorunur.app'
+        minSdk 26
+        targetSdk 35
+        versionCode derlemeNo
+        versionName "1.0.${derlemeNo}"
+        // Uygulama açılınca gidilen sayfa. Kendi alan adı alınınca burası değişir.
+        buildConfigField 'String', 'BASLANGIC', '"https://mertozmen899-alt.github.io/gorunur/panel.html"'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        if (anahtarDosyasi) {
+            kalici {
+                storeFile file(anahtarDosyasi)
+                storePassword System.getenv('GORUNUR_KEYSTORE_SIFRE')
+                keyAlias 'gorunur'
+                keyPassword System.getenv('GORUNUR_KEYSTORE_SIFRE')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig anahtarDosyasi ? signingConfigs.kalici : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+}

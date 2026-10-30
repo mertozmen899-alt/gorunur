@@ -1,0 +1,72 @@
+name: Android uygulaması (APK)
+
+# Uygulama sitenin canlı halini açtığı için sitedeki güncellemeler için yeni APK gerekmez.
+# Bu iş sadece uygulamanın kendisi (android/ klasörü) değişince ya da elle başlatılınca çalışır.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+
+      - name: Kalıcı imza anahtarı (varsa)
+        env:
+          ANAHTAR: ${{ secrets.GORUNUR_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$ANAHTAR" ]; then
+            echo "$ANAHTAR" | base64 -d > "$RUNNER_TEMP/gorunur.jks"
+            echo "GORUNUR_KEYSTORE=$RUNNER_TEMP/gorunur.jks" >> "$GITHUB_ENV"
+            echo "Kalıcı anahtarla imzalanacak."
+          else
+            echo "::warning::Kalıcı imza anahtarı eklenmemiş, bu APK geçici anahtarla imzalandı."
+          fi
+
+      - name: APK üret
+        working-directory: android
+        env:
+          GORUNUR_KEYSTORE_SIFRE: ${{ secrets.GORUNUR_KEYSTORE_SIFRE }}
+        run: gradle --no-daemon --stacktrace assembleRelease
+
+      - name: Dosyayı adlandır
+        run: cp android/app/build/outputs/apk/release/app-release.apk Gorunur.apk
+
+      - name: İndirme sayfasına koy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPO: ${{ github.repository }}
+        run: |
+          NOT="Sürüm 1.0.${{ github.run_number }} ($(date -u +%Y-%m-%d)). Uygulama siteyi canlı açar: sitedeki her güncelleme uygulamada anında görünür."
+          if gh release view android --repo "$DEPO" > /dev/null 2>&1; then
+            gh release upload android Gorunur.apk --clobber --repo "$DEPO"
+            gh release edit android --notes "$NOT" --repo "$DEPO"
+          else
+            gh release create android Gorunur.apk --title "Görünür Android uygulaması" --notes "$NOT" --repo "$DEPO"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Gorunur-apk
+          path: Gorunur.apk
