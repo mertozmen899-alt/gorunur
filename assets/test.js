@@ -119,7 +119,7 @@
       if (i > satirlar.length) {
         clearInterval(t);
         setTimeout(function () {
-          var yer = durum.sehir === 'Türkiye geneli' ? 'Türkiye’de' : durum.sehir.split(',')[0].trim() + '’de';
+          var yer = durum.sehir === 'Türkiye geneli' ? 'Türkiye’de' : (function (ad) { var k = ad.toLocaleLowerCase('tr'), u = k.match(/[aıoueiöü]/g) || ['e']; return ad + '’' + (/[çfhkpsşt]$/.test(k) ? 't' : 'd') + ('aıou'.indexOf(u[u.length - 1]) >= 0 ? 'a' : 'e'); })(durum.sehir.split(',')[0].trim());
           document.querySelector('#s5 .yer').textContent = yer;
           document.querySelector('#s5 .is-kucuk').textContent = durum.is.toLocaleLowerCase('tr');
           try { sessionStorage.setItem('gorunur_test', JSON.stringify({ mod: durum.mod.slice(0, 3), sehir: durum.sehir, is: durum.is })); } catch (e) {}

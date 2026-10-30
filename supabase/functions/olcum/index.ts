@@ -130,7 +130,7 @@ async function serp(params: Record<string, string>, anahtar: string) {
 }
 
 let aramaKotasiYok = false; // bir istekte arama kotası yoksa diğer sorularda tekrar denenmez
-async function gemini(soru: string, anahtar: string, modeller: string[], jsonMod = false) {
+async function gemini(soru: string, anahtar: string, modeller: string[], jsonMod = false, sicaklik?: number) {
   let sonHata = "";
   for (const model of modeller) {
     // Önce Google arama destekli dene; arama ücretsiz kotada yoksa aramasız sor
@@ -144,7 +144,7 @@ async function gemini(soru: string, anahtar: string, modeller: string[], jsonMod
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: soru }] }],
           ...(aramali && !jsonMod ? { tools: [{ google_search: {} }] } : {}),
-          generationConfig: { temperature: jsonMod ? 0.2 : 0.4, maxOutputTokens: 1500, ...(jsonMod ? { responseMimeType: "application/json" } : {}) },
+          generationConfig: { temperature: sicaklik ?? (jsonMod ? 0.2 : 0.4), maxOutputTokens: 1500, ...(jsonMod ? { responseMimeType: "application/json" } : {}) },
         }),
         signal: AbortSignal.timeout(jsonMod ? 25000 : 35000),
       });
@@ -346,34 +346,47 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     }
   };
 
-  // 3) Yapay zekâ: 10 müşteri sorusu; kaç cevapta adınız ve rakiplerin adı geçiyor
+  // 3) Yapay zekâ: 6 müşteri sorusu, her biri 3 kez (yapay zekâ her seferinde farklı cevap verebilir).
+  //    Sonuç bir orandır: her 100 cevabın kaçında adınız geçiyor.
   const yz = async () => {
     if (!GEM) return;
     // Ücretsiz planda Google arama aracı yok; GEMINI_ARAMALI=1 ise (ücretli plan) aramalı sorar
     aramaKotasiYok = (Deno.env.get("GEMINI_ARAMALI") || "") !== "1";
     const yer = turkiye ? "Türkiye'de" : `${semtKisa}${sehir ? ", " + sehir : ""} bölgesinde`;
     const cekir = isK.split(/\s+/).filter((k) => k && !EKLER.has(k)).join(" ") || isK;
-    const sorular = tekillestir([
+    const TEKRAR = Math.min(5, Math.max(1, Number(Deno.env.get("YZ_TEKRAR") || "3")));
+    const SORU_SAYISI = Math.min(10, Math.max(3, Number(Deno.env.get("YZ_SORU") || "6")));
+    const sablon = [
       `${yer} iyi bir ${isK} önerir misin?`,
       `${yer} en çok tavsiye edilen ${isK} hangileri?`,
       `${yer} ${isK} arıyorum, güvenilir bir yer söyler misin?`,
-      `${yer} uygun fiyatlı ${cekir} için nereye gitmeliyim?`,
       `${yer} kaliteli ${cekir} için hangi işletmeyi önerirsin?`,
-      ...kelimeler.map((k) => `"${k}" diye arıyorum. Hangi işletmeleri önerirsin?`),
-    ]).slice(0, 10);
+    ];
+    const kelimeSorulari = kelimeler.map((k) => `"${k}" diye arıyorum. Hangi işletmeleri önerirsin?`);
+    // Şablon ve arama kelimelerini karıştır: 3 şablon + kelimeler, sonra kalan şablonlar
+    const sorular = tekillestir([...sablon.slice(0, 3), ...kelimeSorulari.slice(0, 3), ...sablon.slice(3), ...kelimeSorulari.slice(3)]).slice(0, SORU_SAYISI);
     const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.5-flash"].filter(Boolean) as string[];
     const KISA = " Kısa cevap ver: 3-5 işletme adı ve her biri için tek cümle.";
-    const cevaplar: Array<Record<string, unknown>> = new Array(sorular.length);
-    // Dakikalık sınıra takılmamak için aynı anda en fazla 4 soru
+    const isler: Array<{ soru: string; tekrar: number }> = [];
+    for (let t = 1; t <= TEKRAR; t++) for (const soru of sorular) isler.push({ soru, tekrar: t });
+    const cevaplar: Array<Record<string, unknown>> = new Array(isler.length);
+    const bekle = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    // Dakikalık sınıra takılmamak için aynı anda en fazla 3 istek; kota dolarsa 20 sn bekleyip bir kez daha dene
     let sira = 0;
-    await Promise.all(Array.from({ length: 4 }, async () => {
-      while (sira < sorular.length) {
-        const n = sira++, soru = sorular[n];
-        try {
-          const { model, metin, aramali } = await gemini(soru + KISA, GEM, modeller);
-          cevaplar[n] = { soru, model, aramali, geciyor: adGeciyor(metin, isl.ad, haric), ozet: metin.slice(0, 1200) };
-        } catch (e) {
-          cevaplar[n] = { soru, hata: /timed out|aborted/i.test(String((e as Error).message)) ? "Yapay zekâ zamanında cevap vermedi." : String((e as Error).message).slice(0, 200) };
+    await Promise.all(Array.from({ length: 3 }, async () => {
+      while (sira < isler.length) {
+        const n = sira++, { soru, tekrar } = isler[n];
+        for (let deneme = 0; deneme < 2; deneme++) {
+          try {
+            // Gerçek kullanıcılar gibi her seferinde biraz farklı cevap alabilmek için sıcaklık 1
+            const { model, metin, aramali } = await gemini(soru + KISA, GEM, modeller, false, 1);
+            cevaplar[n] = { soru, tekrar, model, aramali, geciyor: adGeciyor(metin, isl.ad, haric), ozet: metin.slice(0, 1000) };
+            break;
+          } catch (e) {
+            const m = String((e as Error).message);
+            cevaplar[n] = { soru, tekrar, hata: /timed out|aborted|zaman aşımı/i.test(m) ? "Yapay zekâ zamanında cevap vermedi." : m.slice(0, 200) };
+            if (deneme === 0 && /: kota\)$/.test(m)) await bekle(20000); else break;
+          }
         }
       }
     }));
@@ -382,7 +395,9 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     s.yz_gecen = basarili.filter((c) => (c as { geciyor: boolean }).geciyor).length;
     s.yz_cevaplar = cevaplar;
     const hataliYz = cevaplar.filter((c) => c && "hata" in c);
-    if (hataliYz.length) hatalar.push(`Yapay zekâ: ${hataliYz.length} soru sorulamadı (${String(hataliYz[0].hata).slice(0, 140)})`);
+    // Birkaç cevabın eksik olması ölçümü bozmaz; yarıdan fazlası eksikse uyar
+    if (hataliYz.length && hataliYz.length * 2 >= cevaplar.length) hatalar.push(`Yapay zekâ: ${cevaplar.length} cevaptan ${hataliYz.length} tanesi alınamadı (${String(hataliYz[0].hata).slice(0, 140)})`);
+    else if (hataliYz.length) console.log("yz eksik cevap", hataliYz.length, String(hataliYz[0].hata).slice(0, 140));
     yzMetinleri = basarili.map((c) => String((c as { ozet: string }).ozet || ""));
   };
   let yzMetinleri: string[] = [];

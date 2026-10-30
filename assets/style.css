@@ -304,6 +304,7 @@ h1,h2,h3{margin:0}
 .yz-cevap{background:var(--kart2);border:1px solid var(--cizgi3);border-radius:16px;padding:0 16px}
 .yz-cevap summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 0;font-weight:700;font-size:15px}
 .yz-cevap summary::-webkit-details-marker{display:none}
+.yz-tekrar{margin:12px 0 4px;font-size:12px;font-weight:800;color:var(--yazi3);text-transform:uppercase;letter-spacing:.04em}
 .yz-metin{margin:0 0 16px;color:var(--yazi2);font-size:14px;line-height:1.6;white-space:pre-line}
 @media (max-width:560px){.uc-kutu{grid-template-columns:1fr}.sayi-kutu b{font-size:28px}}
 @media (max-width:560px){.tablo th,.tablo td{padding:11px 10px}}

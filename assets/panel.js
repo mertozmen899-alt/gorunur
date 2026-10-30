@@ -8,7 +8,14 @@
   var oturum, isletme;
 
   function el(tag, metin, sinif) { var e = document.createElement(tag); if (metin != null) e.textContent = metin; if (sinif) e.className = sinif; return e; }
-  function yerde(semt) { return semt === 'Türkiye geneli' ? 'Türkiye’de' : (semt || '').split(',')[0].trim() + '’de'; }
+  // Türkçe bulunma eki: son ünlüye göre -da/-de, sert ünsüzden sonra -ta/-te (Çorum’da, Kadıköy’de, Bağcılar’da, Ahmet’te)
+  function yerde(semt) {
+    if (semt === 'Türkiye geneli') return 'Türkiye’de';
+    var ad = (semt || '').split(',')[0].trim(), kucuk = ad.toLocaleLowerCase('tr');
+    var unluler = kucuk.match(/[aıoueiöü]/g) || ['e'], son = unluler[unluler.length - 1];
+    var kalin = 'aıou'.indexOf(son) >= 0, sert = /[çfhkpsşt]$/.test(kucuk);
+    return ad + '’' + (sert ? 't' : 'd') + (kalin ? 'a' : 'e');
+  }
   function gosterLink(url) { return (url || '').replace(/^https?:\/\//, '').replace(/\/$/, ''); }
   function sayi(x) { return x == null ? '-' : Number(x).toLocaleString('tr-TR'); }
   function tarih(t) { return new Date(t).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }); }
@@ -294,6 +301,20 @@
       var y = Math.round(100 * o.yz_gecen / o.yz_soru_sayisi); return { v: y, bos: !y, yazi: '%' + y, t: kisaTarih(o.baslangic) };
     }), { min: 0, max: 100, cizgiler: [0, 50, 100], etiketle: function (v) { return '%' + v; }, etiket: 'Yapay zekâ önerme oranı' });
   }
+  function yzYuzde(o) { return o && o.yz_soru_sayisi ? Math.round(100 * (o.yz_gecen || 0) / o.yz_soru_sayisi) : null; }
+  function yzGruplar(o) {
+    var g = [], bul = {};
+    (o.yz_cevaplar || []).forEach(function (c) { if (!c) return; if (!bul[c.soru]) { bul[c.soru] = { soru: c.soru, cevaplar: [] }; g.push(bul[c.soru]); } bul[c.soru].cevaplar.push(c); });
+    return g;
+  }
+  // Son 4 haftadaki ölçümlerin ortalama önerilme oranı (en az 2 ölçüm varsa)
+  function dortHafta(o) {
+    var son = new Date(o.baslangic).getTime();
+    var l = gecmis.concat([o]).filter(function (x, k, a) { return x.yz_soru_sayisi && son - new Date(x.baslangic).getTime() < 28 * 864e5 && son >= new Date(x.baslangic).getTime() && a.findIndex(function (y) { return y === x || (x.id && y.id === x.id); }) === k; });
+    if (l.length < 2) return null;
+    var t = 0, n = 0; l.forEach(function (x) { t += x.yz_gecen || 0; n += x.yz_soru_sayisi; });
+    return { yuzde: Math.round(100 * t / n), olcum: l.length };
+  }
   function payCiz(o, i) {
     var kutu = $('yz-pay'); kutu.innerHTML = '';
     var n = o.yz_soru_sayisi || 0;
@@ -305,11 +326,11 @@
       var d = el('div', null, 'pay-satir' + (r.siz ? ' siz' : ''));
       d.appendChild(el('span', r.ad, 'pay-ad'));
       var cubuk = el('span', null, 'pay-cubuk'); var dolu = el('i'); dolu.style.width = Math.max(2, Math.round(100 * r.sayi / n)) + '%'; cubuk.appendChild(dolu); d.appendChild(cubuk);
-      d.appendChild(el('span', r.sayi + ' / ' + n, 'pay-sayi'));
+      d.appendChild(el('span', '%' + Math.round(100 * r.sayi / n), 'pay-sayi'));
       kutu.appendChild(d);
     });
     var onde = (o.yz_rakipler || []).filter(function (r) { return r.sayi > (o.yz_gecen || 0); });
-    $('yz-pay-not').textContent = 'Yapay zekâya müşteri gibi ' + n + ' soru sorduk ve cevaplarda hangi işletmelerin adı geçiyor saydık. ' +
+    $('yz-pay-not').textContent = 'Yapay zekâdan müşteri gibi ' + n + ' cevap aldık ve her işletmenin kaç cevapta önerildiğini saydık (yüzde olarak). ' +
       (onde.length ? onde.length + ' rakibiniz sizden daha çok öneriliyor.' : (o.yz_gecen ? 'Rakiplerinizden daha çok öneriliyorsunuz.' : 'Rakiplerinizin adı da geçmiyorsa yapay zekâ bu bölgeyi henüz tanımıyor; ilk öne çıkan siz olabilirsiniz.'));
   }
 
@@ -324,15 +345,16 @@
     else if (o.harita_sonuclar) c = '"' + o.harita_sorgu + '" aramasında Google Haritalar’ın ilk 20 sonucunda yoksunuz.';
     else c = 'Haritalar ölçümü yapılamadı.';
     $('sonuc-cumle').textContent = c;
+    var gr = yzGruplar(o), tekrarli = gr.length && gr.length < o.yz_soru_sayisi;
     $('sonuc-alt').textContent = o.yz_soru_sayisi
-      ? 'Yapay zekâya sorduğumuz ' + o.yz_soru_sayisi + ' sorunun ' + o.yz_gecen + ' tanesinde adınız geçti.' + (b.bulundu && b.yorum != null ? ' Google’da ' + sayi(b.yorum) + ' yorumunuz ve ' + String(b.puan || '-').replace('.', ',') + ' puanınız var.' : '')
+      ? (tekrarli ? 'Yapay zekâya ' + gr.length + ' müşteri sorusunu birkaç kez sorduk (' + o.yz_soru_sayisi + ' cevap). Adınız her 100 cevapta ' + yzYuzde(o) + ' kez geçti.' : 'Yapay zekâya sorduğumuz ' + o.yz_soru_sayisi + ' sorunun ' + o.yz_gecen + ' tanesinde adınız geçti.') + (b.bulundu && b.yorum != null ? ' Google’da ' + sayi(b.yorum) + ' yorumunuz ve ' + String(b.puan || '-').replace('.', ',') + ' puanınız var.' : '')
       : (b.bulundu && b.yorum != null ? 'Google’da ' + sayi(b.yorum) + ' yorumunuz ve ' + String(b.puan || '-').replace('.', ',') + ' puanınız var.' : '');
 
     var onceki = gecmis.filter(function (x) { return x !== o && (!o.id || x.id !== o.id) && new Date(x.baslangic) < new Date(o.baslangic); })[0];
     var dg = $('degisim');
     if (onceki) {
       var sirayaz = function (x) { return x.harita_sira ? x.harita_sira + '.' : 'ilk 20’de yok'; };
-      var oran = function (x) { return x.yz_soru_sayisi ? x.yz_gecen + '/' + x.yz_soru_sayisi : '-'; };
+      var oran = function (x) { return x.yz_soru_sayisi ? '%' + yzYuzde(x) : '-'; };
       var hD = (onceki.harita_sira || 0) === (o.harita_sira || 0) ? 'değişmedi (' + sirayaz(o) + ')' : sirayaz(onceki) + ' → ' + sirayaz(o);
       var yD = oran(onceki) === oran(o) ? 'değişmedi (' + oran(o) + ')' : oran(onceki) + ' → ' + oran(o);
       var ayni = hD.indexOf('değişmedi') === 0 && yD.indexOf('değişmedi') === 0;
@@ -352,8 +374,9 @@
     $('k-arama').textContent = o.arama_sira ? o.arama_sira + '.' : (o.arama_sonuclar ? 'Yok' : '-');
     var aOlculen = ks.filter(function (k) { return 'arama_sira' in k; });
     $('k-arama-not').textContent = aOlculen.length > 1 && !o.arama_sira && !as.yerel_kutuda ? aOlculen.length + ' aramada da ilk sonuçlarda değilsiniz' : o.arama_sira ? 'normal sonuçlarda' : (as.yerel_kutuda ? 'ama harita kutusunda ' + as.yerel_kutuda + '.' : (o.arama_sonuclar ? 'ilk sonuçlarda değilsiniz' : 'ölçülemedi'));
-    $('k-yz').textContent = o.yz_soru_sayisi ? o.yz_gecen + ' / ' + o.yz_soru_sayisi : '-';
-    $('k-yz-not').textContent = o.yz_soru_sayisi ? 'cevapta adınız geçti (%' + Math.round(100 * o.yz_gecen / o.yz_soru_sayisi) + ')' : 'ölçülemedi';
+    var dh = dortHafta(o);
+    $('k-yz').textContent = o.yz_soru_sayisi ? '%' + yzYuzde(o) : '-';
+    $('k-yz-not').textContent = o.yz_soru_sayisi ? 'her 100 cevapta ' + yzYuzde(o) + ' kez adınız geçti' + (dh ? '. 4 haftalık ortalama: %' + dh.yuzde : '') : 'ölçülemedi';
     ['k-harita', 'k-arama', 'k-yz'].forEach(function (id) { $(id).className = ''; });
     if (o.harita_sira && o.harita_sira <= 3) $('k-harita').className = 'iyi';
     if (o.yz_gecen > 0) $('k-yz').className = 'iyi';
@@ -394,15 +417,20 @@
     var yl = $('yz-liste'); yl.innerHTML = '';
     var aramasiz = (o.yz_cevaplar || []).some(function (c) { return c.aramali === false; });
     $('yz-not').textContent = aramasiz
-      ? 'Yapay zekâya müşteri gibi sorduk. Bu ölçümde internette arama yapmadan kendi bilgisinden cevapladı. Cevapların tamamını açıp okuyabilirsiniz.'
+      ? 'Yapay zekâya müşteri gibi sorduk. Yapay zekâ aynı soruya her seferinde farklı cevap verebilir; bu yüzden her soruyu birkaç kez soruyoruz. Bu ölçümde internette arama yapmadan kendi bilgisinden cevapladı. Cevapların tamamını açıp okuyabilirsiniz.'
       : 'Google aramasıyla çalışan bir yapay zekâya müşteri gibi sorduk. Cevapların tamamını açıp okuyabilirsiniz.';
-    (o.yz_cevaplar || []).forEach(function (c) {
+    yzGruplar(o).forEach(function (g) {
+      var ok = g.cevaplar.filter(function (c) { return !c.hata; }), gec = ok.filter(function (c) { return c.geciyor; }).length;
       var d = el('details', null, 'yz-cevap');
       var s = el('summary');
-      s.appendChild(el('span', '"' + c.soru + '"', 'yz-soru'));
-      s.appendChild(el('span', c.hata ? 'Sorulamadı' : (c.geciyor ? 'Adınız geçti' : 'Adınız geçmedi'), 'pil ' + (c.hata ? 'pil-a' : (c.geciyor ? 'pil-y' : 'pil-k'))));
+      s.appendChild(el('span', '"' + g.soru + '"', 'yz-soru'));
+      var yazi = !ok.length ? 'Sorulamadı' : (g.cevaplar.length === 1 ? (gec ? 'Adınız geçti' : 'Adınız geçmedi') : ok.length + ' cevapta ' + gec + ' kez');
+      s.appendChild(el('span', yazi, 'pil ' + (!ok.length ? 'pil-a' : (gec ? 'pil-y' : 'pil-k'))));
       d.appendChild(s);
-      d.appendChild(el('p', c.hata ? c.hata : (c.ozet || '(boş cevap)'), 'yz-metin'));
+      g.cevaplar.forEach(function (c, k) {
+        if (g.cevaplar.length > 1) d.appendChild(el('p', (k + 1) + '. cevap' + (c.hata ? '' : (c.geciyor ? ' · adınız geçti' : ' · adınız geçmedi')), 'yz-tekrar'));
+        d.appendChild(el('p', c.hata ? c.hata : (c.ozet || '(boş cevap)'), 'yz-metin'));
+      });
       yl.appendChild(d);
     });
     if (!yl.children.length) yl.appendChild(el('p', 'Yapay zekâ ölçümü yapılamadı.', 'kart-alt'));
