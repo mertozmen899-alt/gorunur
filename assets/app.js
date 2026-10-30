@@ -151,6 +151,22 @@
       izlenen.forEach(function (e) { e.classList.add('lp-gor'); });
     }
 
+    // 1b) Bir kez beliren bölümler (.lp-bir): ekranın altındaysa gizli bekler, ilk girişte sırayla yükselir
+    if (hareket && IO) {
+      var birler = document.querySelectorAll('.lp-bir');
+      var bio = new IntersectionObserver(function (g) {
+        g.forEach(function (x) {
+          if (!x.isIntersecting) return;
+          bio.unobserve(x.target);
+          x.target.classList.remove('lp-bekle'); x.target.classList.add('lp-geldi');
+        });
+      }, { rootMargin: '0px 0px -12% 0px' });
+      birler.forEach(function (e) {
+        if (e.getBoundingClientRect().top < innerHeight) return; // ilk ekranda olan hemen görünür
+        e.classList.add('lp-bekle'); bio.observe(e);
+      });
+    }
+
     // 2) Başlıkta dönen kelime (Google'da / Haritalar'da / yapay zekâda)
     var don = hero.querySelector('.lp-don');
     if (don) {
@@ -213,18 +229,27 @@
         var nokta = document.createElement('span');
         nokta.className = 'lp-wa-yaziyor'; nokta.setAttribute('aria-hidden', 'true');
         nokta.innerHTML = '<i></i><i></i><i></i>';
+        // Başlıktaki "çevrimiçi" yazısı, noktalar görünürken "yazıyor…" olur
+        var durum = document.querySelector('.lp-wa .tel-alt'), durumIlk = durum ? durum.textContent : '';
+        var yaziyor = function (v) { if (!durum) return; durum.textContent = v ? 'yazıyor…' : durumIlk; durum.classList.toggle('yaziyor', v); };
         var sonraki = function () {
           if (k >= ogeler.length) { mesajlar.classList.remove('lp-sira'); return; }
           var o = ogeler[k++];
           if (o.classList.contains('gelen')) {
             nokta.style.left = o.offsetLeft + 'px'; nokta.style.top = o.offsetTop + 'px';
-            mesajlar.appendChild(nokta);
+            mesajlar.appendChild(nokta); yaziyor(true);
             setTimeout(function () {
               if (nokta.parentNode) nokta.parentNode.removeChild(nokta);
-              o.classList.add('lp-cikti'); setTimeout(sonraki, 450);
+              yaziyor(false);
+              o.classList.add('lp-cikti'); setTimeout(sonraki, o.classList.contains('wa-kart') ? 800 : 450);
             }, 900);
+          } else if (o.classList.contains('giden')) {
+            // Giden mesaj: önce gri tik, kısa süre sonra "okundu" (mavi tik)
+            o.classList.add('lp-cikti');
+            setTimeout(function () { o.classList.add('lp-okundu'); }, 600);
+            setTimeout(sonraki, 1000);
           } else {
-            o.classList.add('lp-cikti'); setTimeout(sonraki, o.classList.contains('giden') ? 700 : 300);
+            o.classList.add('lp-cikti'); setTimeout(sonraki, 300);
           }
         };
         setTimeout(sonraki, 200);
