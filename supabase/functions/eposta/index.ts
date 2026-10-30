@@ -1,6 +1,10 @@
 // Görünür e-posta gönderici
-// 1) { tur: "bekleme", id }  (veritabanı tetikleyicisi çağırır, x-gorunur-cron başlığıyla): bekleme listesi onay e-postası
-// 2) { tur: "cikis", anahtar } (cikis.html çağırır): kişiyi bekleme listesinden siler
+// Bekleme listesi çift onaylıdır (double opt-in):
+// 1) { tur: "bekleme", id }  (veritabanı tetikleyicisi çağırır, x-gorunur-cron başlığıyla): "Kaydınızı onaylayın" e-postası
+//    (bağlantı: SITE + "onay.html?a=<onay_anahtari>")
+// 2) { tur: "onay", anahtar } (onay.html çağırır, herkese açık, 32 haneli onay anahtarıyla): kaydı onaylar, hoş geldin e-postasını yollar
+// 3) { tur: "cikis", anahtar } (cikis.html çağırır): kişiyi bekleme listesinden siler
+// 4) { tur: "bekleyenler" } (x-gorunur-cron): onaylı ama hoş geldin almamışlara hoş geldin, onaysız ve onay e-postası gitmemişlere onay e-postası
 // Gönderim yolu: RESEND_API_KEY + EPOSTA_GONDEREN varsa Resend (alan adı alınınca), yoksa Gmail (GMAIL_ADRES + GMAIL_UYGULAMA_SIFRESI, 465 portu).
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import nodemailer from "npm:nodemailer@6.9.16";
@@ -87,6 +91,68 @@ Verilerinizi nasıl kullandığımız: <a href="${SITE}aydinlatma.html" style="c
   return { konu, duz, html, cikis };
 }
 
+function onayMetni(r: Record<string, any>) {
+  const onay = `${SITE}onay.html?a=${encodeURIComponent(r.onay_anahtari)}`;
+  const cikis = `${SITE}cikis.html?a=${encodeURIComponent(r.cikis_anahtari)}`;
+  const konu = "Kaydınızı onaylayın";
+  const duz = [
+    "Merhaba,",
+    "",
+    `${r.eposta} adresiyle Görünür bekleme listesine katılmak istendi.`,
+    "Kaydınızı tamamlamak için aşağıdaki bağlantıyı açın:",
+    onay,
+    "",
+    "Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz. Onaylanmayan adreslere başka e-posta göndermeyiz.",
+    "Kaydınızın hemen silinmesini isterseniz: " + cikis,
+    "",
+    "Görünür",
+    SITE,
+  ].join("\n");
+  const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${konu}</title></head>
+<body style="margin:0;padding:0;background:#F6F7F9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#161A22">
+<div style="display:none;max-height:0;overflow:hidden">Görünür bekleme listesine katılmak için tek tıkla onaylayın.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F7F9;padding:32px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:1px solid #E2E5EB;border-radius:20px">
+<tr><td style="padding:28px 32px 8px">
+<table role="presentation" cellpadding="0" cellspacing="0"><tr>
+<td style="width:34px;height:34px;border-radius:10px;background:#FFBD14;text-align:center;font-size:18px;line-height:34px;font-weight:800;color:#111318">◎</td>
+<td style="padding-left:10px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:#161A22">Görünür</td></tr></table>
+</td></tr>
+<tr><td style="padding:16px 32px 0">
+<h1 style="margin:0;font-size:26px;line-height:1.2;font-weight:800;letter-spacing:-.02em;color:#161A22">Kaydınızı onaylayın</h1>
+<p style="margin:14px 0 0;font-size:16px;line-height:1.6;color:#343B48"><b>${kacis(r.eposta)}</b> adresiyle Görünür bekleme listesine katılmak istendi. Kaydınızı tamamlamak için aşağıdaki düğmeye tıklayın.</p>
+</td></tr>
+<tr><td style="padding:24px 32px 8px">
+<a href="${onay}" style="display:inline-block;background:#FFBD14;color:#111318;text-decoration:none;font-weight:800;font-size:15px;padding:13px 22px;border-radius:999px">Kaydımı onayla</a>
+</td></tr>
+<tr><td style="padding:16px 32px 28px">
+<p style="margin:0;font-size:14px;line-height:1.6;color:#5B6375">Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz. Onaylanmayan adreslere başka e-posta göndermeyiz.</p>
+</td></tr>
+</table>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px"><tr><td style="padding:18px 20px;font-size:12px;line-height:1.6;color:#6A7385;text-align:center">
+Kaydınızın hemen silinmesini isterseniz <a href="${cikis}" style="color:#1E3A64">listeden çıkın</a>.
+Verilerinizi nasıl kullandığımız: <a href="${SITE}aydinlatma.html" style="color:#1E3A64">aydınlatma metni</a>.
+</td></tr></table>
+</td></tr></table>
+</body></html>`;
+  return { konu, duz, html, cikis };
+}
+
+// Onay e-postası (onaylanmamış kayıt) ya da hoş geldin e-postası (onaylı kayıt) gönderir ve sonucu kaydeder
+async function kayitGonder(db: any, r: Record<string, any>, tur: "onay" | "hosgeldin") {
+  const m = tur === "onay" ? onayMetni(r) : beklemeMetni(r);
+  try {
+    const yol = await gonder(r.eposta, m.konu, m.duz, m.html, m.cikis);
+    await db.from("bekleme_listesi").update(tur === "onay" ? { onay_gonderildi: new Date().toISOString(), eposta_hata: null } : { eposta_gonderildi: new Date().toISOString(), eposta_hata: null }).eq("id", r.id);
+    return { tamam: true, yol };
+  } catch (e) {
+    const h = String((e as Error).message).slice(0, 300);
+    console.log("eposta hatasi", tur, h);
+    await db.from("bekleme_listesi").update({ eposta_hata: h }).eq("id", r.id);
+    return { tamam: false, hata: h };
+  }
+}
+
 async function gonder(alici: string, konu: string, duz: string, html: string, cikis: string) {
   const headers = { "List-Unsubscribe": `<${cikis}>` };
   if (env("RESEND_API_KEY") && env("EPOSTA_GONDEREN")) {
@@ -119,37 +185,49 @@ Deno.serve(async (req) => {
     return json({ tamam: true, silinen: (data || []).length });
   }
 
+  // Kayıt onayı (herkese açık, sadece gizli onay anahtarıyla): onaylar ve hoş geldin e-postasını yollar
+  if (g.tur === "onay") {
+    const a = String(g.anahtar || "");
+    if (!/^[a-f0-9]{32}$/.test(a)) return json({ hata: "Bağlantı geçersiz." }, 400);
+    const { data: yeni } = await db.from("bekleme_listesi").update({ onaylandi: true }).eq("onay_anahtari", a).eq("onaylandi", false).select("*");
+    const r = (yeni || [])[0];
+    if (!r) {
+      const { data: var_ } = await db.from("bekleme_listesi").select("id").eq("onay_anahtari", a).maybeSingle();
+      if (!var_) return json({ hata: "Bu bağlantı geçersiz ya da kayıt silinmiş." }, 404);
+      return json({ tamam: true, zaten: true });
+    }
+    if (!r.eposta_gonderildi) await kayitGonder(db, r, "hosgeldin");
+    return json({ tamam: true });
+  }
+
   // Geri kalan her şey yalnızca veritabanı tetikleyicisinden
   const k = req.headers.get("x-gorunur-cron") || "";
   const { data: ayar } = await db.from("cron_ayar").select("deger").eq("ad", "olcum_anahtari").maybeSingle();
   if (!k || !ayar || ayar.deger !== k) return json({ hata: "Yetkisiz" }, 401);
 
+  // Yeni kayıt: önce onay e-postası (hoş geldin e-postası ancak onaydan sonra gider)
   if (g.tur === "bekleme") {
     const { data: r } = await db.from("bekleme_listesi").select("*").eq("id", g.id).maybeSingle();
     if (!r) return json({ hata: "Kayıt yok" }, 404);
-    if (r.eposta_gonderildi && !g.yeniden) return json({ tamam: true, zaten: true });
-    const m = beklemeMetni(r);
-    try {
-      const yol = await gonder(r.eposta, m.konu, m.duz, m.html, m.cikis);
-      await db.from("bekleme_listesi").update({ eposta_gonderildi: new Date().toISOString(), eposta_hata: null }).eq("id", r.id);
-      return json({ tamam: true, yol });
-    } catch (e) {
-      const h = String((e as Error).message).slice(0, 300);
-      console.log("eposta hatasi", h);
-      await db.from("bekleme_listesi").update({ eposta_hata: h }).eq("id", r.id);
-      return json({ hata: h }, 502);
-    }
+    if (r.onaylandi) return json({ tamam: true, zaten: true });
+    if (r.onay_gonderildi && !g.yeniden) return json({ tamam: true, zaten: true });
+    const s = await kayitGonder(db, r, "onay");
+    return s.tamam ? json(s) : json({ hata: s.hata }, 502);
   }
-  // Ayar sonradan eklendiyse: e-postası gitmemiş kayıtlara gönder (en fazla 40)
+  // Ayar sonradan eklendiyse: onaylılardan hoş geldin almamışlara hoş geldin, onaysızlardan onay e-postası
+  // almamışlara onay e-postası gönder (toplam en fazla 40)
   if (g.tur === "bekleyenler") {
-    const { data: l } = await db.from("bekleme_listesi").select("*").is("eposta_gonderildi", null).order("id").limit(40);
+    const { data: hos } = await db.from("bekleme_listesi").select("*").eq("onaylandi", true).is("eposta_gonderildi", null).order("id").limit(40);
+    const kalan = 40 - (hos || []).length;
+    const { data: ony } = kalan > 0 ? await db.from("bekleme_listesi").select("*").eq("onaylandi", false).is("onay_gonderildi", null).order("id").limit(kalan) : { data: [] };
     let n = 0; const hatalar: string[] = [];
-    for (const r of l || []) {
-      const m = beklemeMetni(r);
-      try { await gonder(r.eposta, m.konu, m.duz, m.html, m.cikis); n++; await db.from("bekleme_listesi").update({ eposta_gonderildi: new Date().toISOString(), eposta_hata: null }).eq("id", r.id); }
-      catch (e) { hatalar.push(String((e as Error).message).slice(0, 120)); await db.from("bekleme_listesi").update({ eposta_hata: String((e as Error).message).slice(0, 300) }).eq("id", r.id); }
+    for (const [liste, tur] of [[hos || [], "hosgeldin"], [ony || [], "onay"]] as Array<[Record<string, any>[], "onay" | "hosgeldin"]>) {
+      for (const r of liste) {
+        const s = await kayitGonder(db, r, tur);
+        if (s.tamam) n++; else hatalar.push(String(s.hata).slice(0, 120));
+      }
     }
-    return json({ gonderilen: n, hatalar: hatalar.slice(0, 3) });
+    return json({ gonderilen: n, hosgeldin: (hos || []).length, onay: (ony || []).length, hatalar: hatalar.slice(0, 3) });
   }
   return json({ hata: "Bilinmeyen işlem" }, 400);
 });
