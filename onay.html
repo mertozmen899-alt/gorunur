@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Görünür haber listesi kaydınızı onaylayın.">
+<meta name="robots" content="noindex">
+<title>Kaydınızı onaylayın · Görünür</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<script>(function(){var t;try{t=localStorage.getItem('gorunur_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Yazı tipleri sayfanın çizilmesini bekletmez: önce sistem yazısıyla açılır, Google Fonts gelince yerine geçer -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap"></noscript>
+<link rel="stylesheet" href="assets/style.css?v=32">
+<script src="assets/tema.js?v=1" defer></script>
+</head>
+<body>
+<a class="atla" href="#icerik">İçeriğe geç</a>
+<main class="kap" id="icerik" tabindex="-1" style="max-width:560px;padding-top:72px;padding-bottom:72px">
+<a href="./" class="logo" aria-label="Görünür ana sayfa"><span class="logo-isaret"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></span><span class="logo-ad">Görünür</span></a>
+<!-- E-postadaki onay bağlantısı buraya gelir: onay.html?a=<32 karakterlik anahtar> -->
+<section id="sor" style="margin-top:40px">
+<h1 tabindex="-1" style="font-family:var(--baslik);font-size:32px;line-height:1.15;margin:0">Kaydınızı onaylayın</h1>
+<p style="color:var(--yazi3);font-size:16px;line-height:1.6;margin:14px 0 24px">Fiyatlar ve yeni özellikler açıklanınca size e-postayla haber verelim mi? Onaylamak için düğmeye basın.</p>
+<button type="button" class="btn btn-amber" id="onayla">Evet, kaydımı onaylıyorum</button>
+</section>
+<section id="bekle" hidden style="margin-top:40px" aria-live="polite">
+<h1 style="font-family:var(--baslik);font-size:32px;line-height:1.15;margin:0">Kaydınızı onaylıyoruz…</h1>
+<p style="color:var(--yazi3);font-size:16px;line-height:1.6;margin:14px 0 0">Birkaç saniye sürer.</p>
+</section>
+<section id="bitti" hidden style="margin-top:40px">
+<h1 tabindex="-1" style="font-family:var(--baslik);font-size:32px;line-height:1.15;margin:0">Kaydınız onaylandı</h1>
+<p style="color:var(--yazi3);font-size:16px;line-height:1.6;margin:14px 0 24px">Fiyatlar ve yeni özellikler açıklanınca size haber vereceğiz. Bu arada ücretsiz denemeyi hemen kullanabilirsiniz.</p>
+<a href="giris.html#kayit" class="btn btn-amber">Ücretsiz hesap açın</a>
+<a href="./" class="metin-bag" style="margin-left:16px;font-weight:700">Ana sayfaya dön</a>
+</section>
+<section id="hata" hidden style="margin-top:40px">
+<h1 tabindex="-1" style="font-family:var(--baslik);font-size:32px;line-height:1.15;margin:0">Bu bağlantı çalışmadı</h1>
+<p id="hata-metin" style="color:var(--yazi3);font-size:16px;line-height:1.6;margin:14px 0 24px">Bağlantı geçersiz ya da süresi dolmuş olabilir. <a href="./#liste">Ana sayfadan</a> e-postanızı yeniden yazarsanız size yeni bir onay bağlantısı göndeririz.</p>
+<button type="button" class="btn btn-cizgi" id="tekrar" hidden>Tekrar deneyin</button>
+</section>
+</main>
+<script>
+(function () {
+  var a = new URLSearchParams(location.search).get('a') || '';
+  var $ = function (id) { return document.getElementById(id); };
+  function goster(id) {
+    ['sor', 'bekle', 'bitti', 'hata'].forEach(function (x) { $(x).hidden = x !== id; });
+    var h = $(id).querySelector('h1'); if (h) h.focus();
+  }
+  function hata(baglantiSorunu) {
+    $('tekrar').hidden = !baglantiSorunu;
+    if (baglantiSorunu) $('hata-metin').textContent = 'Şu an onaylayamadık. İnternet bağlantınızı kontrol edip birkaç dakika sonra tekrar deneyin.';
+    goster('hata');
+  }
+  function onayla() {
+    goster('bekle');
+    fetch('https://drlqbwdupntqqtkmdncc.supabase.co/functions/v1/eposta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tur: 'onay', anahtar: a }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }, function () { return { ok: r.ok, j: null }; }); })
+      .then(function (y) {
+        if (y.j && y.j.tamam) return goster('bitti');
+        // Sunucu cevap verdi ama kabul etmedi: bağlantı geçersiz ya da süresi dolmuş. 5xx ise geçici sorun sayılır.
+        hata(!y.ok && !y.j);
+      })
+      .catch(function () { hata(true); });
+  }
+  if (!/^[a-f0-9]{32}$/.test(a)) { hata(false); return; }
+  $('tekrar').addEventListener('click', onayla);
+  // E-posta güvenlik tarayıcıları bağlantıyı açınca kendiliğinden onaylanmasın: kişi düğmeye bassın
+  $('onayla').addEventListener('click', onayla);
+})();
+</script>
+</body>
+</html>

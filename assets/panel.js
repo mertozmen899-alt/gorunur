@@ -262,7 +262,7 @@
     },
     bing: function (i) {
       return { k: 'bing', t: 'Bing Haritalar’da işletme hesabı açın', s: '15 dakika · ücretsiz',
-        n: 'ChatGPT, işletme bilgilerini büyük ölçüde Bing Haritalar’dan alıyor. Bing’de yoksanız ChatGPT sizi pek bilmiyor.',
+        n: 'ChatGPT’nin baktığı kaynaklardan biri Bing; orada da kaydınızın olması şansınızı artırır.',
         adimlar: [
           'bingplaces.com adresine girin. Gmail ya da Hotmail/Outlook hesabınızla giriş yapın.',
           'Google İşletme Profiliniz varsa "Google’dan içe aktar" seçeneğini seçin. Bilgileriniz kendiliğinden gelir.',

@@ -64,6 +64,9 @@
         delete(){ self._sil=true; const st=store(); st.yapilan=[]; save(st); return self; },
         select(){ return self; }, eq(k,v){ (self._eq=self._eq||{})[k]=v; return self;}, order(){return self;}, limit(){ if(t==='olcumler'){ /* Yönetici gibi davran: süzgeçsiz sorgu başkalarının verisini de getirir */ if(!(self._eq&&self._eq.isletme_id)) return Promise.resolve({data:null,error:{message:'TEST: olcumler sorgusu isletme_id ile suzulmedi'}}); const g=store().gecmis||GECMIS; return Promise.resolve({data:g,error:null}); } return self;},
         update(v){ const st=store(); st.isl=Object.assign({},st.isl||{},v); save(st); self._u=true; return self; },
+        // Kurulum kaydı isletmeKaydet() ile upsert kullanır; testler kaç kez çağrıldığını store().upsert ile görür
+        upsert(v){ const st=store(); if(t==='isletmeler'){ st.isl=Object.assign({},st.isl||{},v); } st.upsert=(st.upsert||0)+1; save(st); self._up=true; return self; },
+        gte(k,v){ (self._gte=self._gte||{})[k]=v; return self; }, lte(k,v){ (self._lte=self._lte||{})[k]=v; return self; }, in(){ return self; },
         single: async () => (self._yeni?{data:self._yeni,error:null}:{ data: Object.assign(ISL, store().isl||{}), error:null }),
         maybeSingle: async () => { if(t==='isletmeler' && !(self._eq&&self._eq.sahip==='u-sahip')) return {data:null,error:{message:'TEST: JSON object requested, multiple (or no) rows returned (isletmeler sahip ile suzulmedi)'}}; return { data: t==='olcumler' ? (store().olcum||null) : Object.assign(ISL, store().isl||{}), error:null }; }
       }; return self; }

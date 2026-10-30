@@ -2,6 +2,9 @@
 // (2) site sağlığı taraması (SerpApi harcamaz)
 // (3) Google yorumları + cevap taslakları (günde 1 yenileme; en fazla 2 SerpApi araması + 1 Gemini)
 // (4) "Hangi platformlarda varsınız?" kontrolü (günde 1 yenileme; 1 SerpApi araması)
+// Günlük sınırlar isletmeler.kullanim sütununda tutulur (sadece sunucu yazar, işletme adı değişince silinmez):
+//   SerpApi araması (yorumlar + platformlar) kişi başı günde 6, site taraması günde 5, hazır metin günde 15.
+//   Ayrıca tüm sistem için günlük SerpApi bütçesi: public.serp_harca (SERP_GUNLUK_SINIR, varsayılan 150).
 // Deneme yolu: x-gorunur-cron başlığı cron_ayar.olcum_anahtari ile aynıysa ve gövdede deneme_isletme_id varsa
 // işlem o işletme için (oturum olmadan) yapılır.
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -59,26 +62,98 @@ Sadece şu JSON'u döndür: {"gonderiler":[{"konu":"kısa konu adı","metin":"g�
   throw new Error("Bilinmeyen metin türü");
 }
 
+// ---------------- Güvenli adres denetimi (SSRF koruması) ----------------
+// Sadece http/https, kullanıcı adı/şifre yok, port 80/443, iç ağ adı yok ve alan adı özel/iç IP'ye çözülmüyor.
+class GuvenlikHatasi extends Error {}
+function ozelIp4(ip: string): boolean {
+  const p = ip.split(".").map((x) => Number(x));
+  if (p.length !== 4 || p.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return true;
+  const [a, b, c] = p;
+  return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 192 && b === 0 && c === 0) ||
+    (a === 198 && (b === 18 || b === 19)) || a >= 224;
+}
+function ozelIp6(ip: string): boolean {
+  const x = ip.toLowerCase().replace(/^\[|\]$/g, "");
+  if (x === "::" || x === "::1") return true;
+  if (/^f[cd][0-9a-f]{0,2}:/.test(x)) return true;          // fc00::/7
+  if (/^fe[89ab][0-9a-f]?:/.test(x)) return true;            // fe80::/10
+  if (/^ff/.test(x)) return true;                             // çoklu yayın
+  if (x.startsWith("::ffff:") || x.startsWith("64:ff9b:") || x.startsWith("2002:") || /^::[0-9.]+$/.test(x)) return true; // IPv4 gömülü adresler
+  return false;
+}
+// Alan adının IP adresleri (A ve AAAA). Deno.resolveDns hiç çalışmazsa DNS-over-HTTPS yedeği.
+async function cozumle(host: string): Promise<string[]> {
+  const ipler: string[] = [];
+  let hata = 0;
+  for (const tur of ["A", "AAAA"] as const) {
+    try { ipler.push(...await Deno.resolveDns(host, tur, { signal: AbortSignal.timeout(5000) })); } catch { hata++; }
+  }
+  if (ipler.length || hata < 2) return ipler;
+  for (const tur of ["A", "AAAA"]) {
+    try {
+      const r = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(host)}&type=${tur}`, { headers: { accept: "application/dns-json" }, signal: AbortSignal.timeout(5000) });
+      const j = await r.json();
+      for (const a of (j?.Answer || []) as Array<{ type: number; data: string }>) if (a.type === 1 || a.type === 28) ipler.push(String(a.data));
+    } catch { /* yok */ }
+  }
+  return ipler;
+}
+async function adresDenetle(adres: string | URL): Promise<URL> {
+  let u: URL;
+  try { u = new URL(String(adres)); } catch { throw new GuvenlikHatasi("Web sitesi adresi geçersiz."); }
+  if (u.protocol !== "http:" && u.protocol !== "https:") throw new GuvenlikHatasi("Bu web sitesi adresi taranamıyor.");
+  if (u.username || u.password) throw new GuvenlikHatasi("Bu web sitesi adresi taranamıyor.");
+  if (u.port && u.port !== "80" && u.port !== "443") throw new GuvenlikHatasi("Bu web sitesi adresi taranamıyor.");
+  const host = u.hostname.toLowerCase().replace(/\.$/, "");
+  if (!host.includes(".") || /^[\d.]+$/.test(host) || host.includes(":") || host.includes("[") ||
+    /(^|\.)(localhost|local|internal|lan|localdomain|home|corp)$/.test(host) || /supabase\.(co|in)$/.test(host)) {
+    throw new GuvenlikHatasi("Bu web sitesi adresi taranamıyor.");
+  }
+  const ipler = await cozumle(host);
+  if (!ipler.length) throw new Error("Alan adı çözülemedi.");
+  if (ipler.some((ip) => ip.includes(":") ? ozelIp6(ip) : ozelIp4(ip))) throw new GuvenlikHatasi("Bu web sitesi adresi taranamıyor.");
+  return u;
+}
+// Yönlendirmeleri elle izler (en fazla 3), her adımda adresi yeniden denetler
+async function guvenliGetir(adres: string | URL, ms: number, headers: Record<string, string> = {}) {
+  const sinyal = AbortSignal.timeout(ms);
+  let u = await adresDenetle(adres);
+  for (let adim = 0; ; adim++) {
+    const r = await fetch(u, { redirect: "manual", signal: sinyal, headers });
+    const yer = r.headers.get("location");
+    if ([301, 302, 303, 307, 308].includes(r.status) && yer) {
+      await r.body?.cancel();
+      if (adim >= 3) throw new GuvenlikHatasi("Siteniz çok fazla kez yönlendiriyor, taranamadı.");
+      try { u = await adresDenetle(new URL(yer, u)); } catch (e) {
+        if (e instanceof GuvenlikHatasi) throw new GuvenlikHatasi("Siteniz taranmasına izin verilmeyen bir adrese yönlendiriyor.");
+        throw e;
+      }
+      continue;
+    }
+    return { r, son: u.toString() };
+  }
+}
+
 // ---------------- Site sağlığı ----------------
 type Kontrol = { kod: string; ad: string; tamam: boolean; agirlik: number; detay: string; oneri: string };
 async function siteTara(isl: Record<string, any>) {
   let adres = String(isl.site || "").trim();
   if (!adres) throw new Error("Kurulumda web sitesi girilmemiş.");
   if (!/^https?:\/\//i.test(adres)) adres = "https://" + adres;
-  // Güvenlik: sadece normal alan adları (IP adresi, localhost ve iç ağ adresleri taranmaz)
-  let host = "";
-  try { host = new URL(adres).hostname.toLowerCase(); } catch { throw new Error("Web sitesi adresi geçersiz."); }
-  if (!host.includes(".") || /^[\d.]+$/.test(host) || host.includes(":") || /(^|\.)(localhost|local|internal|lan)$/.test(host) || /supabase\.(co|in)$/.test(host)) throw new Error("Bu web sitesi adresi taranamıyor.");
+  // Güvenlik: sadece normal alan adları (IP adresi, localhost, iç ağ adresleri ve iç IP'ye çözülen adlar taranmaz)
   const t0 = Date.now();
   let r: Response;
+  let son = adres;
   try {
-    r = await fetch(adres, { redirect: "follow", signal: AbortSignal.timeout(15000), headers: { "User-Agent": "Mozilla/5.0 (compatible; GorunurSiteSagligi/1.0; +https://mertozmen899-alt.github.io/gorunur/)", "Accept-Language": "tr-TR,tr;q=0.9" } });
+    const g = await guvenliGetir(adres, 15000, { "User-Agent": "Mozilla/5.0 (compatible; GorunurSiteSagligi/1.0; +https://mertozmen899-alt.github.io/gorunur/)", "Accept-Language": "tr-TR,tr;q=0.9" });
+    r = g.r; son = g.son;
   } catch (e) {
+    if (e instanceof GuvenlikHatasi) throw new Error(e.message);
     return { adres, acildi: false, puan: 0, sure_ms: Date.now() - t0, kontroller: [{ kod: "acilmiyor", ad: "Site açılıyor mu?", tamam: false, agirlik: 100, detay: /timed out|abort/i.test(String(e)) ? "Site 15 saniyede açılmadı." : "Siteye bağlanılamadı.", oneri: "Sitenizi yapan kişiye sitenin açılmadığını bildirin. Kapalı bir site hem Google'da hem yapay zekâda sizi geriye düşürür." }] };
   }
   const sure = Date.now() - t0;
   const html = (await r.text().catch(() => "")).slice(0, 1_500_000);
-  const son = r.url || adres;
   const kok = new URL(son);
   const bul = (re: RegExp) => (html.match(re) || [])[1] || "";
   const temiz = (x: string) => x.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
@@ -102,7 +177,7 @@ async function siteTara(isl: Record<string, any>) {
   const titleSade = sade(title);
   const titleYer = isl.semt === "Türkiye geneli" || parca.some((p: string) => titleSade.includes(p));
   const titleIs = isK.some((t) => titleSade.includes(t.slice(0, Math.max(4, t.length - 2))));
-  const ek = async (yol: string) => { try { const x = await fetch(new URL(yol, kok.origin), { signal: AbortSignal.timeout(6000), redirect: "follow" }); const t = await x.text(); return x.ok && t.length > 20 && !/<html/i.test(t.slice(0, 300)); } catch { return false; } };
+  const ek = async (yol: string) => { try { const { r: x } = await guvenliGetir(new URL(yol, kok.origin), 6000); const t = await x.text(); return x.ok && t.length > 20 && !/<html/i.test(t.slice(0, 300)); } catch { return false; } };
   const [sitemap, robots] = await Promise.all([ek("/sitemap.xml"), ek("/robots.txt")]);
   const K: Kontrol[] = [
     { kod: "https", ad: "Güvenli bağlantı (https)", tamam: kok.protocol === "https:", agirlik: 10, detay: kok.protocol === "https:" ? "Siteniz güvenli bağlantıyla açılıyor." : "Siteniz güvenli bağlantı (kilit simgesi) olmadan açılıyor.", oneri: "Sitenizi yapan kişiden ücretsiz SSL sertifikası kurmasını isteyin. Tarayıcılar kilitsiz sitelerde 'Güvenli değil' uyarısı gösteriyor." },
@@ -127,6 +202,9 @@ async function siteTara(isl: Record<string, any>) {
 }
 
 // ---------------- SerpApi ----------------
+// Her SerpApi aramasından önce çağrılır: kişi başı ve sistem geneli günlük sınırı düşer, doluysa KotaHatasi atar.
+class KotaHatasi extends Error {}
+type Kapi = () => Promise<void>;
 async function serp(params: Record<string, string>, anahtar: string) {
   const u = new URL("https://serpapi.com/search.json");
   for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
@@ -156,8 +234,9 @@ function kisaAd(ad: string): string {
 }
 
 // ---------------- Google yorumları ----------------
-async function haritadaBul(isl: Record<string, any>, SERP: string) {
+async function haritadaBul(isl: Record<string, any>, SERP: string, kapi: Kapi) {
   const yer = yerKisa(isl);
+  await kapi();
   const j = await serp({ engine: "google_maps", type: "search", q: `${isl.ad} ${yer}`.trim(), hl: "tr" }, SERP);
   const aday = [...(j.place_results ? [j.place_results] : []), ...(j.local_results || [])] as Array<Record<string, any>>;
   const ayni = aday.filter((r) => r && r.data_id && adGeciyor(String(r.title || ""), isl.ad));
@@ -184,12 +263,12 @@ ${yorumlar}
 Sadece şu JSON'u döndür: {"taslaklar":[{"no":1,"metin":"cevap taslağı"}]} (her yorum için bir taslak, no yorumun numarası)`;
 }
 
-async function yorumlariGetir(isl: Record<string, any>, db: any, SERP: string, GEM: string) {
+async function yorumlariGetir(isl: Record<string, any>, db: any, SERP: string, GEM: string, kapi: Kapi) {
   let dataId = String(isl.gmaps_data_id || "");
   let yer: Record<string, any> | null = (isl.yorumlar && isl.yorumlar.yer) || null;
   let arama = 0;
   if (!dataId) {
-    const b = await haritadaBul(isl, SERP) as Record<string, any>; arama++;
+    const b = await haritadaBul(isl, SERP, kapi) as Record<string, any>; arama++;
     if (b.bulunamadi) {
       const sonuc = { tarih: new Date().toISOString(), gun: bugunTR(), bulunamadi: true, baska_sube: b.baska_sube, arama };
       await db.from("isletmeler").update({ yorumlar: sonuc }).eq("id", isl.id);
@@ -198,6 +277,7 @@ async function yorumlariGetir(isl: Record<string, any>, db: any, SERP: string, G
     dataId = b.data_id; yer = b;
     await db.from("isletmeler").update({ gmaps_data_id: dataId }).eq("id", isl.id);
   }
+  await kapi();
   const j = await serp({ engine: "google_maps_reviews", data_id: dataId, hl: "tr", sort_by: "newestFirst" }, SERP); arama++;
   const pi = (j.place_info || {}) as Record<string, any>;
   const liste = ((j.reviews || []) as Array<Record<string, any>>).slice(0, 10).map((r) => {
@@ -248,8 +328,9 @@ const DIZINLER: Array<{ ad: string; alan: string; re: RegExp }> = [
   { ad: "Firmasec", alan: "firmasec.com", re: /(^|\.)firmasec\.com$/ },
   { ad: "Yellow Pages Türkiye", alan: "yellowpages.com.tr", re: /yellowpages\.com\.tr$/ },
 ];
-async function platformlariBul(isl: Record<string, any>, SERP: string) {
+async function platformlariBul(isl: Record<string, any>, SERP: string, kapi: Kapi) {
   const yer = yerKisa(isl);
+  await kapi();
   const j = await serp({ engine: "google", q: `"${isl.ad}" ${yer}`.trim(), hl: "tr", gl: "tr", google_domain: "google.com.tr" }, SERP);
   const sonuclar: Array<{ link: string; alan: string; metin: string }> = [];
   for (const r of (j.organic_results || []) as Array<Record<string, any>>) {
@@ -288,7 +369,7 @@ async function platformlariBul(isl: Record<string, any>, SERP: string) {
     "Yandex Haritalar'da kaydınız var. Adınızı, adresinizi ve telefonunuzu kontrol edin.",
     "Google'da adınızla aratınca Yandex Haritalar kaydınız çıkmadı. Yandex Haritalar'ı açıp adınızı arayın; yoksa Google'a \"Yandex işletme ekle\" yazın ve çıkan Yandex Business sayfasından ücretsiz kayıt olun.");
   L.push({ ad: "Apple Haritalar", alan: "maps.apple.com", durum: "kendiniz", link: "https://business.apple.com", ne_yapmali: "Apple Haritalar'ı otomatik kontrol edemiyoruz. iPhone kullanan müşterileriniz ve Siri buraya bakıyor.", adimlar: ["iPhone'da Haritalar uygulamasını ya da bilgisayardan maps.apple.com adresini açın.", "İşletmenizin adını ve şehrinizi yazıp arayın.", "Çıkmıyorsa uygulamada \"Bir sorun bildir\" bölümünden \"İşletme ekle\" deyin ya da business.apple.com adresinden Apple Business Connect ile ücretsiz ekleyin."] });
-  L.push({ ad: "Bing Haritalar", alan: "bingplaces.com", durum: "kendiniz", link: "https://www.bingplaces.com", ne_yapmali: "Bing'i otomatik kontrol edemiyoruz. ChatGPT işletme bilgilerinde Bing verisini kullanıyor.", adimlar: ["bing.com/maps adresini açıp işletmenizin adını ve şehrinizi arayın.", "Çıkmıyorsa ya da bilgiler eksikse bingplaces.com adresine Microsoft veya Google hesabınızla girin.", "Google İşletme Profiliniz varsa \"Google'dan içe aktar\" seçeneğiyle bilgilerinizi tek seferde aktarın."] });
+  L.push({ ad: "Bing Haritalar", alan: "bingplaces.com", durum: "kendiniz", link: "https://www.bingplaces.com", ne_yapmali: "Bing'i otomatik kontrol edemiyoruz. ChatGPT'nin baktığı kaynaklardan biri Bing; orada da kaydınızın olması şansınızı artırır.", adimlar: ["bing.com/maps adresini açıp işletmenizin adını ve şehrinizi arayın.", "Çıkmıyorsa ya da bilgiler eksikse bingplaces.com adresine Microsoft veya Google hesabınızla girin.", "Google İşletme Profiliniz varsa \"Google'dan içe aktar\" seçeneğiyle bilgilerinizi tek seferde aktarın."] });
   ekle("Foursquare", "foursquare.com", bul((a) => a === "foursquare.com" || a.endsWith(".foursquare.com")),
     "Foursquare'de kaydınız var. Bilgilerinizin güncel olduğunu kontrol edin.",
     "Google'da adınızla aratınca Foursquare kaydınız çıkmadı. Foursquare bazı harita ve yapay zekâ uygulamalarına veri sağlıyor; foursquare.com üzerinden ücretsiz ekleyebilirsiniz.");
@@ -334,15 +415,32 @@ Deno.serve(async (req) => {
   }
   if (!isl || !isl.kurulum_bitti) return json({ hata: "Önce kurulumu tamamlayın." }, 400);
   const SERP = (Deno.env.get("SERPAPI_KEY") || "").trim();
+  const SERP_SINIR = parseInt(Deno.env.get("SERP_GUNLUK_SINIR") || "150", 10) || 150;
+  // Kişi başı günlük sayaç (atomik). Deneme yolunda kişi sınırı uygulanmaz, sistem bütçesi uygulanır.
+  const harca = async (alan: string, adet: number, sinir: number) => {
+    if (deneme) return true;
+    const { data, error } = await db.rpc("kullanim_harca", { p_isletme: isl!.id, p_alan: alan, p_adet: adet, p_sinir: sinir });
+    if (error) { console.log("kullanim_harca hata", error.message); return false; }
+    return data === true;
+  };
+  const kapi: Kapi = async () => {
+    if (!(await harca("serp", 1, 6))) throw new KotaHatasi("Bugünkü arama hakkınız doldu. Yarın tekrar deneyin.");
+    const { data, error } = await db.rpc("serp_harca", { adet: 1, sinir: SERP_SINIR });
+    if (error) console.log("serp_harca hata", error.message);
+    if (data !== true) throw new KotaHatasi("Bugün çok yoğunuz, günlük arama sınırımıza ulaştık. Yarın tekrar deneyin.");
+  };
 
   if (govde.islem === "yorumlar") {
     const onceki = isl.yorumlar as Record<string, any> | null;
     if (onceki?.gun === bugunTR() && !(deneme && govde.zorla)) return json({ yorumlar: onceki, mesaj: "Yorumlarınızı bugün yeniledik. Yarın tekrar yenileyebilirsiniz." });
     if (!SERP) return json({ hata: "Arama anahtarı eksik.", yorumlar: onceki }, 503);
     try {
-      const sonuc = await yorumlariGetir(isl, db, SERP, (Deno.env.get("GEMINI_API_KEY") || "").trim());
+      await harca("yorum", 1, 1000);
+      const sonuc = await yorumlariGetir(isl, db, SERP, (Deno.env.get("GEMINI_API_KEY") || "").trim(), kapi);
       return json({ yorumlar: sonuc });
-    } catch (e) { console.log("yorumlar hata", String(e)); return json({ hata: "Yorumlarınız şu an alınamadı. Biraz sonra tekrar deneyin.", yorumlar: onceki }, 502); }
+    } catch (e) {
+      if (e instanceof KotaHatasi) return json({ hata: e.message, yorumlar: onceki }, 429);
+      console.log("yorumlar hata", String(e)); return json({ hata: "Yorumlarınız şu an alınamadı. Biraz sonra tekrar deneyin.", yorumlar: onceki }, 502); }
   }
 
   if (govde.islem === "platformlar") {
@@ -350,20 +448,21 @@ Deno.serve(async (req) => {
     if (onceki?.gun === bugunTR() && !(deneme && govde.zorla)) return json({ platformlar: onceki, mesaj: "Bugün kontrol ettik. Yarın tekrar kontrol edebilirsiniz." });
     if (!SERP) return json({ hata: "Arama anahtarı eksik.", platformlar: onceki }, 503);
     try {
-      const sonuc = await platformlariBul(isl, SERP);
+      await harca("platform", 1, 1000);
+      const sonuc = await platformlariBul(isl, SERP, kapi);
       await db.from("isletmeler").update({ platformlar: sonuc }).eq("id", isl.id);
       return json({ platformlar: sonuc });
-    } catch (e) { console.log("platformlar hata", String(e)); return json({ hata: "Kontrol şu an yapılamadı. Biraz sonra tekrar deneyin.", platformlar: onceki }, 502); }
+    } catch (e) {
+      if (e instanceof KotaHatasi) return json({ hata: e.message, platformlar: onceki }, 429);
+      console.log("platformlar hata", String(e)); return json({ hata: "Kontrol şu an yapılamadı. Biraz sonra tekrar deneyin.", platformlar: onceki }, 502); }
   }
 
   if (govde.islem === "site") {
     // Aynı gün içinde en fazla 5 tarama (siteyi yormamak için)
     const onceki = isl.site_saglik as Record<string, any> | null;
-    const bugun = new Date().toISOString().slice(0, 10);
-    const sayac = onceki?.sayac?.gun === bugun ? onceki.sayac.n : 0;
-    if (sayac >= 5) return json({ hata: "Bugün sitenizi 5 kez taradık. Yarın tekrar deneyin.", site: onceki }, 429);
+    if (!(await harca("site", 1, 5))) return json({ hata: "Bugün sitenizi 5 kez taradık. Yarın tekrar deneyin.", site: onceki }, 429);
     try {
-      const sonuc = { ...(await siteTara(isl)), tarih: new Date().toISOString(), sayac: { gun: bugun, n: sayac + 1 } };
+      const sonuc = { ...(await siteTara(isl)), tarih: new Date().toISOString() };
       await db.from("isletmeler").update({ site_saglik: sonuc, site_saglik_tarih: sonuc.tarih }).eq("id", isl.id);
       return json({ site: sonuc });
     } catch (e) { return json({ hata: String((e as Error).message) }, 400); }
@@ -378,16 +477,14 @@ Deno.serve(async (req) => {
     if (!GEM) return json({ hata: "Yapay zekâ anahtarı eksik." }, 503);
     const kayit = (isl.hazir_metinler || {}) as Record<string, any>;
     const anahtar = tur === "sayfa" ? `sayfa:${sade(kelime)}` : tur;
-    // Günde en fazla 15 metin
-    const bugun = new Date().toISOString().slice(0, 10);
-    const bugunku = kayit._sayac?.gun === bugun ? Number(kayit._sayac.n) || 0 : 0; // "Yeniden yazın" da sayılır
-    if (bugunku >= 15 && !govde.onbellek) return json({ hata: "Bugünlük metin hakkınız doldu. Yarın tekrar deneyin." }, 429);
     if (govde.onbellek && kayit[anahtar]) return json({ metin: kayit[anahtar] });
+    // Günde en fazla 15 metin ("Yeniden yazın" da sayılır)
+    if (!(await harca("metin", 1, 15))) return json({ hata: "Bugünlük metin hakkınız doldu. Yarın tekrar deneyin." }, 429);
     try {
       const icerik = await gemini(metinSorusu(tur, isl, kelime), GEM);
       const sonuc = { tur, kelime: tur === "sayfa" ? kelime : null, icerik, tarih: new Date().toISOString() };
       kayit[anahtar] = sonuc;
-      kayit._sayac = { gun: bugun, n: bugunku + 1 };
+      delete kayit._sayac; // eski sayaç (artık kullanim sütununda)
       await db.from("isletmeler").update({ hazir_metinler: kayit }).eq("id", isl.id);
       return json({ metin: sonuc });
     } catch (e) { return json({ hata: String((e as Error).message).slice(0, 200) }, 502); }

@@ -1248,3 +1248,19 @@ body:has(.lp-promo:not([hidden])) .wa-dugme{opacity:0;pointer-events:none}
 .platform.p-bulunamadi{border-left:4px solid var(--kirmizi)}
 .platform.p-kendiniz{border-left:4px solid var(--amber)}
 @media (max-width:560px){.yorum-ozet{gap:8px}.yorum-ozet .sayi-kutu{padding:12px}.yorum-ozet .sayi-kutu b{font-size:22px}.yorum-ozet .sayi-kutu span{font-size:11.5px}.yorum-ozet .sayi-kutu small{font-size:11px}}
+
+/* v32: son düzeltmeler */
+/* Kodla odaklanan başlık ve bölümlerde (tabindex="-1") fareyle/dokunarak gelince odak çerçevesi çizilmesin; klavyede görünür kalsın */
+[tabindex="-1"]:focus:not(:focus-visible){outline:none}
+/* Başlıklar ve teşekkür kutusu yalnız ekran okuyucuya yer bildirmek için kodla odaklanır, tıklanamaz: çerçeve hiç gerekmez */
+:is(h1,h2,h3,.tesekkur,#t-hata)[tabindex="-1"]:focus{outline:none}
+/* Alt şerit ("Durumunuzu 1 dakikada görün") açıkken WhatsApp düğmesi şeridin üstüne çıkar (sınıfı app.js ekler; :has desteklemeyen tarayıcılar için) */
+@media (max-width:999px){
+  body.alt-cta-acik .wa-dugme{bottom:calc(84px + env(safe-area-inset-bottom))}
+}
+/* Telefonda WhatsApp düğmesi kurulum ve test sayfalarının en altındaki ipucu metinlerini ve düğmeleri örtmesin */
+@media (max-width:720px){
+  .test-govde{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+}
+/* Dokunma hedefleri: tek başına duran metin bağlantıları en az 24px yüksekliğinde */
+.platform>a,#vazgec,.metin-bag,.alt-bilgi:not(.lp-alt) .kap span a{display:inline-flex;align-items:center;min-height:24px;padding-block:2px}
