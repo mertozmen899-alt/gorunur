@@ -65,7 +65,8 @@
       var ek = ekVeri ? ekVeri() : {};
       katil({ eposta: deger, onay: true, calismaSekli: ek.calismaSekli, sehir: ek.sehir, isTuru: ek.isTuru })
         .then(function (sonuc) {
-          if (sonuc === 'tamam') {
+          // Kayıt alınınca sunucu onay e-postası gönderir; kişi bağlantıya tıklayınca listeye eklenir (onay.html)
+          if (sonuc === 'tamam' || sonuc === 'onay_gonderildi') {
             var t = kutu.querySelector('.tesekkur');
             t.querySelector('.adres').textContent = deger;
             form.hidden = true; t.hidden = false; t.setAttribute('tabindex', '-1'); t.focus();
@@ -308,6 +309,8 @@
       if (!serit) return;
       var goster = asagi && lt > innerHeight && !promoAcik;
       if (serit.hidden === goster) serit.hidden = !goster;
+      // WhatsApp düğmesi şeridin üstüne çıksın (style.css: body.alt-cta-acik)
+      if (document.body.classList.contains('alt-cta-acik') !== goster) document.body.classList.toggle('alt-cta-acik', goster);
     }
     function istek() { if (!bekleyen) { bekleyen = true; requestAnimationFrame(seritGuncelle); } }
     window.addEventListener('scroll', istek, { passive: true });

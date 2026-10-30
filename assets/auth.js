@@ -25,8 +25,9 @@
     for (var k in HATA) if (m.indexOf(k) === 0) return HATA[k];
     if (/rate limit/i.test(m)) return HATA['Email rate limit exceeded'];
     if (/fetch|network/i.test(m)) return 'İnternet bağlantısında sorun var. Tekrar deneyin.';
+    // Teknik ayrıntı yalnız konsola yazılır, kullanıcıya sade mesaj gösterilir
     try { console.error('Görünür hata:', e); } catch (x) {}
-    return 'Bir sorun oldu, tekrar deneyin.' + (m ? ' (Ayrıntı: ' + String(m).slice(0, 90) + ')' : '');
+    return 'Bir sorun oldu, tekrar deneyin. Sürerse WhatsApp\'tan bize yazın.';
   }
 
   function oturum() {
