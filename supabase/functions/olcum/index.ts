@@ -184,6 +184,15 @@ Deno.serve(async (req) => {
   if (cronAnahtar) {
     const { data: ayar } = await db.from("cron_ayar").select("deger").eq("ad", "olcum_anahtari").maybeSingle();
     if (!ayar || ayar.deger !== cronAnahtar) return json({ hata: "Yetkisiz" }, 401);
+    // Nöbet: son turu ve SerpApi kalan arama sayısını kaydet (hesap sorgusu arama hakkı harcamaz)
+    await db.from("cron_ayar").upsert({ ad: "nobet_son_tur", deger: new Date().toISOString() });
+    if (SERP) {
+      try {
+        const r = await fetch(`https://serpapi.com/account.json?api_key=${SERP}`, { signal: AbortSignal.timeout(10000) });
+        const a = await r.json();
+        if (r.ok) await db.from("cron_ayar").upsert({ ad: "serpapi_durum", deger: JSON.stringify({ kalan: a.total_searches_left ?? a.plan_searches_left, bu_ay: a.this_month_usage, aylik: a.searches_per_month, plan: a.plan_name, zaman: new Date().toISOString() }) });
+      } catch (e) { console.log("serpapi hesap bilgisi alinamadi", String(e)); }
+    }
     if (!SERP && !GEM) return json({ hata: "Anahtar yok" }, 503);
     const sinir = new Date(Date.now() - 6.5 * 864e5).toISOString();
     const { data: isletmeler } = await db.from("isletmeler").select("*").eq("kurulum_bitti", true).eq("haftalik_olcum", true);
