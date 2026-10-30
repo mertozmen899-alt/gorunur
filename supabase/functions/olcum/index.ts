@@ -2,7 +2,7 @@
 // Giriş yapmış kullanıcının işletmesi için: Google Haritalar sırası, Google arama sırası
 // ve Gemini (Google arama destekli) cevaplarında adının geçip geçmediğini ölçer.
 // Gerekli gizli anahtarlar (Supabase > Edge Functions > Secrets): SERPAPI_KEY, GEMINI_API_KEY
-// İsteğe bağlı: GEMINI_MODEL, GUNLUK_OLCUM_HAKKI (varsayılan 5)
+// İsteğe bağlı: GEMINI_MODEL, GUNLUK_OLCUM_HAKKI (varsayılan 15)
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const CORS = {
@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
   if (!isl || !isl.kurulum_bitti) return json({ hata: "Önce kurulumu tamamlayın." }, 400);
 
   // Günlük ölçüm hakkı (otomatik haftalık ölçümler sayılmaz)
-  const hak = parseInt(Deno.env.get("GUNLUK_OLCUM_HAKKI") || "5", 10);
+  const hak = parseInt(Deno.env.get("GUNLUK_OLCUM_HAKKI") || "15", 10);
   const { count } = await db.from("olcumler").select("id", { count: "exact", head: true })
     .eq("sahip", u.user.id).eq("kaynak", "elle").gte("baslangic", new Date(Date.now() - 864e5).toISOString());
   if ((count || 0) >= hak) return json({ hata: `Bugünkü ölçüm hakkınız (${hak}) doldu. Yarın tekrar deneyin.` }, 429);
