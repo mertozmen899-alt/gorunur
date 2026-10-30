@@ -146,6 +146,15 @@
     return var_(c[0]) && bulunan >= Math.ceil(c.length / 2);
   }
   var sonVeri = null;
+  // Önbellekten gelen sonuç kaç gün önceki aramaya ait? ("bugün" ya da "3 gün önce")
+  function aramaZamani(v) {
+    if (!v || !v.onbellek || !v.tarih) return '';
+    var t = new Date(v.tarih); if (isNaN(t)) return '';
+    var bas = function (d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
+    var g = Math.round((bas(new Date()) - bas(t)) / 864e5);
+    return g <= 0 ? 'bugün' : g + ' gün önce';
+  }
+  var ACIKLAMA_ILK = null;
   function liSatir(no, ad, ek) {
     var li = document.createElement('li');
     var b = document.createElement('b'); b.className = 't-no'; b.textContent = no; li.appendChild(b);
@@ -172,12 +181,17 @@
       $('t-aciklama').textContent = 'Şu an ölçüm yapamadık. Ücretsiz hesap açarsanız bunu sizin için her hafta ölçer, sonucu panelinizde tek bir sayıyla gösteririz.';
       return;
     }
+    if (ACIKLAMA_ILK === null) ACIKLAMA_ILK = $('t-aciklama').textContent;
+    var zaman = aramaZamani(v);
+    $('t-aciklama').textContent = zaman ? 'Bu sonuçlar ' + zaman + ' yapılan aramaya göre. Google Haritalar\'a ve yapay zekâya bir müşteri gibi sorduk; bunlar gerçek sonuçlar.' : ACIKLAMA_ILK;
     var hl = $('t-harita'); hl.innerHTML = '';
     if (v.harita && v.harita.length) {
       $('t-harita-not').textContent = '"' + durum.is.toLocaleLowerCase('tr') + ' ' + durum.sehir.split(',')[0] + '" diye aratınca:';
       v.harita.slice(0, 5).forEach(function (x) { hl.appendChild(liSatir(x.sira + '.', x.ad, x.puan ? x.puan.toLocaleString('tr-TR') + ' ★ · ' + (x.yorum || 0) + ' yorum' : '')); });
     } else {
-      $('t-harita-not').textContent = v.sehir === 'Türkiye geneli' ? 'Türkiye geneli çalışanlar için harita sırası ölçülmez.' : 'Haritalara şu an bakamadık, birazdan tekrar deneyin.';
+      $('t-harita-not').textContent = v.sehir === 'Türkiye geneli' ? 'Türkiye geneli çalışanlar için harita sırası ölçülmez.'
+        : v.harita_yok === 'kapasite' ? 'Bu ay ücretsiz test için ayırdığımız harita aramaları doldu. Harita sırasını ay başında yeniden gösterebileceğiz; yapay zekâ sonuçları aşağıda.'
+        : 'Haritalara şu an bakamadık, birazdan tekrar deneyin.';
     }
     var yl = $('t-yz'); yl.innerHTML = '';
     if (v.yz && v.yz.isletmeler) {
@@ -197,6 +211,7 @@
       d.isletmeler.forEach(function (x, i) { ol.appendChild(liSatir((i + 1) + '.', x.ad, '')); });
       ek.appendChild(ol);
     });
+    if (v.harita_yok === 'kapasite') ek.appendChild(el('p', 't-not', 'Google Yapay Zekâ Modu sonucu da bu ayki arama kapasitemiz dolduğu için gösterilemedi.'));
     if (ek.childNodes.length) yl.parentNode.insertBefore(ek, yl.nextSibling);
   }
   function yzListeleri(v) { return ['yz', 'gyz', 'cg'].map(function (k) { return v && v[k] && v[k].isletmeler || []; }); }
@@ -274,7 +289,8 @@
       kiyasSatir(t, 'Web sitesi', varYok(siz.web), varYok(lider.web), siz.web ? true : (lider.web ? false : null));
       kiyasSatir(t, 'Telefon', varYok(siz.tel), varYok(lider.tel), siz.tel ? true : false);
       kiyasSatir(t, 'Çalışma saatleri', varYok(siz.saat), varYok(lider.saat), siz.saat ? true : false);
-      kiyasSatir(t, 'Yapay zekâ önerdi mi?', yzVar ? 'Evet' : 'Hayır', '', yzVar);
+      var liderYz = yzListeleri(sonVeri).some(function (l) { return l.some(function (x) { return eslesir(lider.ad, x.ad); }); });
+      kiyasSatir(t, 'Yapay zekâ önerdi mi?', yzVar ? 'Evet' : 'Hayır', liderYz ? 'Evet' : 'Hayır', yzVar);
       k.appendChild(t);
     }
     var A = adimlarUret(siz, lider, yzVar);
@@ -307,7 +323,8 @@
     kilit.appendChild(el('p', null, '2. ve 3. adımın nasıl yapılacağını ve her hafta sıranızı hesabınızda görün.'));
     var ac = el('a', 'btn btn-amber', 'Ücretsiz hesap aç, hepsini gör'); ac.href = 'giris.html#kayit'; kilit.appendChild(ac);
     k.appendChild(kilit);
-    k.appendChild(el('p', 't-not', 'Sonuç bugün yapılan tek bir aramaya göre. Konuma ve güne göre sıra biraz değişebilir; Görünür bunu her hafta ölçer.'));
+    var zamanR = aramaZamani(sonVeri);
+    k.appendChild(el('p', 't-not', (zamanR ? 'Bu sonuçlar ' + zamanR + ' yapılan aramaya göre.' : 'Sonuç bugün yapılan tek bir aramaya göre.') + ' Konuma ve güne göre sıra biraz değişebilir; Görünür bunu her hafta ölçer.'));
     out.appendChild(k);
     try { sessionStorage.setItem('gorunur_test_rapor', JSON.stringify({ ad: siz && siz.ad, sira: sira })); } catch (e) {}
     k.scrollIntoView && k.scrollIntoView({ behavior: 'smooth', block: 'start' });
