@@ -72,7 +72,7 @@
       A.sb.from('ajan_raporlari').select('*').order('olusturma', { ascending: false }).limit(30)
     ]).then(function (s) {
       var AJAN = { arge: 'Ar-Ge', kalite: 'Kalite ekibi', yazilimci: 'Yazılımcı', denetci: 'Ölçüm denetçisi' };
-      var ROL = { test: 'Test', guvenlik: 'Güvenlik', metin: 'Metin', olcum: 'Ölçüm', zaverno: 'Zaverno', fikir: 'Fikir', degisiklik: 'Değişiklik' };
+      var ROL = { test: 'Test', guvenlik: 'Güvenlik', metin: 'Metin', olcum: 'Ölçüm', zaverno: 'Zaverno', fikir: 'Fikir', degisiklik: 'Değişiklik', kullanim: 'Kullanım' };
       var al = $('ajan-liste'); var ar = (s[3] && s[3].data) || [];
       if (!ar.length) al.appendChild(el('p', 'Henüz ajan raporu yok. İlk raporlar yarın sabah gelecek.', 'kart-alt'));
       ar.forEach(function (r) {
