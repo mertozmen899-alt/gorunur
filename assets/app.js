@@ -232,24 +232,33 @@
         // Başlıktaki "çevrimiçi" yazısı, noktalar görünürken "yazıyor…" olur
         var durum = document.querySelector('.lp-wa .tel-alt'), durumIlk = durum ? durum.textContent : '';
         var yaziyor = function (v) { if (!durum) return; durum.textContent = v ? 'yazıyor…' : durumIlk; durum.classList.toggle('yaziyor', v); };
+        // Sohbet penceresi sabit boyda: yeni mesaj alta sığmıyorsa yazışma gerçek WhatsApp gibi yukarı kayar (yalnız transform)
+        var pencere = mesajlar.parentNode, kayma = 0;
+        var kaydir = function (alt) {
+          var bosluk = parseFloat(getComputedStyle(mesajlar).paddingBottom) || 0;
+          var hedef = Math.max(0, Math.round(alt + bosluk - pencere.clientHeight));
+          if (hedef > kayma) { kayma = hedef; mesajlar.style.transform = 'translateY(' + (-kayma) + 'px)'; }
+        };
         var sonraki = function () {
           if (k >= ogeler.length) { mesajlar.classList.remove('lp-sira'); return; }
           var o = ogeler[k++];
           if (o.classList.contains('gelen')) {
             nokta.style.left = o.offsetLeft + 'px'; nokta.style.top = o.offsetTop + 'px';
             mesajlar.appendChild(nokta); yaziyor(true);
+            kaydir(o.offsetTop + nokta.offsetHeight);
             setTimeout(function () {
               if (nokta.parentNode) nokta.parentNode.removeChild(nokta);
               yaziyor(false);
-              o.classList.add('lp-cikti'); setTimeout(sonraki, o.classList.contains('wa-kart') ? 800 : 450);
+              o.classList.add('lp-cikti'); kaydir(o.offsetTop + o.offsetHeight);
+              setTimeout(sonraki, o.classList.contains('wa-kart') ? 800 : 450);
             }, 900);
           } else if (o.classList.contains('giden')) {
             // Giden mesaj: önce gri tik, kısa süre sonra "okundu" (mavi tik)
-            o.classList.add('lp-cikti');
+            o.classList.add('lp-cikti'); kaydir(o.offsetTop + o.offsetHeight);
             setTimeout(function () { o.classList.add('lp-okundu'); }, 600);
             setTimeout(sonraki, 1000);
           } else {
-            o.classList.add('lp-cikti'); setTimeout(sonraki, 300);
+            o.classList.add('lp-cikti'); kaydir(o.offsetTop + o.offsetHeight); setTimeout(sonraki, 300);
           }
         };
         setTimeout(sonraki, 200);
@@ -261,15 +270,20 @@
     var promo = document.getElementById('lp-promo');
     var serit = document.getElementById('lp-serit');
     var liste = document.getElementById('liste');
-    var listeGoruldu = false, promoAcik = false, oncekiOdak = null, bekleyen = false;
+    var listeGoruldu = false, promoAcik = false, oncekiOdak = null, bekleyen = false, promoBekliyor = false;
+    var promoDene = function () {};
     var ANAHTAR = 'gorunur_tanitim', HAFTA = 7 * 24 * 3600 * 1000;
 
     function seritGuncelle() {
       bekleyen = false;
       var lt = liste ? liste.getBoundingClientRect().top : Infinity;
       if (lt < innerHeight) listeGoruldu = true;
+      // Hero geçildi mi: masaüstünde üst menüdeki düğme, telefonda WhatsApp düğmesi buna göre görünür (style.css)
+      var asagi = hero.getBoundingClientRect().bottom < 0;
+      if (document.body.classList.contains('lp-asagi') !== asagi) document.body.classList.toggle('lp-asagi', asagi);
+      if (promoBekliyor) promoDene();
       if (!serit) return;
-      var goster = hero.getBoundingClientRect().bottom < 0 && lt > innerHeight && !promoAcik;
+      var goster = asagi && lt > innerHeight && !promoAcik;
       if (serit.hidden === goster) serit.hidden = !goster;
     }
     function istek() { if (!bekleyen) { bekleyen = true; requestAnimationFrame(seritGuncelle); } }
@@ -308,21 +322,28 @@
     promo.addEventListener('click', function (e) { if (e.target.closest('[data-kapat]')) promoKapat(); });
     window.__gorunurPromo = promoAc; // test ve ekran görüntüsü için
 
+    // Pencere yalnız bilgisayarda ve ziyaretçi okurken araya girmeden açılır: en az 6 sn sonra,
+    // sarı "Nasıl çalışır" bandı geçildiğinde ya da fare sayfadan yukarı çıkarken (kapatmaya/sekme değiştirmeye giderken).
+    // Telefonda açılmaz: orada alt şerit aynı işi yapar, tam ekran perde Google'ın da hoşlanmadığı bir şey.
     var sonGosterim = 0;
     try { sonGosterim = parseInt(localStorage.getItem(ANAHTAR) || '0', 10) || 0; } catch (e) { sonGosterim = 0; }
     if (navigator.webdriver || Date.now() - sonGosterim < HAFTA) return;
-    setTimeout(function dene() {
-      if (listeGoruldu || promoAcik) return;
+    if (!(window.matchMedia && matchMedia('(min-width: 721px)').matches)) return;
+    var bant = document.getElementById('nasil');
+    promoDene = function (cikis) {
+      if (!promoBekliyor || listeGoruldu || promoAcik || document.hidden) return;
       var a = document.activeElement;
       if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
-      if (document.hidden) {
-        document.addEventListener('visibilitychange', function v() {
-          if (document.hidden) return;
-          document.removeEventListener('visibilitychange', v); setTimeout(dene, 1500);
-        });
-        return;
-      }
+      if (!cikis && !(bant && bant.getBoundingClientRect().bottom < 0)) return;
+      promoBekliyor = false;
+      document.removeEventListener('mouseout', cikisIzle);
       promoAc();
+    };
+    function cikisIzle(e) { if (!e.relatedTarget && e.clientY <= 0) promoDene(true); }
+    setTimeout(function () {
+      promoBekliyor = true;
+      document.addEventListener('mouseout', cikisIzle);
+      promoDene();
     }, 6000);
   }
 
@@ -337,11 +358,17 @@
     var cerceve = bolum.querySelector('.lp-video'), dugme = bolum.querySelector('.lp-oynat');
     if (!kaynak || !cerceve || !dugme) return;
     var kapakEl = cerceve.querySelector('.lp-video-kapak');
-    if (kapak && kapakEl) { kapakEl.style.backgroundImage = 'url("' + kapak.replace(/["\\]/g, '') + '")'; kapakEl.classList.add('lp-kapakli'); }
     var v = document.createElement('video');
+    // Kapak resmi bölüm yaklaşınca iner (açılışta gereksiz yük olmasın)
+    if (kapak && kapakEl) {
+      var kapakKoy = function () { kapakEl.style.backgroundImage = 'url("' + kapak.replace(/["\\]/g, '') + '")'; kapakEl.classList.add('lp-kapakli'); v.poster = kapak; };
+      if ('IntersectionObserver' in window) {
+        var kio = new IntersectionObserver(function (g) { if (g[0].isIntersecting) { kio.disconnect(); kapakKoy(); } }, { rootMargin: '600px 0px' });
+        kio.observe(cerceve);
+      } else kapakKoy();
+    }
     v.className = 'lp-video-oynatici'; v.controls = true; v.preload = 'none';
     v.setAttribute('playsinline', ''); v.playsInline = true;
-    if (kapak) v.poster = kapak;
     v.src = kaynak;
     cerceve.appendChild(v);
     var not = cerceve.querySelector('.lp-video-not'); if (not) not.hidden = true;
