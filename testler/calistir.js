@@ -13,6 +13,8 @@ const sunucu = http.createServer((q, r) => {
 const ADRES = 'http://127.0.0.1:' + sunucu.address().port;
 const SAHTE = fs.readFileSync(path.join(__dirname, 'sahte-supabase.js'), 'utf8');
 const sonuc = { tarih: new Date().toISOString(), gecen: [], kalan: [] };
+// Bir sayfa takılırsa (ör. panel hiç açılmazsa) testler sonsuza kadar beklemesin: 6 dakikada hata say
+setTimeout(() => { sonuc.kalan.push('ZAMAN AŞIMI: testler 6 dakikada bitmedi (bir sayfa takılıyor olabilir)'); console.log(JSON.stringify(sonuc, null, 2)); process.exit(1); }, 360000).unref();
 const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push(detay ? ad + ': ' + detay : ad));
 
 (async () => {
@@ -35,6 +37,8 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     // Panel: menü sayfaları
     hatalar.length = 0;
     await p.goto(ADRES + '/panel.html#ozet'); await p.waitForSelector('#panel:not([hidden])', { timeout: 10000 }).catch(() => {});
+    // Sahte veri tabanı yönetici gibi davranır (süzgeçsiz sorguya hata döner): panel yine de açılmalı
+    kontrol(cihaz + ' panel, birden çok işletme varken de açılıyor (sahip süzgeci)', await p.isVisible('#panel').catch(() => false));
     kontrol(cihaz + ' panel yükleniyor', await p.isVisible('#panel'));
     for (const s of ['ozet', 'isler', 'yz', 'google', 'hesap']) {
       await p.click('#yan-menu [data-git=' + s + ']').catch(() => {});
