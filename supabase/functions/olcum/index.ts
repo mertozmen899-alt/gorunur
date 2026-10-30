@@ -75,6 +75,31 @@ async function populerAramalar(cekir: string, yer: string, anahtar: string): Pro
   });
   return tekillestir(uygun.map((k) => k.toLocaleLowerCase("tr")));
 }
+// Google sonuçlarında rehber / liste sayfası olanları ayırır
+const REHBER_ALAN = /(yandex\.|cybo\.com|foursquare\.com|tripadvisor\.|armut\.com|doktortakvimi\.com|bulurum\.com|rehber|infobel|kompass|cylex|hotfrog|mapcarta|wanderlog|yelp\.|sikayetvar\.com|firma|nerede|yakinimda|eniyi|listele|kurumsal|sarisayfa|yellowpages|ilan|zingat|hepsiemlak|sahibinden\.com|trendyol\.com|hepsiburada\.com|n11\.com|getir|yemeksepeti|booking\.com|etstur|obilet)/i;
+const REHBER_BASLIK = /(listesi|rehberi|firmaları|firmalari|mağazaları|magazalari|en iyi|yakınımda|yakinimda|adresleri|telefonları|telefonlari|nerede|tavsiye|önerileri|onerileri)/i;
+function rehberMi(baslik: string, alan: string): boolean {
+  if (!alan || /google\.|instagram\.com|facebook\.com|youtube\.com|tiktok\.com|wikipedia/i.test(alan)) return false;
+  return REHBER_ALAN.test(alan) || REHBER_BASLIK.test(baslik);
+}
+// Sektöre özel rehber ve platform siteleri: yapay zekâya sorulur, her alan adının gerçekten açıldığı denetlenir
+async function sektorRehberleri(isK: string, GEM: string, modeller: string[]) {
+  const soru = `Türkiye'de "${isK}" işletmelerinin müşteriler tarafından bulunduğu ve işletmenin kendine profil, ilan ya da mağaza açabildiği Türk rehber, platform ve pazar yeri sitelerini listele. Sadece gerçekten var olan, Türkiye'de bilinen siteler olsun. Google, Bing, Apple, Yandex haritaları, Instagram ve Facebook'u yazma. En fazla 6 site. Sadece şu biçimde JSON dizi döndür: [{"ad":"Site adı","alan":"ornek.com","ne_ise_yarar":"Bu işletme için neden önemli, tek kısa cümle"}]`;
+  const { metin } = await gemini(soru, GEM, modeller, true);
+  let liste: Array<{ ad?: string; alan?: string; ne_ise_yarar?: string }> = [];
+  try { liste = JSON.parse(metin.replace(/^```(json)?|```$/g, "").trim()); } catch { return []; }
+  if (!Array.isArray(liste)) return [];
+  const temiz = liste.map((x) => ({ ad: String(x.ad || "").slice(0, 60), alan: alanAdi(String(x.alan || "")), ne_ise_yarar: String(x.ne_ise_yarar || "").slice(0, 200) }))
+    .filter((x) => x.ad && /^[a-z0-9.-]+\.[a-z]{2,}$/.test(x.alan) && !/google\.|bing\.|apple\.|yandex\.|instagram\.|facebook\./.test(x.alan));
+  // Alan adı gerçekten açılıyor mu? (uydurma siteleri ele)
+  const denetim = await Promise.allSettled(temiz.map(async (x) => {
+    const r = await fetch("https://" + x.alan, { redirect: "follow", signal: AbortSignal.timeout(7000), headers: { "User-Agent": "Mozilla/5.0 (GorunurDenetim)" } });
+    await r.body?.cancel();
+    if (r.status >= 500 && r.status !== 503) throw new Error("kapali");
+    return x;
+  }));
+  return denetim.filter((d) => d.status === "fulfilled").map((d) => (d as PromiseFulfilledResult<typeof temiz[number]>).value).slice(0, 6);
+}
 // Adres istenen semt/şehirde mi? (adres yoksa kabul)
 function yerdeMi(adres: unknown, semtKisa: string, sehir: string, turkiye: boolean): boolean {
   if (turkiye || !adres) return true;
@@ -101,7 +126,7 @@ async function serp(params: Record<string, string>, anahtar: string) {
 }
 
 let aramaKotasiYok = false; // bir istekte arama kotası yoksa diğer sorularda tekrar denenmez
-async function gemini(soru: string, anahtar: string, modeller: string[]) {
+async function gemini(soru: string, anahtar: string, modeller: string[], jsonMod = false) {
   let sonHata = "";
   for (const model of modeller) {
     // Önce Google arama destekli dene; arama ücretsiz kotada yoksa aramasız sor
@@ -112,8 +137,8 @@ async function gemini(soru: string, anahtar: string, modeller: string[]) {
         headers: { "Content-Type": "application/json", "x-goog-api-key": anahtar },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: soru }] }],
-          ...(aramali ? { tools: [{ google_search: {} }] } : {}),
-          generationConfig: { temperature: 0.4, maxOutputTokens: 1500 },
+          ...(aramali && !jsonMod ? { tools: [{ google_search: {} }] } : {}),
+          generationConfig: { temperature: jsonMod ? 0.2 : 0.4, maxOutputTokens: 1500, ...(jsonMod ? { responseMimeType: "application/json" } : {}) },
         }),
         signal: AbortSignal.timeout(35000),
       });
@@ -266,6 +291,7 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     }
   };
 
+  const rehberSayfalari: Array<{ baslik: string; alan: string; kelime: string; sira: number }> = [];
   // 2) Google arama: ilk 2 kelime (SerpApi kotasını korumak için)
   const arama = async () => {
     if (!SERP) return;
@@ -284,6 +310,11 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
       const ben = org.find((x) => (siteAlan && alanOf(x) === siteAlan) || adGeciyor(String(x.baslik || ""), isl.ad));
       const yerel = (((j.local_results || {}) as Record<string, unknown>).places || []) as Array<Record<string, unknown>>;
       const yerelBen = yerel.findIndex((p) => adGeciyor(String(p.title || ""), isl.ad));
+      for (const x of org) {
+        const alan = alanOf(x);
+        if (x !== ben && rehberMi(String(x.baslik || ""), alan) && !rehberSayfalari.some((y) => y.alan === alan))
+          rehberSayfalari.push({ baslik: String(x.baslik || ""), alan, kelime: aranacak[i], sira: x.sira as number });
+      }
       kelimeSonuc[i].arama_sira = ben ? ben.sira : null;
       kelimeSonuc[i].yerel_kutuda = yerelBen >= 0 ? yerelBen + 1 : null;
       kelimeSonuc[i].yerel_kutu = yerel.slice(0, 3).map((p) => p.title);
@@ -338,9 +369,22 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
   };
   let yzMetinleri: string[] = [];
 
-  const sonuclar = await Promise.allSettled([harita(), arama(), yz()]);
+  // 4) Sektöre özel rehber siteleri (30 günde bir yenilenir)
+  const rehber = async () => {
+    if (!GEM) return;
+    const eskiR = !isl.sektor_rehberleri_tarih || Date.now() - new Date(isl.sektor_rehberleri_tarih).getTime() > 30 * 864e5;
+    if (!eskiR) return;
+    const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-2.5-flash-lite"].filter(Boolean) as string[];
+    try {
+      const liste = await sektorRehberleri(isK, GEM, modeller);
+      if (liste.length) await db.from("isletmeler").update({ sektor_rehberleri: liste, sektor_rehberleri_tarih: new Date().toISOString() }).eq("id", isl.id);
+    } catch (e) { console.log("sektor rehberleri alinamadi", String(e)); }
+  };
+
+  const sonuclar = await Promise.allSettled([harita(), arama(), yz(), rehber()]);
   sonuclar.forEach((r) => { if (r.status === "rejected") hatalar.push(String(r.reason?.message || r.reason).slice(0, 200)); });
   s.kelimeler = kelimeSonuc;
+  s.rehber_sayfalari = rehberSayfalari.slice(0, 6);
   if (yzMetinleri.length) {
     const adaylar = new Map<string, string>();
     for (const l of haritaListeleri) for (const r of (l || []).slice(0, 10)) {
@@ -352,7 +396,7 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     s.yz_rakipler = pay;
   }
 
-  const hepsiHata = sonuclar.every((r) => r.status === "rejected");
+  const hepsiHata = sonuclar.slice(0, 3).every((r) => r.status === "rejected");
   const guncel = { ...s, hatalar, durum: hepsiHata ? "hata" : "bitti", bitis: new Date().toISOString() };
   const { data: son } = await db.from("olcumler").update(guncel).eq("id", (kayit as { id: string }).id).select("*").single();
   return { son, hepsiHata };

@@ -347,3 +347,10 @@ h1,h2,h3{margin:0}
 .pay-satir.siz .pay-cubuk i{background:var(--amber)}
 .pay-sayi{font-weight:800;font-variant-numeric:tabular-nums;color:var(--yazi2)}
 @media (max-width:560px){.pay-satir{grid-template-columns:minmax(0,1fr) auto}.pay-cubuk{grid-column:1/-1;grid-row:2}}
+
+/* Önerilen siteler */
+.site-liste{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.site-liste li{background:var(--zemin2);border:1px solid var(--cizgi2);border-radius:12px;padding:10px 12px;font-size:14px}
+.site-liste a{font-weight:800;color:var(--amber)}
+.site-alan{color:var(--soluk);font-size:13px}
+.site-liste small{display:block;margin-top:3px;color:var(--yazi2);font-size:13px;line-height:1.5}

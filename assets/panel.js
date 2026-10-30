@@ -42,6 +42,17 @@
       d.appendChild(el('span', String(k + 1), 'is-no'));
       var g = el('div', null, 'is-govde');
       g.appendChild(el('b', x.t)); if (x.s) g.appendChild(el('small', x.s)); if (x.n) g.appendChild(el('p', x.n));
+      if (x.siteler && x.siteler.length) {
+        var ul = el('ul', null, 'site-liste');
+        x.siteler.forEach(function (st) {
+          var li = el('li');
+          var a = el('a', st.ad); a.href = st.url; a.target = '_blank'; a.rel = 'noopener nofollow'; li.appendChild(a);
+          li.appendChild(el('span', ' ' + st.alan, 'site-alan'));
+          if (st.not) li.appendChild(el('small', st.not));
+          ul.appendChild(li);
+        });
+        g.appendChild(ul);
+      }
       if (x.adimlar && x.adimlar.length) {
         var ol = el('ol', null, 'adim-liste');
         x.adimlar.forEach(function (a) { ol.appendChild(el('li', a)); });
@@ -153,6 +164,37 @@
     }
   };
 
+  // Sektörünüzdeki rehber ve platform siteleri: araştırılmış liste + Google'da gerçekten çıkan liste sayfaları
+  function rehberIsleri(i, o) {
+    var isler = [];
+    var sektor = (isletme.sektor_rehberleri || i.sektor_rehberleri || []);
+    if (sektor.length) isler.push({
+      t: 'Sektörünüzün sitelerinde işletme hesabı açın', s: 'Her biri 15-20 dakika · çoğu ücretsiz',
+      n: '"' + (i.is_turu || 'işletme') + '" işletmeleri için Türkiye’de müşterilerin baktığı siteleri araştırdık. Yapay zekâ ve Google bu sitelerdeki profilleri okuyor. Aşağıdakilerin her birinde hesabınız olsun:',
+      siteler: sektor.map(function (x) { return { ad: x.ad, alan: x.alan, url: 'https://' + x.alan, not: x.ne_ise_yarar }; }),
+      adimlar: [
+        'Listedeki her siteye girin ve "Firma ekle", "İşletme kaydı", "Satıcı ol" ya da "Hizmet veren ol" yazan bölümü bulun.',
+        'İşletme adını, adresi ve telefonu Google’daki ile harfi harfine aynı yazın.',
+        'Ürün veya hizmetlerinizi, fotoğraflarınızı ve çalışma saatlerinizi ekleyin.',
+        'Müşterilerinizden bu sitelerde de yorum isteyin.'
+      ],
+      sonuc: 'Yapay zekâ sizi ne kadar çok güvenilir sitede görürse o kadar çok öneriyor.'
+    });
+    var sayfalar = o.rehber_sayfalari || [];
+    if (sayfalar.length) isler.push({
+      t: 'Google’da çıkan liste sayfalarına adınızı ekletin', s: 'Sayfa başına 10 dakika',
+      n: 'Müşterileriniz Google’da arama yapınca bu liste ve rehber sayfalarını görüyor. Bu sayfalarda sizin adınızı göremedik:',
+      siteler: sayfalar.map(function (x) { return { ad: x.baslik, alan: x.alan, url: 'https://' + x.alan, not: '"' + x.kelime + '" aramasında ' + x.sira + '. sırada çıkıyor.' }; }),
+      adimlar: [
+        'Her sayfayı açın ve listede işletmenizin olup olmadığına bakın.',
+        'Yoksa sayfadaki "Firma ekle", "Ücretsiz kayıt" ya da "İletişim" bölümünden işletmenizi ekleyin veya eklenmesini isteyin.',
+        'Varsa adres ve telefonunuzun doğru yazıldığını kontrol edin.'
+      ],
+      sonuc: 'Google aramasında listelerden gelen müşterilere de görünürsünüz; yapay zekâ bu listeleri sık kaynak gösteriyor.'
+    });
+    return isler;
+  }
+
   // Ölçüm sonucundan yapılacaklar çıkarır (sadece ölçülen farka dayanır)
   function olcumIsleri(o, i) {
     var isler = [];
@@ -179,7 +221,9 @@
     var isK = (i.is_turu || 'işletme').toLocaleLowerCase('tr');
     var cek = isK.split(/\s+/).filter(function (k) { return k && EKLER.indexOf(k) < 0; }).join(' ') || isK;
     var adimlar = [IS.bing(i), IS.digerHaritalar(i)];
-    if (/(dis|doktor|hekim|klinik|psikolog|diyetisyen|fizyoterap|estetik|saglik)/.test(t) && !/veteriner/.test(t))
+    var arastirilmis = rehberIsleri(i, o);
+    if (arastirilmis.length) adimlar = adimlar.concat(arastirilmis);
+    else if (/(dis|doktor|hekim|klinik|psikolog|diyetisyen|fizyoterap|estetik|saglik)/.test(t) && !/veteriner/.test(t))
       adimlar.push({ t: 'Doktortakvimi’nde profil açın', s: '20 dakika', n: 'Sağlık alanında Google ve yapay zekâ en çok Doktortakvimi profillerini ve yorumlarını gösteriyor.', adimlar: ['doktortakvimi.com adresine girip "Doktor musunuz?" ya da "Klinik ekle" bölümünden ücretsiz kayıt olun.', 'Uzmanlık alanlarınızı, ' + yer + ' adresinizi ve muayene ücretinizi ekleyin.', 'Hastalarınızdan orada da yorum isteyin.'], l: 'https://www.doktortakvimi.com', lm: 'Doktortakvimi' });
     else if (/(tadilat|temizlik|nakliyat|boya|tesisat|elektrik|usta|montaj|tamir|tamirat|ders|fotograf|dugun|organizasyon|bahce|klima|cilingir)/.test(t))
       adimlar.push({ t: 'Armut’ta hizmet veren hesabı açın', s: '20 dakika', n: 'Hizmet işlerinde Armut profilleri ve yorumları aramalarda ve yapay zekâ cevaplarında sık geçiyor.', adimlar: ['armut.com adresine girip "Hizmet veren ol" bölümünden kayıt olun.', 'Verdiğiniz her hizmeti ayrı ayrı seçin ve ' + yer + ' bölgesini işaretleyin.', 'İşlerinizin fotoğraflarını ekleyin, işi bitirdiğiniz müşterilerden Armut’ta yorum isteyin.'], l: 'https://armut.com', lm: 'Armut' });
