@@ -212,11 +212,16 @@
 
     // 5) WhatsApp mesajları ekrana girince sırayla, "yazıyor" noktalarıyla gelir
     var mesajlar = document.querySelector('.lp-wa .mesajlar');
-    if (mesajlar && hareket && IO && !gorunuyor(mesajlar)) {
+    if (mesajlar && hareket && IO) {
       mesajlar.classList.add('lp-sira');
+      // Yazışma ekrandayken sürekli döner: bitince 4 sn bekler, solarak başa sarar. Ekran dışındayken durur.
+      var waGorunur = false, waCalisiyor = false, waBasla = null;
       var wio = new IntersectionObserver(function (g) {
-        if (!g[0].isIntersecting) return;
-        wio.disconnect();
+        waGorunur = g[0].isIntersecting;
+        if (waGorunur && !waCalisiyor && waBasla) waBasla();
+      }, { threshold: 0.35 });
+      wio.observe(mesajlar);
+      (function () {
         var ogeler = Array.prototype.slice.call(mesajlar.children), k = 0;
         var nokta = document.createElement('span');
         nokta.className = 'lp-wa-yaziyor'; nokta.setAttribute('aria-hidden', 'true');
@@ -232,7 +237,7 @@
           if (hedef > kayma) { kayma = hedef; mesajlar.style.transform = 'translateY(' + (-kayma) + 'px)'; }
         };
         var sonraki = function () {
-          if (k >= ogeler.length) { mesajlar.classList.remove('lp-sira'); return; }
+          if (k >= ogeler.length) { setTimeout(basaSar, 4000); return; }
           var o = ogeler[k++];
           if (o.classList.contains('gelen')) {
             nokta.style.left = o.offsetLeft + 'px'; nokta.style.top = o.offsetTop + 'px';
@@ -253,9 +258,26 @@
             o.classList.add('lp-cikti'); kaydir(o.offsetTop + o.offsetHeight); setTimeout(sonraki, 300);
           }
         };
-        setTimeout(sonraki, 200);
-      }, { threshold: 0.35 });
-      wio.observe(mesajlar);
+        var basaSar = function () {
+          if (!waGorunur) { waCalisiyor = false; return; } // ekran dışı: görününce baştan başlar
+          mesajlar.style.transition = 'opacity .45s ease';
+          mesajlar.style.opacity = '0';
+          setTimeout(function () {
+            ogeler.forEach(function (o) { o.classList.remove('lp-cikti', 'lp-okundu'); });
+            mesajlar.style.transition = 'none'; mesajlar.style.transform = ''; kayma = 0; k = 0;
+            void mesajlar.offsetHeight;
+            mesajlar.style.transition = 'opacity .45s ease'; mesajlar.style.opacity = '1';
+            setTimeout(function () { mesajlar.style.transition = ''; sonraki(); }, 500);
+          }, 500);
+        };
+        waBasla = function () {
+          waCalisiyor = true;
+          ogeler.forEach(function (o) { o.classList.remove('lp-cikti', 'lp-okundu'); });
+          mesajlar.style.transform = ''; kayma = 0; k = 0;
+          setTimeout(sonraki, 200);
+        };
+        if (waGorunur) waBasla();
+      })();
     } else if (mesajlar) {
       // Hareket yoksa (ya da yazışma zaten ekrandaysa) sohbetin son mesajları görünsün: yazı çubuğunun altında mesaj kalmaz
       var sabitle = function () {
