@@ -707,3 +707,35 @@ a.sayi-kutu{color:inherit;text-decoration:none;transition:border-color .15s;bord
   .lp-promo-kart{animation:lpAltan .45s cubic-bezier(.2,.7,.2,1) both}
 }
 .lp-sira>.lp-cikti,.lp-sira>.lp-wa-yaziyor{opacity:1}
+
+/* WhatsApp iletişim düğmesi (her sayfada, sağ alt) */
+.wa-dugme{position:fixed;right:20px;bottom:20px;z-index:45;display:flex;align-items:center;gap:10px;text-decoration:none}
+.wa-yuvarlak{width:58px;height:58px;border-radius:50%;background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 28px -10px rgba(0,0,0,.45);transition:transform .15s ease}
+.wa-dugme:hover .wa-yuvarlak{transform:scale(1.06)}
+.wa-dugme:focus-visible{outline:none} .wa-dugme:focus-visible .wa-yuvarlak{outline:3px solid var(--vurgu);outline-offset:3px}
+.wa-balon{position:absolute;right:70px;top:50%;translate:0 -50%;white-space:nowrap;background:var(--kart);color:var(--yazi);border:1px solid var(--cizgi2);font-size:14px;font-weight:700;padding:9px 14px;border-radius:12px 12px 3px 12px;box-shadow:0 10px 24px -14px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .2s ease}
+.wa-dugme:hover .wa-balon,.wa-dugme:focus-visible .wa-balon,.wa-dugme.wa-acik .wa-balon{opacity:1}
+@media (max-width:720px){
+  .wa-dugme{right:14px;bottom:14px} .wa-yuvarlak{width:52px;height:52px} .wa-balon{display:none}
+  body:has(.lp-serit:not([hidden])) .wa-dugme{bottom:84px}
+  body:has(.yan-menu) .wa-dugme{bottom:calc(78px + env(safe-area-inset-bottom))}
+}
+body:has(.lp-promo:not([hidden])) .wa-dugme{opacity:0;pointer-events:none}
+@media (prefers-reduced-motion:reduce){.wa-yuvarlak,.wa-balon{transition:none}}
+
+/* "Web siteniz yok mu? Biz yapalım" teklifi */
+.site-teklif{display:flex;flex-wrap:wrap;gap:28px;align-items:center;background:var(--kart);border:1px solid var(--cizgi2);border-radius:24px;padding:32px}
+.site-teklif>div{flex:1 1 340px;min-width:0}
+.site-teklif ul{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:10px}
+.site-teklif li{display:flex;gap:10px;align-items:flex-start;font-size:15px;line-height:1.5;color:var(--yazi2)}
+.site-teklif li::before{content:"✓";flex:none;width:22px;height:22px;border-radius:50%;background:var(--yesilzemin);color:var(--yesil);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.btn-wa{background:#25D366;color:#0B2E17;display:inline-flex;align-items:center;gap:10px} .btn-wa:hover{background:#3EE07C;color:#0B2E17}
+.site-mock{position:relative;max-width:360px;margin:0 auto;background:var(--kart2);border:1px solid var(--cizgi2);border-radius:18px;padding:14px}
+.site-mock .sm-ust{display:flex;gap:6px;margin-bottom:12px} .site-mock .sm-ust i{width:9px;height:9px;border-radius:50%;background:var(--cizgi3)}
+.site-mock .sm-adres{font-size:12px;color:var(--soluk);background:var(--kart);border:1px solid var(--cizgi2);border-radius:999px;padding:5px 12px;margin-bottom:14px}
+.site-mock .sm-baslik{font-family:var(--baslik);font-weight:800;font-size:20px;line-height:1.2;color:var(--yazi)}
+.site-mock .sm-satir{height:9px;border-radius:6px;background:var(--cizgi2);margin-top:9px}
+.site-mock .sm-dugmeler{display:flex;gap:8px;margin-top:14px} .site-mock .sm-dugmeler b{font-size:12px;padding:7px 12px;border-radius:999px;background:var(--amber);color:#111318} .site-mock .sm-dugmeler b+b{background:var(--kart);color:var(--yazi);border:1px solid var(--cizgi3)}
+.site-mock .sm-rozet{position:absolute;right:-10px;bottom:-14px;background:var(--kart);border:1px solid var(--cizgi2);border-radius:12px 12px 12px 3px;padding:8px 12px;font-size:12px;font-weight:800;color:var(--yazi);box-shadow:0 10px 22px -12px rgba(0,0,0,.35)}
+@media (max-width:720px){.site-teklif{padding:22px}.site-mock .sm-rozet{right:6px}}
+.t-teklif-panel{margin-top:14px;border:1px solid var(--cizgi2);border-radius:14px;padding:14px 16px;background:var(--kart2)} .t-teklif-panel b{display:block;color:var(--yazi)} .t-teklif-panel .kart-alt{margin:4px 0 10px}

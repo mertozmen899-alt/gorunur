@@ -767,7 +767,16 @@
     var ss = i.site_saglik; kutu.innerHTML = '';
     $('site-tara').hidden = !i.site;
     if (!$('site-tara').disabled) $('site-tara').textContent = i.site_saglik ? 'Yeniden tara' : 'Siteyi tara';
-    if (!i.site) { kutu.appendChild(el('p', 'Kurulumda web sitesi girmediniz. Siteniz varsa Hesap sayfasından "Düzenle" ile ekleyin; yoksa İşlerim’de basit bir site açma adımları var.', 'kart-alt')); siteIsleriCiz(); return; }
+    if (!i.site) {
+      kutu.appendChild(el('p', 'Kurulumda web sitesi girmediniz. Siteniz varsa Hesap sayfasından "Düzenle" ile ekleyin.', 'kart-alt'));
+      var tk = el('div', null, 't-teklif-panel');
+      tk.appendChild(el('b', 'Siteniz yoksa biz yapalım'));
+      tk.appendChild(el('p', 'Google\'a uygun, telefonda hızlı açılan bir web sitesini sizin için hazırlıyoruz. Sırası Görünür ile her hafta takip edilir.', 'kart-alt'));
+      var wa = el('a', 'WhatsApp\'tan bilgi alın', 'btn btn-wa kucuk-btn'); wa.target = '_blank'; wa.rel = 'noopener';
+      wa.href = 'https://wa.me/905556984086?text=' + encodeURIComponent('Merhaba, ' + (i.ad || 'işletmem') + ' için web sitesi yaptırmak istiyorum.');
+      tk.appendChild(wa); kutu.appendChild(tk);
+      siteIsleriCiz(); return;
+    }
     if (!ss) { kutu.appendChild(el('p', 'Sitenizi henüz taramadık. "Siteyi tara" düğmesine basın, 10-20 saniye sürer.', 'kart-alt')); siteIsleriCiz(); return; }
     var ust = el('div', null, 'site-ust');
     var p = el('div', null, 'site-puan ' + (ss.puan >= 80 ? 'iyi' : ss.puan >= 50 ? 'orta' : 'zayif'));

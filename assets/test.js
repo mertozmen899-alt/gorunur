@@ -264,6 +264,14 @@
       }
       d.appendChild(ic); k.appendChild(d);
     });
+    if (!siz || !siz.web) {
+      var tk = el('div', 't-teklif');
+      tk.appendChild(el('b', null, 'Web siteniz yok mu? Google\'a uygun sitenizi biz yapalım.'));
+      tk.appendChild(el('p', null, 'İşinizi, semtinizi ve telefonunuzu Google\'ın anlayacağı şekilde anlatan, telefonda hızlı açılan bir site hazırlıyoruz.'));
+      var wa = el('a', 'btn btn-wa', 'WhatsApp\'tan bilgi alın'); wa.target = '_blank'; wa.rel = 'noopener';
+      wa.href = 'https://wa.me/905556984086?text=' + encodeURIComponent('Merhaba, ' + (siz ? siz.ad : 'işletmem') + ' için web sitesi yaptırmak istiyorum. (' + aramaAdi() + ')');
+      tk.appendChild(wa); k.appendChild(tk);
+    }
     var kilit = el('div', 't-kilit');
     kilit.appendChild(el('p', null, '2. ve 3. adımın nasıl yapılacağını ve her hafta sıranızı hesabınızda görün.'));
     var ac = el('a', 'btn btn-amber', 'Ücretsiz hesap aç, hepsini gör'); ac.href = 'giris.html#kayit'; kilit.appendChild(ac);
