@@ -67,6 +67,37 @@ async function yapayZeka(soru: string, anahtar: string) {
   throw new Error("Yapay zekâ: " + son);
 }
 
+// ChatGPT: OpenAI Responses API, internette arama açık (gerçek ChatGPT gibi güncel cevap)
+async function chatgpt(soru: string, sehir: string, anahtar: string) {
+  const modeller = [Deno.env.get("OPENAI_MODEL"), "gpt-5-mini", "gpt-4.1-mini"].filter(Boolean) as string[];
+  const istek = `${soru} Gerçek bir müşteriye cevap verir gibi 3 ile 5 işletme öner. Cevabının sonunda sadece şu JSON'u ver: {"isletmeler":[{"ad":"işletme adı","neden":"tek kısa cümle"}]}`;
+  let son = "";
+  for (const model of modeller) {
+    try {
+      const govde: Record<string, unknown> = {
+        model, input: istek,
+        tools: [{ type: "web_search", user_location: { type: "approximate", country: "TR", ...(sehir && sehir !== "Türkiye geneli" ? { city: sehir.split(",")[0].trim() } : {}) } }],
+      };
+      if (model.startsWith("gpt-5")) govde.reasoning = { effort: "low" };
+      const r = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + anahtar },
+        body: JSON.stringify(govde), signal: AbortSignal.timeout(45000),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { son += ` ${model}: ${r.status} ${String(j?.error?.message || "").slice(0, 100)};`; continue; }
+      const metin = String(j.output_text || (j.output || []).flatMap((o: { content?: Array<{ text?: string }> }) => o.content || []).map((c: { text?: string }) => c.text || "").join("\n"));
+      let v: Record<string, unknown> | null = null;
+      const blok = metin.match(/\{[\s\S]*"isletmeler"[\s\S]*\}/);
+      try { if (blok) v = JSON.parse(blok[0]); } catch { /* aşağıda */ }
+      if (!v) { const adlar = [...metin.matchAll(/"ad"\s*:\s*"([^"]{2,80})"/g)].map((m) => ({ ad: m[1], neden: "" })); if (adlar.length) v = { isletmeler: adlar }; }
+      const liste = (Array.isArray(v?.isletmeler) ? v!.isletmeler as Array<Record<string, unknown>> : []).map((x) => ({ ad: String(x.ad || "").replace(/\s*\(?\[?[a-z0-9.-]+\.(com|tr|net)[^)]*\)?\]?/gi, "").slice(0, 80), neden: String(x.neden || "").replace(/\s*\(\[[^\]]*\]\([^)]*\)\)/g, "").slice(0, 160) })).filter((x) => x.ad).slice(0, 5);
+      if (liste.length) return { model, isletmeler: liste };
+      son += ` ${model}: boş;`;
+    } catch (e) { son += ` ${model}: ${String(e).slice(0, 60)};`; }
+  }
+  throw new Error("ChatGPT: " + son);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ hata: "Sadece POST" }, 405);
@@ -93,7 +124,7 @@ Deno.serve(async (req) => {
       return json({ adaylar: l.slice(0, 4) });
     } catch (e) { console.log("hizli-test bul", String(e).slice(0, 200)); return json({ hata: "olcum", mesaj: "Şu an arayamadık. Birazdan tekrar deneyin." }, 502); }
   }
-  const anahtar = "v2|" + sade(sehir) + "|" + sade(isK);
+  const anahtar = "v3|" + sade(sehir) + "|" + sade(isK);
   const { data: onb } = await db.from("hizli_testler").select("sonuc, olusturma").eq("anahtar", anahtar).maybeSingle();
   if (onb && Date.now() - new Date(onb.olusturma).getTime() < 7 * 864e5) return json({ ...onb.sonuc, onbellek: true });
 
@@ -109,20 +140,23 @@ Deno.serve(async (req) => {
   if ((ipSay || 0) >= IP_GUNLUK) return json({ hata: "sinir", mesaj: "Bugün çok deneme yaptınız. Yarın tekrar deneyin." }, 429);
   const haritaAcik = (topSay || 0) < TOPLAM_GUNLUK && sehir !== "Türkiye geneli";
 
-  const SERP = (Deno.env.get("SERPAPI_KEY") || "").trim(), GEM = (Deno.env.get("GEMINI_API_KEY") || "").trim();
+  const SERP = (Deno.env.get("SERPAPI_KEY") || "").trim(), GEM = (Deno.env.get("GEMINI_API_KEY") || "").trim(), OAI = (Deno.env.get("OPENAI_API_KEY") || "").trim();
   const soru = `${yerde(sehir)} iyi bir ${isK} önerir misin?`;
-  const [h, y] = await Promise.allSettled([
+  const [h, y, c] = await Promise.allSettled([
     haritaAcik && SERP ? haritalar(`${isK} ${sehir}`, SERP) : Promise.resolve(null),
     GEM ? yapayZeka(soru, GEM) : Promise.resolve(null),
+    OAI && (topSay || 0) < TOPLAM_GUNLUK ? chatgpt(soru, sehir, OAI) : Promise.resolve(null),
   ]);
   const sonuc = {
     sehir, is: isK, soru,
     harita: h.status === "fulfilled" ? h.value : null,
     yz: y.status === "fulfilled" ? y.value : null,
+    cg: c.status === "fulfilled" ? c.value : null,
     tarih: new Date().toISOString(),
   };
   if (h.status === "rejected") console.log("hizli-test harita", String(h.reason).slice(0, 200));
   if (y.status === "rejected") console.log("hizli-test yz", String(y.reason).slice(0, 200));
+  if (c.status === "rejected") console.log("hizli-test cg", String(c.reason).slice(0, 300));
   await db.from("hizli_test_istek").insert({ ip_ozet: ipOzet, yeni: true });
   if (!sonuc.harita && !sonuc.yz) return json({ hata: "olcum", mesaj: "Şu an ölçemedik. Birkaç dakika sonra tekrar deneyin." }, 502);
   // Sadece iki parça da geldiyse önbelleğe al (yarım sonuç bir hafta takılı kalmasın)
