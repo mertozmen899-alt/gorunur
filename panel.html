@@ -10,10 +10,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=3">
+<link rel="stylesheet" href="assets/style.css?v=4">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="assets/auth.js?v=3"></script>
-<script src="assets/panel.js?v=3" defer></script>
+<script src="assets/auth.js?v=4"></script>
+<script src="assets/panel.js?v=4" defer></script>
 </head>
 <body>
 <header class="ust">
@@ -35,14 +35,59 @@
 <h1 id="baslik">Hoş geldiniz</h1>
 </div>
 
-<section class="hero-kart">
-<span class="durum"><i></i>İlk ölçümünüz sırada</span>
+<!-- Henüz ölçüm yok / ölçüm sürüyor -->
+<section class="hero-kart" id="ilk">
+<span class="durum"><i></i><span id="durum-yazi">İlk ölçümünüz sırada</span></span>
 <h2 id="hero-cumle"></h2>
-<p id="hero-alt"></p>
-<div class="adimlar" id="ilk-adimlar">
-<div class="tamam"><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Kurulum tamamlandı</div>
-<div class="aktif"><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Ölçüm sistemi hazırlanıyor</div>
-<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>İlk ölçüm ve ilk işleriniz</div>
+<p id="hero-alt">Google Haritalar'da ve Google aramasında kaçıncı çıktığınıza, ChatGPT benzeri yapay zekâ cevaplarında adınızın geçip geçmediğine bakacağız. Yaklaşık 1 dakika sürer.</p>
+<div class="adimlar" id="olcum-adimlar" hidden aria-live="polite">
+<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Google Haritalar'da sıranıza bakıyoruz</div>
+<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Google aramasına bakıyoruz</div>
+<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Yapay zekâya müşteri gibi soruyoruz</div>
+<div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Sizden önce çıkanları buluyoruz</div>
+</div>
+<div class="uyari koyu-uyari" id="olcum-uyari" role="alert" style="margin-top:14px"></div>
+<button type="button" class="btn btn-amber" id="olc" style="margin-top:20px">İlk ölçümü başlat</button>
+</section>
+
+<!-- Ölçüm sonucu -->
+<section id="sonuc" hidden>
+<div class="hero-kart sonuc-hero">
+<div class="sonuc-ust">
+<span class="durum durum-sakin"><span id="olcum-tarih"></span></span>
+<button type="button" class="btn btn-cizgi kucuk-btn" id="yeniden">Yeniden ölç</button>
+</div>
+<h2 id="sonuc-cumle"></h2>
+<p id="sonuc-alt"></p>
+<div class="uc-kutu">
+<div class="sayi-kutu"><span>Google Haritalar</span><b id="k-harita"></b><small id="k-harita-not"></small></div>
+<div class="sayi-kutu"><span>Google arama</span><b id="k-arama"></b><small id="k-arama-not"></small></div>
+<div class="sayi-kutu"><span>Yapay zekâ cevapları</span><b id="k-yz"></b><small id="k-yz-not"></small></div>
+</div>
+<p class="hata-not" id="sonuc-hata" hidden></p>
+</div>
+
+<div class="panel-izgara">
+<section class="kart genis">
+<div class="kart-bas"><h3>Bu haftanın işleri</h3><span class="pil pil-a">Ölçüme göre</span></div>
+<p class="kart-alt">Ölçümde gördüklerimize göre önem sırasıyla.</p>
+<div class="isler" id="olcum-isler"></div>
+</section>
+
+<section class="kart genis">
+<h3>Haritalarda kim önde?</h3>
+<p class="kart-alt" id="rakip-not"></p>
+<div class="kaydir" style="margin-top:14px"><table class="tablo">
+<thead><tr><th>Sıra</th><th>İşletme</th><th>Puan</th><th>Yorum</th></tr></thead>
+<tbody id="rakip-tablo"></tbody>
+</table></div>
+</section>
+
+<section class="kart genis">
+<h3>Yapay zekâ ne dedi?</h3>
+<p class="kart-alt">Google aramasıyla çalışan bir yapay zekâya müşteri gibi sorduk. Cevapların tamamını açıp okuyabilirsiniz.</p>
+<div id="yz-liste" class="yz-liste"></div>
+</section>
 </div>
 </section>
 
@@ -53,27 +98,16 @@
 </section>
 
 <section class="kart">
-<h3>Neyi ölçeceğiz?</h3>
-<p class="kart-alt">Çalışma şeklinize göre seçtik.</p>
-<ul class="olcum-liste" id="olcumler"></ul>
-</section>
-
-<section class="kart genis">
-<div class="kart-bas"><h3>Şimdiden yapabilecekleriniz</h3><span class="pil pil-a">Ölçüm beklemeden</span></div>
-<p class="kart-alt">Bunlar her işletme için geçerli. Asıl haftalık işlerinizi ilk ölçümden sonra hazırlayacağız.</p>
-<div class="isler" id="isler"></div>
-</section>
-
-<section class="kart">
-<h3>Haftalık gidişat</h3>
-<p class="kart-alt">İlk ölçüm bitince ilk çubuk burada görünür. Her pazartesi bir çubuk eklenir.</p>
-<div class="bos-grafik" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-</section>
-
-<section class="kart">
 <h3>Size nasıl ulaşacağız?</h3>
 <p class="kart-alt" id="iletisim"></p>
-<a href="kurulum.html?adim=5" class="btn btn-cizgi" style="margin-top:14px;padding:10px 16px;min-height:42px;font-size:14px">Değiştir</a>
+<p class="kart-alt" style="margin-top:10px">Haftalık otomatik ölçüm ve WhatsApp özeti <span class="pil pil-a" style="font-size:11px">yakında</span></p>
+<a href="kurulum.html?adim=5" class="btn btn-cizgi kucuk-btn" style="margin-top:14px">Değiştir</a>
+</section>
+
+<section class="kart genis" id="genel-isler-kart">
+<div class="kart-bas"><h3>Her işletme için geçerli</h3><span class="pil pil-a">Ölçüm beklemeden</span></div>
+<p class="kart-alt">Bunlar ölçümden bağımsız, her zaman işe yarayan adımlar.</p>
+<div class="isler" id="isler"></div>
 </section>
 </div>
 </main>
