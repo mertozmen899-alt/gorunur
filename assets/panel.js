@@ -32,7 +32,9 @@
     var ilk3 = (o.harita_sonuclar || []).filter(function (r) { return !r.siz; }).slice(0, 3);
     var ortYorum = ilk3.length ? Math.round(ilk3.reduce(function (t, r) { return t + (r.yorum || 0); }, 0) / ilk3.length) : null;
     var ortPuan = ilk3.length ? ilk3.reduce(function (t, r) { return t + (r.puan || 0); }, 0) / ilk3.length : null;
-    if (b.bulundu === false) {
+    if (b.bulundu === false && b.baska_sube) {
+      isler.push({ t: (i.semt || '').split(',')[0] + ' için ayrı Google profili açın', s: 'En önemli iş · 20 dakika', n: 'Google Haritalar’da "' + i.ad + '" adıyla sadece ' + (b.baska_sube.adres ? b.baska_sube.adres.split(',').slice(-2).join(',').trim() + ' adresindeki ' : '') + '"' + b.baska_sube.ad + '" profili çıkıyor. ' + (i.semt || '').split(',')[0] + ' mağazanızın kendi profili yoksa müşteriler sizi haritada göremez. Varsa adı farklı yazılmış olabilir; Google Haritalar’da mağazanızı açıp adını kurulumdaki adla aynı yapın.', l: 'https://business.google.com', lm: 'Google İşletme Profili' });
+    } else if (b.bulundu === false) {
       isler.push({ t: 'Google’da işletme profilinizi bulamadık', s: 'En önemli iş · 15 dakika', n: '"' + i.ad + '" adıyla Google Haritalar’da bir profil göremedik. Profil yoksa business.google.com’dan ücretsiz açın. Varsa adı farklı yazılmış olabilir; kurulumdaki işletme adını Google’daki adla aynı yapın.', l: 'https://business.google.com', lm: 'Google İşletme Profili' });
     }
     if (b.bulundu && ortYorum != null && (b.yorum || 0) < ortYorum) {
@@ -61,6 +63,7 @@
     $('olcum-tarih').textContent = 'Son ölçüm: ' + tarih(o.bitis || o.baslangic);
     var c;
     if (o.harita_sira) c = yerde(i.semt) + ' "' + o.harita_sorgu + '" aramasında Google Haritalar’da ' + o.harita_sira + '. sıradasınız.';
+    else if (b.bulundu === false && b.baska_sube) c = yerde(i.semt) + ' "' + i.ad + '" profilini bulamadık. Google’da sadece "' + b.baska_sube.ad + '" görünüyor' + (b.baska_sube.adres ? ' (' + b.baska_sube.adres.split(',').slice(-2).join(',').trim() + ')' : '') + '.';
     else if (b.bulundu === false) c = 'Google Haritalar’da "' + i.ad + '" adıyla bir profil bulamadık.';
     else if (o.harita_sonuclar) c = '"' + o.harita_sorgu + '" aramasında Google Haritalar’ın ilk 20 sonucunda yoksunuz.';
     else c = 'Haritalar ölçümü yapılamadı.';
@@ -100,6 +103,10 @@
 
     // Yapay zekâ cevapları
     var yl = $('yz-liste'); yl.innerHTML = '';
+    var aramasiz = (o.yz_cevaplar || []).some(function (c) { return c.aramali === false; });
+    $('yz-not').textContent = aramasiz
+      ? 'Yapay zekâya müşteri gibi sorduk. Bu ölçümde internette arama yapmadan kendi bilgisinden cevapladı. Cevapların tamamını açıp okuyabilirsiniz.'
+      : 'Google aramasıyla çalışan bir yapay zekâya müşteri gibi sorduk. Cevapların tamamını açıp okuyabilirsiniz.';
     (o.yz_cevaplar || []).forEach(function (c) {
       var d = el('details', null, 'yz-cevap');
       var s = el('summary');

@@ -40,6 +40,12 @@ function alanAdi(url?: string | null): string {
     return "";
   }
 }
+// Adres istenen semt/şehirde mi? (adres yoksa kabul)
+function yerdeMi(adres: unknown, semtKisa: string, sehir: string, turkiye: boolean): boolean {
+  if (turkiye || !adres) return true;
+  const a = " " + sade(String(adres)) + " ";
+  return [semtKisa, sehir].filter(Boolean).some((y) => a.includes(" " + sade(y)));
+}
 // İşletme adı bir başlıkla/metinle eşleşiyor mu?
 function adGeciyor(metin: string, ad: string): boolean {
   const m = " " + sade(metin) + " ";
@@ -59,29 +65,32 @@ async function serp(params: Record<string, string>, anahtar: string) {
   return j;
 }
 
+let aramaKotasiYok = false; // bir istekte arama kotası yoksa diğer sorularda tekrar denenmez
 async function gemini(soru: string, anahtar: string, modeller: string[]) {
   let sonHata = "";
   for (const model of modeller) {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": anahtar },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: soru }] }],
-        tools: [{ google_search: {} }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 900 },
-      }),
-      signal: AbortSignal.timeout(45000),
-    });
-    const j = await r.json().catch(() => ({}));
-    if (r.status === 404 || r.status === 400 && /not found|not supported/i.test(JSON.stringify(j))) {
-      sonHata = `${model}: bulunamadı`;
-      continue;
+    // Önce Google arama destekli dene; arama ücretsiz kotada yoksa aramasız sor
+    for (const aramali of aramaKotasiYok ? [false] : [true, false]) {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": anahtar },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: soru }] }],
+          ...(aramali ? { tools: [{ google_search: {} }] } : {}),
+          generationConfig: { temperature: 0.4, maxOutputTokens: 900 },
+        }),
+        signal: AbortSignal.timeout(45000),
+      });
+      const j = await r.json().catch(() => ({}));
+      const mesaj = String(j?.error?.message || r.status);
+      if (r.status === 404 || r.status === 400 && /not found|not supported/i.test(mesaj)) { sonHata = `${model}: bulunamadı`; break; }
+      if (r.status === 429 || r.status === 403) { sonHata = `${model}${aramali ? " (aramalı)" : ""}: kota`; if (aramali) aramaKotasiYok = true; continue; }
+      if (!r.ok) throw new Error("Gemini: " + mesaj);
+      const metin = (j?.candidates?.[0]?.content?.parts || []).map((p: { text?: string }) => p.text || "").join("").trim();
+      return { model, metin, aramali };
     }
-    if (!r.ok) throw new Error("Gemini: " + (j?.error?.message || r.status));
-    const metin = (j?.candidates?.[0]?.content?.parts || []).map((p: { text?: string }) => p.text || "").join("").trim();
-    return { model, metin };
   }
-  throw new Error("Gemini: uygun model bulunamadı (" + sonHata + ")");
+  throw new Error("Gemini: ücretsiz kota yetmedi ya da model bulunamadı (" + sonHata + ")");
 }
 
 Deno.serve(async (req) => {
@@ -109,12 +118,7 @@ Deno.serve(async (req) => {
   const SERP = bul("SERPAPI_KEY");
   const GEM = bul("GEMINI_API_KEY");
   const eksik = [!SERP && "SERPAPI_KEY", !GEM && "GEMINI_API_KEY"].filter(Boolean);
-  if (eksik.length === 2) {
-    // Teşhis: sadece değişken ADLARI (değerler asla yazılmaz)
-    const adlar = Object.keys(Deno.env.toObject()).filter((k) => /SERP|GEMINI|_KEY/i.test(k) && !/^SUPABASE_/.test(k)).map((k) => JSON.stringify(k));
-    console.log("anahtar adlari:", adlar.join(" ") || "(hic yok)");
-    return json({ hata: "Ölçüm anahtarları henüz eklenmedi: " + eksik.join(", ") + (adlar.length ? " (bulunan adlar: " + adlar.join(", ") + ")" : "") }, 503);
-  }
+  if (eksik.length === 2) return json({ hata: "Ölçüm anahtarları henüz eklenmedi: " + eksik.join(", ") }, 503);
 
   const semtKisa = (isl.semt || "").split(",")[0].trim();
   const sehir = ((isl.semt || "").split(",")[1] || "").trim();
@@ -136,7 +140,7 @@ Deno.serve(async (req) => {
       sira: (r.position as number) || i + 1, ad: r.title, puan: r.rating ?? null, yorum: r.reviews ?? null,
       adres: r.address ?? null, site: r.website ?? null, tur: r.type ?? null, place_id: r.place_id ?? null,
     }));
-    const ben = liste.find((r) => adGeciyor(String(r.ad || ""), isl.ad) || (siteAlan && alanAdi(String(r.site || "")) === siteAlan));
+    const ben = liste.find((r) => (adGeciyor(String(r.ad || ""), isl.ad) || (siteAlan && alanAdi(String(r.site || "")) === siteAlan)) && yerdeMi(r.adres, semtKisa, sehir, turkiye));
     s.harita_sira = ben ? ben.sira : null;
     s.harita_sonuclar = liste.slice(0, 10).map((r) => ({ ...r, siz: r === ben }));
     s.rakipler = liste.filter((r) => r !== ben).slice(0, 5);
@@ -146,10 +150,12 @@ Deno.serve(async (req) => {
       // Aramada çıkmadıysa işletmeyi adıyla bulmayı dene (profil var mı?)
       const j2 = await serp({ engine: "google_maps", type: "search", q: `${isl.ad} ${turkiye ? "" : semtKisa}`.trim(), hl: "tr" }, SERP);
       const adaylar = [...(j2.local_results || []), ...(j2.place_results ? [j2.place_results] : [])] as Array<Record<string, unknown>>;
-      const b = adaylar.find((r) => adGeciyor(String(r.title || ""), isl.ad));
+      const ayni = adaylar.filter((r) => adGeciyor(String(r.title || ""), isl.ad));
+      const b = ayni.find((r) => yerdeMi(r.address, semtKisa, sehir, turkiye));
+      const baska = !b && ayni[0];
       s.isletme_bilgi = b
         ? { ad: b.title, puan: b.rating ?? null, yorum: b.reviews ?? null, adres: b.address ?? null, tur: b.type ?? null, bulundu: true }
-        : { bulundu: false };
+        : { bulundu: false, baska_sube: baska ? { ad: baska.title, adres: baska.address ?? null, puan: baska.rating ?? null, yorum: baska.reviews ?? null } : null };
     }
   };
 
@@ -170,26 +176,29 @@ Deno.serve(async (req) => {
   // 3) Yapay zekâ (Gemini + Google arama)
   const yz = async () => {
     if (!GEM) return;
+    aramaKotasiYok = false;
     const yer = turkiye ? "Türkiye'de" : `${semtKisa}${sehir ? ", " + sehir : ""} bölgesinde`;
     const sorular = [
       `${yer} iyi bir ${isK} önerir misin? Birkaç işletme adı ver.`,
       `${turkiye ? "" : semtKisa + " civarında "}en çok tavsiye edilen ${isK} hangileri?`.trim(),
       `${yer} ${isK} arıyorum, güvenilir bir yer söyler misin?`,
     ];
-    const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"].filter(Boolean) as string[];
-    const cevaplar = await Promise.all(sorular.map(async (soru) => {
+    const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite"].filter(Boolean) as string[];
+    const cevaplar: Array<Record<string, unknown>> = [];
+    for (const soru of sorular) cevaplar.push(await (async () => {
       try {
-        const { model, metin } = await gemini(soru, GEM, modeller);
-        return { soru, model, geciyor: adGeciyor(metin, isl.ad), ozet: metin.slice(0, 1200) };
+        const { model, metin, aramali } = await gemini(soru, GEM, modeller);
+        return { soru, model, aramali, geciyor: adGeciyor(metin, isl.ad), ozet: metin.slice(0, 1200) };
       } catch (e) {
         return { soru, hata: String((e as Error).message).slice(0, 200) };
       }
-    }));
+    })());
     const basarili = cevaplar.filter((c) => !("hata" in c));
     s.yz_soru_sayisi = basarili.length;
     s.yz_gecen = basarili.filter((c) => (c as { geciyor: boolean }).geciyor).length;
     s.yz_cevaplar = cevaplar;
-    cevaplar.filter((c) => "hata" in c).forEach((c) => hatalar.push((c as { hata: string }).hata));
+    const hataliYz = cevaplar.filter((c) => "hata" in c);
+    if (hataliYz.length) hatalar.push(`Yapay zekâ: ${hataliYz.length} soru sorulamadı (${String(hataliYz[0].hata).slice(0, 140)})`);
   };
 
   const sonuclar = await Promise.allSettled([harita(), arama(), yz()]);
