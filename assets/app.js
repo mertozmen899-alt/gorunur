@@ -147,6 +147,11 @@
         g.forEach(function (x) { x.target.classList.toggle('lp-gor', x.isIntersecting); });
       }, { rootMargin: '40px 0px' });
       izlenen.forEach(function (e) { io.observe(e); });
+      // Özellik kartları: telefonda alt alta durur; yalnız ekranın ortasındaki kart oynar (aynı anda tek hareket)
+      var orta = new IntersectionObserver(function (g) {
+        g.forEach(function (x) { x.target.classList.toggle('lp-gor', x.isIntersecting); });
+      }, { rootMargin: '-45% 0px -45% 0px' });
+      document.querySelectorAll('.lp-izle-orta').forEach(function (e) { orta.observe(e); });
     } else {
       izlenen.forEach(function (e) { e.classList.add('lp-gor'); });
     }
@@ -195,20 +200,7 @@
       }
     }
 
-    // 3) Hero kartındaki oran sıfırdan sayarak gelir
-    var oran = hero.querySelector('.motor .oran');
-    if (oran && hareket && /^%\d+$/.test(oran.textContent.trim())) {
-      var hedef = parseInt(oran.textContent.trim().slice(1), 10), t0 = null;
-      oran.textContent = '%0';
-      setTimeout(function () {
-        requestAnimationFrame(function adim(t) {
-          if (t0 === null) t0 = t;
-          var p = Math.min(1, (t - t0) / 1100);
-          oran.textContent = '%' + Math.round(hedef * (1 - Math.pow(1 - p, 3)));
-          if (p < 1) requestAnimationFrame(adim);
-        });
-      }, 700);
-    }
+    // 3) Hero kartındaki oran sabit durur (başlıkta zaten dönen kelime var, ikinci hareket eklemiyoruz)
 
     // 4) Kartlardaki ↗ düğmesi ilgili sekmeyi de açar
     document.querySelectorAll('.lp-ac[data-sekme]').forEach(function (a) {
@@ -264,6 +256,15 @@
         setTimeout(sonraki, 200);
       }, { threshold: 0.35 });
       wio.observe(mesajlar);
+    } else if (mesajlar) {
+      // Hareket yoksa (ya da yazışma zaten ekrandaysa) sohbetin son mesajları görünsün: yazı çubuğunun altında mesaj kalmaz
+      var sabitle = function () {
+        var pencere = mesajlar.parentNode, fark = mesajlar.offsetHeight - pencere.clientHeight;
+        mesajlar.style.transform = fark > 0 ? 'translateY(' + (-fark) + 'px)' : '';
+      };
+      sabitle();
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(sabitle);
+      window.addEventListener('resize', sabitle);
     }
 
     // 6) Alt şerit ve tanıtım penceresi
