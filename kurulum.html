@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=16">
+<link rel="stylesheet" href="assets/style.css?v=17">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/auth.js?v=4"></script>
 <script src="assets/veri.js?v=4"></script>
@@ -26,7 +26,7 @@
 <span class="logo-ad">Görünür</span>
 </a>
 <div style="display:flex;align-items:center;gap:18px">
-<span id="adim-etiket" style="font-size:14px;font-weight:700;color:#57534E">Adım 1 / 5</span>
+<span id="adim-etiket" style="font-size:14px;font-weight:700;color:var(--yazi3)">Adım 1 / 5</span>
 <button type="button" id="cikis" class="geri" style="padding:6px 0;font-size:14px">Çıkış yap</button>
 </div>
 </div>
@@ -43,7 +43,7 @@
 <button type="button" class="secenek" data-mod="giderim" aria-pressed="false"><span class="ikon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11zM12 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/></svg></span><span class="m"><strong>Ben onlara giderim</strong><small>Evlere ya da iş yerlerine siz gidersiniz.</small></span><span class="kutu"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span></button>
 <button type="button" class="secenek" data-mod="online" aria-pressed="false"><span class="ikon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 100-18 9 9 0 000 18zM3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg></span><span class="m"><strong>Online çalışırım</strong><small>Müşteriniz her şehirden olabilir.</small></span><span class="kutu"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span></button>
 </div>
-<p style="font-size:13px;color:#6B665E;margin:18px 0 0">Kurulum yaklaşık 3 dakika sürer. Yarıda bırakırsanız kaldığınız yerden devam edersiniz.</p>
+<p style="font-size:13px;color:var(--soluk);margin:18px 0 0">Kurulum yaklaşık 3 dakika sürer. Yarıda bırakırsanız kaldığınız yerden devam edersiniz.</p>
 </section>
 
 <section data-adim="2" hidden>
@@ -52,7 +52,7 @@
 <label for="semt" class="etk" style="margin-top:28px">Semt veya ilçe</label>
 <input id="semt" class="girdi" type="text" autocomplete="off" placeholder="Birkaç harf yazın, örn. Kadı" aria-describedby="semt-not">
 <div id="semt-oneri" class="oneriler" hidden></div>
-<p id="semt-not" style="font-size:13px;color:#6B665E;margin:10px 0 0">Müşterilerinize adres tarif ederken söylediğiniz yeri yazın. Listede yoksa yazdığınız gibi kullanırız.</p>
+<p id="semt-not" style="font-size:13px;color:var(--soluk);margin:10px 0 0">Müşterilerinize adres tarif ederken söylediğiniz yeri yazın. Listede yoksa yazdığınız gibi kullanırız.</p>
 <button type="button" id="turkiye" class="btn btn-cizgi" style="margin-top:14px;font-size:14px;padding:10px 16px" hidden>Türkiye geneli hizmet veriyorum</button>
 </section>
 
@@ -76,7 +76,7 @@
 <input id="instagram" class="girdi" type="text" autocomplete="off" placeholder="@isletmeniz" maxlength="300">
 <label for="google" class="etk" style="margin-top:18px">Google Haritalar'daki işletme linkiniz</label>
 <input id="google" class="girdi" type="url" inputmode="url" autocomplete="off" placeholder="maps.app.goo.gl/..." maxlength="500" aria-describedby="google-not">
-<p id="google-not" style="font-size:13px;color:#6B665E;margin:8px 0 0">Google Haritalar'da işletmenizi açıp "Paylaş"a basınca çıkan link. Yoksa boş bırakın, hangisinin gerektiğini biz söyleriz.</p>
+<p id="google-not" style="font-size:13px;color:var(--soluk);margin:8px 0 0">Google Haritalar'da işletmenizi açıp "Paylaş"a basınca çıkan link. Yoksa boş bırakın, hangisinin gerektiğini biz söyleriz.</p>
 </section>
 
 <section data-adim="5" hidden>
@@ -90,7 +90,7 @@
 <label class="radyo"><input type="radio" name="siklik" value="onemli"><span><b>Sadece önemli bir şey olunca</b><small>Sıranız değişince ya da rakibiniz bir şey yapınca.</small></span></label>
 <label class="radyo"><input type="radio" name="siklik" value="yok"><span><b>Mesaj istemiyorum</b><small>Sadece panelden bakarım, e-posta yeter.</small></span></label>
 </fieldset>
-<p style="font-size:13px;color:#6B665E;margin:14px 0 0">Bunu sonra panelden değiştirebilirsiniz.</p>
+<p style="font-size:13px;color:var(--soluk);margin:14px 0 0">Bunu sonra panelden değiştirebilirsiniz.</p>
 </section>
 
 <div class="uyari koyu-uyari" id="uyari" role="alert" aria-live="assertive" style="margin-top:16px"></div>
@@ -102,7 +102,7 @@
 </div>
 </div>
 </main>
-<p id="yukleniyor" style="text-align:center;color:#6B665E;padding:80px 24px">Yükleniyor…</p>
+<p id="yukleniyor" style="text-align:center;color:var(--soluk);padding:80px 24px">Yükleniyor…</p>
 </div>
 </body>
 </html>
