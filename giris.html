@@ -4,14 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Giriş yap | Görünür</title>
+<meta name="description" content="Görünür hesabınıza giriş yapın ya da ücretsiz hesap açın.">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#FFFFFF">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Yazı tipleri sayfanın çizilmesini bekletmez: önce sistem yazısıyla açılır, Google Fonts gelince yerine geçer -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap"></noscript>
 <script>(function(){var t;try{t=localStorage.getItem('gorunur_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t;if(t==='koyu'){var m=document.querySelector('meta[name="theme-color"]');if(m)m.content='#0F1217'}})()</script>
-<link rel="stylesheet" href="assets/style.css?v=24">
+<link rel="stylesheet" href="assets/style.css?v=28">
 <script src="assets/tema.js?v=1" defer></script>
 <script src="assets/iletisim.js?v=1" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -19,6 +22,7 @@
 <script src="assets/sayac.js?v=1" defer></script>
 </head>
 <body>
+<a class="atla" href="#icerik">İçeriğe geç</a>
 <div class="test-govde">
 <div class="kap" style="width:100%">
 <div class="test-ust">
@@ -32,10 +36,10 @@
 </div>
 </div>
 
-<main class="test" style="max-width:480px">
+<main class="test" id="icerik" tabindex="-1" style="max-width:480px">
 <div class="sekmeler" role="tablist" aria-label="Giriş veya hesap açma">
-<button type="button" role="tab" id="sekme-giris" aria-selected="true" aria-controls="form-giris">Giriş yap</button>
-<button type="button" role="tab" id="sekme-kayit" aria-selected="false" aria-controls="form-kayit">Hesap aç</button>
+<button type="button" role="tab" id="sekme-giris" aria-selected="true" aria-controls="form-giris" tabindex="0">Giriş yap</button>
+<button type="button" role="tab" id="sekme-kayit" aria-selected="false" aria-controls="form-kayit" tabindex="-1">Hesap aç</button>
 </div>
 
 <form id="form-giris" class="form hesap-form" novalidate role="tabpanel" aria-labelledby="sekme-giris">
@@ -58,7 +62,8 @@
 <label class="etk" for="k-sifre">Şifre</label>
 <input id="k-sifre" class="girdi" type="password" autocomplete="new-password" minlength="8" required aria-describedby="sifre-not">
 <p id="sifre-not" style="font-size:13px;color:var(--soluk);margin:6px 0 0">En az 8 karakter.</p>
-<label class="onay onay-koyu"><input type="checkbox" id="k-onay"><span><a href="aydinlatma.html" target="_blank" rel="noopener">Aydınlatma metnini</a> okudum. Hesabımı yönetmek ve ölçüm sonuçlarını göndermek için bilgilerimin işlenmesini kabul ediyorum.</span></label>
+<label class="onay onay-koyu"><input type="checkbox" id="k-onay"><span><a href="kullanim-sartlari.html" target="_blank" rel="noopener">Kullanım şartlarını</a> okudum ve kabul ediyorum.</span></label>
+<p class="kayit-bilgi">Bilgilerinizi hesabınızı yönetmek ve ölçüm sonuçlarınızı göstermek için işleriz. Ayrıntılar <a href="aydinlatma.html" target="_blank" rel="noopener">aydınlatma metninde</a>.</p>
 <div class="uyari koyu-uyari" role="alert" aria-live="assertive"></div>
 <button type="submit" class="btn btn-amber" style="width:100%;margin-top:8px">Hesap aç</button>
 </form>
@@ -78,13 +83,26 @@
   function sec(ad) {
     Object.keys(sekmeler).forEach(function (k) {
       sekmeler[k].setAttribute('aria-selected', k === ad ? 'true' : 'false');
+      sekmeler[k].tabIndex = k === ad ? 0 : -1;
       formlar[k].hidden = k !== ad;
     });
     document.getElementById('bilgi').hidden = true;
   }
   sekmeler.giris.addEventListener('click', function () { sec('giris'); });
   sekmeler.kayit.addEventListener('click', function () { sec('kayit'); });
-  if (location.hash === '#kayit') sec('kayit');
+  // Sol/sağ ok, Home ve End ile sekmeler arasında gezinme
+  var sira = ['giris', 'kayit'];
+  sira.forEach(function (ad, n) {
+    sekmeler[ad].addEventListener('keydown', function (e) {
+      var yeni = e.key === 'ArrowRight' ? (n + 1) % sira.length : e.key === 'ArrowLeft' ? (n - 1 + sira.length) % sira.length : e.key === 'Home' ? 0 : e.key === 'End' ? sira.length - 1 : -1;
+      if (yeni < 0) return;
+      e.preventDefault(); sec(sira[yeni]); sekmeler[sira[yeni]].focus();
+    });
+  });
+  // giris.html#kayit bağlantısı (aynı sayfadan tıklansa bile) Hesap aç sekmesini açar
+  function hashSec() { if (location.hash === '#kayit') sec('kayit'); else if (location.hash === '#giris') sec('giris'); }
+  hashSec();
+  window.addEventListener('hashchange', hashSec);
 
   function bilgi(baslik, metin) {
     var b = document.getElementById('bilgi');
@@ -126,7 +144,7 @@
     var eposta = document.getElementById('k-eposta').value.trim(), sifre = document.getElementById('k-sifre').value;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(eposta)) { u.textContent = 'Lütfen geçerli bir e-posta adresi yazın.'; return; }
     if (sifre.length < 8) { u.textContent = 'Şifre en az 8 karakter olmalı.'; return; }
-    if (!document.getElementById('k-onay').checked) { u.textContent = 'Devam etmek için onay kutusunu işaretleyin.'; return; }
+    if (!document.getElementById('k-onay').checked) { u.textContent = 'Devam etmek için kullanım şartlarını kabul edin.'; return; }
     u.textContent = ''; mesgul(f, true);
     A.sb.auth.signUp({ email: eposta, password: sifre, options: { emailRedirectTo: A.KOK + 'kurulum.html' } }).then(function (r) {
       if (r.error) throw r.error;

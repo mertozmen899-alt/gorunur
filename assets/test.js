@@ -22,6 +22,7 @@
   function guncelle() {
     for (var i = 1; i <= 5; i++) $('s' + i).hidden = durum.adim !== i;
     $('adim-etiket').textContent = durum.adim < 4 ? 'Soru ' + durum.adim + ' / 3' : (durum.adim === 4 ? 'Hazırlanıyor' : 'Hazır');
+    var vz = $('vazgec'); if (vz) { vz.textContent = durum.adim === 5 ? 'Baştan başla' : 'Vazgeç'; vz.href = durum.adim === 5 ? 'test.html' : './'; }
     var yuzde = Math.min(100, durum.adim * 20);
     $('ilerleme').style.width = yuzde + '%';
     document.querySelector('.ilerleme').setAttribute('aria-valuenow', yuzde);

@@ -3,18 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Görünür bekleme listesinden e-posta adresinizi silin.">
 <meta name="robots" content="noindex">
 <title>Listeden çıkış · Görünür</title>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <script>(function(){var t;try{t=localStorage.getItem('gorunur_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=24">
+<!-- Yazı tipleri sayfanın çizilmesini bekletmez: önce sistem yazısıyla açılır, Google Fonts gelince yerine geçer -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap"></noscript>
+<link rel="stylesheet" href="assets/style.css?v=28">
 <script src="assets/tema.js?v=1" defer></script>
 </head>
 <body>
-<main class="kap" style="max-width:560px;padding-top:72px;padding-bottom:72px">
+<a class="atla" href="#icerik">İçeriğe geç</a>
+<main class="kap" id="icerik" tabindex="-1" style="max-width:560px;padding-top:72px;padding-bottom:72px">
 <a href="./" class="logo" aria-label="Görünür ana sayfa"><span class="logo-isaret"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></span><span class="logo-ad">Görünür</span></a>
 <section id="soru" style="margin-top:40px">
 <h1 style="font-family:var(--baslik);font-size:32px;line-height:1.15;margin:0">Bekleme listesinden çıkmak istiyor musunuz?</h1>
