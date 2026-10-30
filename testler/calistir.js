@@ -85,6 +85,22 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     kontrol(cihaz + ' site sağlığı puanı görünüyor', /62/.test((await p.textContent('#site-saglik')) || ''));
     kontrol(cihaz + ' site eksikleri İşlerim’e iş oldu', (await p.$$('#site-isler .is-satir')).length === 1);
     await tasma('site sağlığı');
+    // Google yorumları: ilk açılışta kendiliğinden geldi, özet, cevapsız yoruma taslak ve Kopyala var
+    const yorumYazi = (await p.textContent('#yorum-icerik').catch(() => '')) || '';
+    kontrol(cihaz + ' Google yorumları kendiliğinden geldi', /37/.test(yorumYazi) && /4,3/.test(yorumYazi), yorumYazi.slice(0, 120));
+    kontrol(cihaz + ' cevapsız yorumlara taslak ve Kopyala düğmesi var', (await p.$$('#yorum-icerik .yorum-taslak button')).length === 3);
+    kontrol(cihaz + ' taslağın altında Yanıtla talimatı var', /Yanıtla/.test((await p.textContent('#yorum-icerik .yorum-taslak').catch(() => '')) || ''));
+    kontrol(cihaz + ' cevaplanmış yorumda taslak yok', (await p.$$('#yorum-icerik .yorum.cevapli .yorum-taslak')).length === 0);
+    // Platformlar: durum etiketleri
+    const pl = (await p.textContent('#platform-icerik').catch(() => '')) || '';
+    kontrol(cihaz + ' platform listesinde Var, Bulunamadı ve Kendiniz kontrol edin görünüyor', /Var/.test(pl) && /Bulunamadı/.test(pl) && /Kendiniz kontrol edin/.test(pl), pl.slice(0, 120));
+    kontrol(cihaz + ' Apple Haritalar için adımlar var', (await p.$$('#platform-icerik .p-kendiniz .adim-liste li')).length >= 3);
+    await tasma('yorumlar ve platformlar');
+    // İşlerim: yorum ve platform işleri
+    await p.click('#yan-menu [data-git=isler]').catch(() => {}); await p.waitForTimeout(150);
+    const ypi = (await p.textContent('#yp-isler').catch(() => '')) || '';
+    kontrol(cihaz + ' İşlerim’de "3 yoruma cevap verin" işi var', /3 yoruma cevap verin/.test(ypi), ypi.slice(0, 120));
+    kontrol(cihaz + ' İşlerim’de eksik platform işleri var (en fazla 2)', (await p.$$('#yp-isler .is-satir')).length === 3 && /Facebook’ta profil açın/.test(ypi));
     kontrol(cihaz + ' panelde sayfa hatası yok', !hatalar.length, hatalar.join(' | '));
     // Karanlık tema: düğme var, tıklayınca tema değişip kaydediliyor
     for (const s of ['index.html', 'panel.html#ozet']) {

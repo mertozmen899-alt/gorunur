@@ -1,5 +1,9 @@
 // Görünür yardımcı: (1) hazır metin yazma (sayfa metni, Google profil açıklaması, haftalık gönderi)
-// (2) site sağlığı taraması. İkisi de SerpApi hakkı harcamaz; metinler ücretsiz Gemini kotasıyla yazılır.
+// (2) site sağlığı taraması (SerpApi harcamaz)
+// (3) Google yorumları + cevap taslakları (günde 1 yenileme; en fazla 2 SerpApi araması + 1 Gemini)
+// (4) "Hangi platformlarda varsınız?" kontrolü (günde 1 yenileme; 1 SerpApi araması)
+// Deneme yolu: x-gorunur-cron başlığı cron_ayar.olcum_anahtari ile aynıysa ve gövdede deneme_isletme_id varsa
+// işlem o işletme için (oturum olmadan) yapılır.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const CORS = {
@@ -13,7 +17,7 @@ const sade = (x: string) => (x || "").toLocaleLowerCase("tr").replace(/ı/g, "i"
 
 // ---------------- Gemini (JSON cevap) ----------------
 async function gemini(soru: string, anahtar: string) {
-  const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-2.5-flash-lite"].filter(Boolean) as string[];
+  const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-flash-lite-latest"].filter(Boolean) as string[];
   let son = "";
   for (const model of modeller) {
     try {
@@ -122,17 +126,235 @@ async function siteTara(isl: Record<string, any>) {
   return { adres: son, acildi: r.ok, durum_kodu: r.status, puan, sure_ms: sure, title, kontroller: K };
 }
 
+// ---------------- SerpApi ----------------
+async function serp(params: Record<string, string>, anahtar: string) {
+  const u = new URL("https://serpapi.com/search.json");
+  for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
+  u.searchParams.set("api_key", anahtar);
+  const r = await fetch(u, { signal: AbortSignal.timeout(30000) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.error) throw new Error("SerpApi: " + (j.error || r.status));
+  return j;
+}
+// İşletme adının ayırt edici kelimeleri ("Macitler Mobilya Ltd." -> macitler, mobilya)
+const GENEL = new Set(["ve", "the", "ltd", "sti", "as", "limited", "sirketi", "san", "tic", "ticaret", "sube", "subesi", "merkezi", "merkez", "magaza", "magazasi", "firmasi", "grup", "group", "istanbul", "ankara", "izmir"]);
+const cekirdek = (ad: string) => sade(ad).split(" ").filter((t) => t.length >= 3 && !GENEL.has(t));
+// Metinde işletme adının ilk ayırt edici kelimesi tam kelime olarak (ekleriyle) geçiyor mu
+function adGeciyor(metin: string, ad: string): boolean {
+  const m = " " + sade(metin) + " ", c = cekirdek(ad);
+  if (!c.length) return m.includes(" " + sade(ad) + " ");
+  return new RegExp(" " + c[0] + "(da|de|ta|te|in|nin|un|nun|i|u|e|a)? ").test(m);
+}
+const yerKisa = (isl: Record<string, any>) => isl.semt === "Türkiye geneli" ? "" : String(isl.semt || "").split(",")[0].trim();
+const uzunTireYok = (x: string) => String(x || "").replace(/\s*[—–]\s*/g, ", ").replace(/,\s*,/g, ",").trim();
+const bugunTR = () => new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10); // Türkiye saatiyle bugün
+function kisaAd(ad: string): string {
+  const p = String(ad || "").trim().split(/\s+/).filter(Boolean);
+  if (!p.length) return "Google kullanıcısı";
+  const ilk = p[0].charAt(0).toLocaleUpperCase("tr") + p[0].slice(1);
+  return p.length === 1 ? ilk : ilk + " " + p[p.length - 1].charAt(0).toLocaleUpperCase("tr") + ".";
+}
+
+// ---------------- Google yorumları ----------------
+async function haritadaBul(isl: Record<string, any>, SERP: string) {
+  const yer = yerKisa(isl);
+  const j = await serp({ engine: "google_maps", type: "search", q: `${isl.ad} ${yer}`.trim(), hl: "tr" }, SERP);
+  const aday = [...(j.place_results ? [j.place_results] : []), ...(j.local_results || [])] as Array<Record<string, any>>;
+  const ayni = aday.filter((r) => r && r.data_id && adGeciyor(String(r.title || ""), isl.ad));
+  // Bölge verildiyse adres o bölgede olmalı; başka şehirdeki aynı adlı şube bizim profil sayılmaz
+  const b = yer ? ayni.find((r) => (" " + sade(String(r.address || "")) + " ").includes(" " + sade(yer))) : ayni[0];
+  if (!b) return { bulunamadi: true, baska_sube: ayni[0] ? { ad: ayni[0].title || null, adres: ayni[0].address || null } : null };
+  return { data_id: String(b.data_id), ad: b.title || null, adres: b.address || null, place_id: b.place_id || null, puan: b.rating ?? null, yorum_sayisi: b.reviews ?? null };
+}
+
+function taslakSorusu(isl: Record<string, any>, liste: Array<Record<string, any>>) {
+  const yorumlar = liste.map((y, n) => `${n + 1}) Yazan: ${y.ad}. Puan: ${y.puan}/5. Yorum: ${y.metin ? '"' + y.metin + '"' : "(yazı yok, sadece puan vermiş)"}`).join("\n");
+  return `Sen "${isl.ad}" adlı işletmenin sahibisin. İş türü: "${isl.is_turu || "işletme"}". Bölge: "${yerKisa(isl) || "Türkiye"}".
+Google İşletme Profilindeki aşağıdaki müşteri yorumlarına, işletme sahibi olarak yayınlanacak kısa cevap taslakları yaz.
+Kurallar:
+- Sade, sıcak ve doğal Türkçe yaz; resmi ama samimi ol. Her cevap en fazla 400 karakter, 1-3 cümle.
+- Yorumda geçen somut bir şeye değin (ürün, hizmet, ilgi), genel kalıp cümlelerle yetinme. Yorumda yazı yoksa kısa bir teşekkür yaz.
+- Müşteriye sadece adıyla hitap et (ör. "Ayşe"); "Hanım" veya "Bey" yazma, cinsiyet tahmin etme. Ad belli değilse hitapsız başla.
+- Puan 1, 2 veya 3 ise: önce içtenlikle özür dile, bahane üretme, tartışma, müşteriyi suçlama; konuyu konuşmak için işletmeyle doğrudan iletişime geçmeye davet et ve [TELEFON] yaz.
+- Puan 4 veya 5 ise: teşekkür et, yorumdaki olumlu noktaya değin, tekrar beklediğini söyle.
+- Hiçbir bilgi uydurma: indirim, kampanya, hediye, söz, yapılmış bir değişiklik, adres, saat yazma. İşletme adını en fazla bir kez kullan.
+- Uzun tire (—) kullanma. Emoji ve Markdown işareti kullanma.
+Yorumlar:
+${yorumlar}
+Sadece şu JSON'u döndür: {"taslaklar":[{"no":1,"metin":"cevap taslağı"}]} (her yorum için bir taslak, no yorumun numarası)`;
+}
+
+async function yorumlariGetir(isl: Record<string, any>, db: any, SERP: string, GEM: string) {
+  let dataId = String(isl.gmaps_data_id || "");
+  let yer: Record<string, any> | null = (isl.yorumlar && isl.yorumlar.yer) || null;
+  let arama = 0;
+  if (!dataId) {
+    const b = await haritadaBul(isl, SERP) as Record<string, any>; arama++;
+    if (b.bulunamadi) {
+      const sonuc = { tarih: new Date().toISOString(), gun: bugunTR(), bulunamadi: true, baska_sube: b.baska_sube, arama };
+      await db.from("isletmeler").update({ yorumlar: sonuc }).eq("id", isl.id);
+      return sonuc;
+    }
+    dataId = b.data_id; yer = b;
+    await db.from("isletmeler").update({ gmaps_data_id: dataId }).eq("id", isl.id);
+  }
+  const j = await serp({ engine: "google_maps_reviews", data_id: dataId, hl: "tr", sort_by: "newestFirst" }, SERP); arama++;
+  const pi = (j.place_info || {}) as Record<string, any>;
+  const liste = ((j.reviews || []) as Array<Record<string, any>>).slice(0, 10).map((r) => {
+    const metin = String(r.extracted_snippet?.original || r.snippet || "").replace(/\s+/g, " ").trim();
+    return {
+      ad: kisaAd(r.user?.name || ""),
+      puan: Number(r.rating) || null,
+      tarih: r.iso_date || null,
+      zaman: r.date || null,
+      metin: metin.length > 500 ? metin.slice(0, 497).replace(/\s+\S*$/, "") + "…" : metin,
+      cevaplandi: !!(r.response && (r.response.snippet || r.response.extracted_snippet || r.response.date)),
+    } as Record<string, any>;
+  });
+  const cevapsiz = liste.filter((y) => !y.cevaplandi);
+  let taslakHata: string | null = null;
+  const secilen = cevapsiz.slice(0, 5);
+  if (secilen.length && GEM) {
+    try {
+      const c = await gemini(taslakSorusu(isl, secilen), GEM);
+      const t = (c?.taslaklar || []) as Array<{ no: number; metin: string }>;
+      secilen.forEach((y, n) => {
+        const bul = t.find((x) => Number(x.no) === n + 1) || t[n];
+        if (bul && bul.metin) y.taslak = uzunTireYok(bul.metin).slice(0, 450);
+      });
+    } catch (e) { taslakHata = String((e as Error).message).slice(0, 160); }
+  } else if (secilen.length) taslakHata = "Yapay zekâ anahtarı eksik.";
+  const sonuc = {
+    tarih: new Date().toISOString(), gun: bugunTR(),
+    yer: yer ? { ad: yer.ad || pi.title || null, adres: yer.adres || pi.address || null, place_id: yer.place_id || null } : (pi.title ? { ad: pi.title, adres: pi.address || null, place_id: null } : null),
+    puan: pi.rating ?? yer?.puan ?? null,
+    yorum_sayisi: pi.reviews ?? yer?.yorum_sayisi ?? null,
+    yorumlar: liste, bakilan: liste.length, cevapsiz_sayi: cevapsiz.length,
+    taslak_hata: taslakHata, arama,
+  };
+  await db.from("isletmeler").update({ yorumlar: sonuc }).eq("id", isl.id);
+  return sonuc;
+}
+
+// ---------------- Platformlar ----------------
+type Platform = { ad: string; alan: string; durum: "var" | "bulunamadi" | "kendiniz"; link?: string | null; ne_yapmali: string; adimlar?: string[] };
+const alanAdi = (url?: string | null) => { try { return new URL(String(url).startsWith("http") ? String(url) : "https://" + url).hostname.replace(/^www\./, "").toLowerCase(); } catch { return ""; } };
+const DIZINLER: Array<{ ad: string; alan: string; re: RegExp }> = [
+  { ad: "Bulurum", alan: "bulurum.com", re: /(^|\.)bulurum\.com$/ },
+  { ad: "Cylex", alan: "cylex-tr.com", re: /cylex/ },
+  { ad: "Armut", alan: "armut.com", re: /(^|\.)armut\.com$/ },
+  { ad: "Şikayetvar", alan: "sikayetvar.com", re: /(^|\.)sikayetvar\.com$/ },
+  { ad: "Tripadvisor", alan: "tripadvisor.com.tr", re: /tripadvisor\./ },
+  { ad: "Firmasec", alan: "firmasec.com", re: /(^|\.)firmasec\.com$/ },
+  { ad: "Yellow Pages Türkiye", alan: "yellowpages.com.tr", re: /yellowpages\.com\.tr$/ },
+];
+async function platformlariBul(isl: Record<string, any>, SERP: string) {
+  const yer = yerKisa(isl);
+  const j = await serp({ engine: "google", q: `"${isl.ad}" ${yer}`.trim(), hl: "tr", gl: "tr", google_domain: "google.com.tr" }, SERP);
+  const sonuclar: Array<{ link: string; alan: string; metin: string }> = [];
+  for (const r of (j.organic_results || []) as Array<Record<string, any>>) {
+    const link = String(r.link || "");
+    sonuclar.push({ link, alan: alanAdi(link), metin: `${r.title || ""} ${r.snippet || ""} ${link}` });
+  }
+  const kg = (j.knowledge_graph || {}) as Record<string, any>;
+  const kgBizim = !!(kg.title && adGeciyor(String(kg.title), isl.ad));
+  if (kgBizim) for (const p of (kg.profiles || []) as Array<Record<string, any>>) {
+    const link = String(p.link || ""); sonuclar.push({ link, alan: alanAdi(link), metin: `${kg.title} ${p.name || ""} ${link}` });
+  }
+  const yerel = ((j.local_results?.places || j.local_results || []) as Array<Record<string, any>>);
+  const yerelBizim = Array.isArray(yerel) && yerel.some((r) => adGeciyor(String(r.title || ""), isl.ad));
+  const bul = (test: (alan: string, link: string) => boolean) => sonuclar.find((s) => test(s.alan, s.link) && adGeciyor(s.metin, isl.ad));
+  const L: Platform[] = [];
+  const ekle = (ad: string, alan: string, hit: { link: string } | undefined, varYazi: string, yokYazi: string, link?: string | null) =>
+    L.push(hit || link ? { ad, alan, durum: "var", link: link || hit!.link, ne_yapmali: varYazi } : { ad, alan, durum: "bulunamadi", link: null, ne_yapmali: yokYazi });
+
+  // Google İşletme Profili
+  const y = isl.yorumlar as Record<string, any> | null;
+  const gmapsVar = !!isl.gmaps_data_id || !!(y && y.yer);
+  const gLink = isl.google_profil || (y?.yer?.place_id ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(isl.ad)}&query_place_id=${y.yer.place_id}` : null);
+  if (gmapsVar || kgBizim || yerelBizim || isl.google_profil) L.push({ ad: "Google İşletme Profili", alan: "google.com/maps", durum: "var", link: gLink, ne_yapmali: "Profiliniz var. Adres, telefon, çalışma saatleri ve fotoğrafların güncel olduğundan emin olun." });
+  else L.push({ ad: "Google İşletme Profili", alan: "google.com/maps", durum: "bulunamadi", link: "https://business.google.com", ne_yapmali: "Google'da ve Haritalar'da adınızla bir profil bulamadık. business.google.com adresinden ücretsiz profil açın; diğer bütün adımlar bunun üstüne kurulur." });
+
+  // Instagram (kurulumda girdiyse var sayılır)
+  const igKendi = String(isl.instagram || "").trim();
+  const igLink = igKendi ? (/^https?:\/\//.test(igKendi) ? igKendi : "https://www.instagram.com/" + igKendi.replace(/^@/, "").replace(/^instagram\.com\//, "")) : null;
+  ekle("Instagram", "instagram.com", bul((a) => a === "instagram.com" || a.endsWith(".instagram.com")),
+    "Hesabınız var. Profil açıklamanızda şehriniz, telefonunuz ve web sitenizin bağlantısı olsun.",
+    "Google'da adınızla aratınca bir Instagram hesabı çıkmadı. Hesabınız varsa işletme adınızı profil adına yazın; yoksa ücretsiz bir işletme hesabı açın.", igLink);
+  ekle("Facebook", "facebook.com", bul((a) => a === "facebook.com" || a.endsWith(".facebook.com")),
+    "Sayfanız var. Adres, telefon ve çalışma saatlerinin Google'dakiyle aynı olduğunu kontrol edin.",
+    "Google'da adınızla aratınca bir Facebook sayfası çıkmadı. Sayfanız varsa adını işletme adınızla aynı yapın; yoksa facebook.com/pages/create adresinden ücretsiz açın.");
+  ekle("Yandex Haritalar", "yandex.com.tr/harita", bul((a, l) => /(^|\.)yandex\./.test(a) && /\/(maps|harita)\//.test(l)),
+    "Yandex Haritalar'da kaydınız var. Adınızı, adresinizi ve telefonunuzu kontrol edin.",
+    "Google'da adınızla aratınca Yandex Haritalar kaydınız çıkmadı. Yandex Haritalar'ı açıp adınızı arayın; yoksa Google'a \"Yandex işletme ekle\" yazın ve çıkan Yandex Business sayfasından ücretsiz kayıt olun.");
+  L.push({ ad: "Apple Haritalar", alan: "maps.apple.com", durum: "kendiniz", link: "https://business.apple.com", ne_yapmali: "Apple Haritalar'ı otomatik kontrol edemiyoruz. iPhone kullanan müşterileriniz ve Siri buraya bakıyor.", adimlar: ["iPhone'da Haritalar uygulamasını ya da bilgisayardan maps.apple.com adresini açın.", "İşletmenizin adını ve şehrinizi yazıp arayın.", "Çıkmıyorsa uygulamada \"Bir sorun bildir\" bölümünden \"İşletme ekle\" deyin ya da business.apple.com adresinden Apple Business Connect ile ücretsiz ekleyin."] });
+  L.push({ ad: "Bing Haritalar", alan: "bingplaces.com", durum: "kendiniz", link: "https://www.bingplaces.com", ne_yapmali: "Bing'i otomatik kontrol edemiyoruz. ChatGPT işletme bilgilerinde Bing verisini kullanıyor.", adimlar: ["bing.com/maps adresini açıp işletmenizin adını ve şehrinizi arayın.", "Çıkmıyorsa ya da bilgiler eksikse bingplaces.com adresine Microsoft veya Google hesabınızla girin.", "Google İşletme Profiliniz varsa \"Google'dan içe aktar\" seçeneğiyle bilgilerinizi tek seferde aktarın."] });
+  ekle("Foursquare", "foursquare.com", bul((a) => a === "foursquare.com" || a.endsWith(".foursquare.com")),
+    "Foursquare'de kaydınız var. Bilgilerinizin güncel olduğunu kontrol edin.",
+    "Google'da adınızla aratınca Foursquare kaydınız çıkmadı. Foursquare bazı harita ve yapay zekâ uygulamalarına veri sağlıyor; foursquare.com üzerinden ücretsiz ekleyebilirsiniz.");
+  // Sektör siteleri (aylık araştırılan liste)
+  const goruldu = new Set(L.map((p) => p.alan));
+  for (const s of ((isl.sektor_rehberleri || []) as Array<Record<string, any>>).slice(0, 6)) {
+    const alan = String(s.alan || "").replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "").toLowerCase();
+    if (!alan || goruldu.has(alan)) continue; goruldu.add(alan);
+    ekle(String(s.ad || alan), alan, bul((a) => a === alan || a.endsWith("." + alan)),
+      "Bu sitede adınız geçiyor. Bilgilerinizin güncel olduğunu kontrol edin.",
+      `Google'da adınızla aratınca bu sitede bir sayfanız çıkmadı. ${s.ne_ise_yarar ? String(s.ne_ise_yarar).trim() + " " : ""}Uygunsa sitedeki "Firma ekle" ya da "Satıcı ol" bölümünden kayıt olun.`);
+  }
+  // Genel rehberler: sadece bulunanları "var" olarak ekle
+  for (const d of DIZINLER) {
+    if (goruldu.has(d.alan)) continue;
+    const h = bul((a) => d.re.test(a));
+    if (h) { goruldu.add(d.alan); L.push({ ad: d.ad, alan: d.alan, durum: "var", link: h.link, ne_yapmali: "Bu rehberde adınız geçiyor. Adres ve telefonunuzun doğru yazıldığını kontrol edin." }); }
+  }
+  return { tarih: new Date().toISOString(), gun: bugunTR(), sorgu: `"${isl.ad}" ${yer}`.trim(), liste: L.map((p) => ({ ...p, ne_yapmali: uzunTireYok(p.ne_yapmali) })), arama: 1 };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ hata: "Sadece POST" }, 405);
   const URL_ = Deno.env.get("SUPABASE_URL")!;
-  const kdb = createClient(URL_, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: req.headers.get("Authorization") || "" } } });
-  const { data: u } = await kdb.auth.getUser();
-  if (!u?.user) return json({ hata: "Giriş yapmanız gerekiyor." }, 401);
   const db = createClient(URL_, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const { data: isl } = await db.from("isletmeler").select("*").eq("sahip", u.user.id).maybeSingle();
-  if (!isl || !isl.kurulum_bitti) return json({ hata: "Önce kurulumu tamamlayın." }, 400);
   const govde = await req.json().catch(() => ({}));
+  let isl: Record<string, any> | null = null;
+  let deneme = false;
+  // Deneme yolu (sadece sunucu tarafı anahtarla): oturum olmadan belirli işletme için çalıştırır
+  const cronBaslik = req.headers.get("x-gorunur-cron") || "";
+  if (cronBaslik && govde.deneme_isletme_id) {
+    const { data: ayar } = await db.from("cron_ayar").select("deger").eq("ad", "olcum_anahtari").maybeSingle();
+    if (!ayar?.deger || ayar.deger !== cronBaslik) return json({ hata: "Yetkisiz." }, 401);
+    const { data } = await db.from("isletmeler").select("*").eq("id", String(govde.deneme_isletme_id)).maybeSingle();
+    isl = data; deneme = true;
+  } else {
+    const kdb = createClient(URL_, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: req.headers.get("Authorization") || "" } } });
+    const { data: u } = await kdb.auth.getUser();
+    if (!u?.user) return json({ hata: "Giriş yapmanız gerekiyor." }, 401);
+    const { data } = await db.from("isletmeler").select("*").eq("sahip", u.user.id).maybeSingle();
+    isl = data;
+  }
+  if (!isl || !isl.kurulum_bitti) return json({ hata: "Önce kurulumu tamamlayın." }, 400);
+  const SERP = (Deno.env.get("SERPAPI_KEY") || "").trim();
+
+  if (govde.islem === "yorumlar") {
+    const onceki = isl.yorumlar as Record<string, any> | null;
+    if (onceki?.gun === bugunTR() && !(deneme && govde.zorla)) return json({ yorumlar: onceki, mesaj: "Yorumlarınızı bugün yeniledik. Yarın tekrar yenileyebilirsiniz." });
+    if (!SERP) return json({ hata: "Arama anahtarı eksik.", yorumlar: onceki }, 503);
+    try {
+      const sonuc = await yorumlariGetir(isl, db, SERP, (Deno.env.get("GEMINI_API_KEY") || "").trim());
+      return json({ yorumlar: sonuc });
+    } catch (e) { console.log("yorumlar hata", String(e)); return json({ hata: "Yorumlarınız şu an alınamadı. Biraz sonra tekrar deneyin.", yorumlar: onceki }, 502); }
+  }
+
+  if (govde.islem === "platformlar") {
+    const onceki = isl.platformlar as Record<string, any> | null;
+    if (onceki?.gun === bugunTR() && !(deneme && govde.zorla)) return json({ platformlar: onceki, mesaj: "Bugün kontrol ettik. Yarın tekrar kontrol edebilirsiniz." });
+    if (!SERP) return json({ hata: "Arama anahtarı eksik.", platformlar: onceki }, 503);
+    try {
+      const sonuc = await platformlariBul(isl, SERP);
+      await db.from("isletmeler").update({ platformlar: sonuc }).eq("id", isl.id);
+      return json({ platformlar: sonuc });
+    } catch (e) { console.log("platformlar hata", String(e)); return json({ hata: "Kontrol şu an yapılamadı. Biraz sonra tekrar deneyin.", platformlar: onceki }, 502); }
+  }
 
   if (govde.islem === "site") {
     // Aynı gün içinde en fazla 5 tarama (siteyi yormamak için)

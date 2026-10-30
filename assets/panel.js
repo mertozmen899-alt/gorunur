@@ -176,7 +176,7 @@
   // Ekrandaki önerilen işlerden kaç tanesi yapıldı
   function onerilenler() {
     var gor = {}, out = [];
-    var sira = ['olcum-isler', 'site-isler', 'yz-isler', 'metin-isler', 'isler'];
+    var sira = ['olcum-isler', 'yp-isler', 'site-isler', 'yz-isler', 'metin-isler', 'isler'];
     kutular.slice().sort(function (a, b) { return sira.indexOf(a.id) - sira.indexOf(b.id); }).forEach(function (k) { (k._isler || []).forEach(function (x) { if (x.bilgi) return; var kod = isKodu(x); if (!gor[kod]) { gor[kod] = 1; out.push({ kod: kod, x: x }); } }); });
     return out;
   }
@@ -877,6 +877,138 @@
       .then(function () { if (b) { b.disabled = false; b.textContent = 'Yeniden tara'; } });
   }
 
+  // ---- Google yorumları ve cevap taslakları ----
+  // Türkçe bulunma eki (Facebook’ta, Yandex Haritalar’da, Foursquare’de)
+  function bulunma(ad) {
+    var kucuk = String(ad || '').toLocaleLowerCase('tr');
+    var unluler = kucuk.match(/[aıoueiöü]/g) || ['e'], son = unluler[unluler.length - 1];
+    return ad + '’' + (/[çfhkpsşt]$/.test(kucuk) ? 't' : 'd') + ('aıou'.indexOf(son) >= 0 ? 'a' : 'e');
+  }
+  function yildiz(p) { var n = Math.max(0, Math.min(5, Math.round(Number(p) || 0))); return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); }
+  function puanYaz(p) { return p == null ? '-' : String(p).replace('.', ','); }
+  function yorumTarih(y) { return y.tarih ? kisaTarihG(y.tarih) : (y.zaman || ''); }
+  function yorumCiz() {
+    var kutu = $('yorum-icerik'); if (!kutu) return;
+    var y = isletme.yorumlar; kutu.innerHTML = '';
+    if (!$('yorum-yenile').disabled) $('yorum-yenile').textContent = y ? 'Yorumları yenile' : 'Yorumları getir';
+    if (!y) { kutu.appendChild(el('p', 'Yorumlarınızı henüz getirmedik. "Yorumları getir" düğmesine basın, 20-40 saniye sürer.', 'kart-alt')); ypIsleriCiz(); return; }
+    if (y.bulunamadi) {
+      var bd = el('div', null, 'yorum-bos');
+      bd.appendChild(el('b', 'Google Haritalar’da işletmenizi bulamadık'));
+      var bs = y.baska_sube;
+      bd.appendChild(el('p', '"' + isletme.ad + (isletme.semt !== 'Türkiye geneli' ? ' ' + yerAdi(isletme) : '') + '" diye aradık ama ' + (isletme.semt !== 'Türkiye geneli' ? yerAdi(isletme) + ' bölgesinde ' : '') + 'bu adla bir Google İşletme Profili çıkmadı.' + (bs && bs.ad ? ' Sadece "' + bs.ad + '"' + (bs.adres ? ' (' + bs.adres + ')' : '') + ' çıktı; o profilin yorumlarını sizinmiş gibi göstermiyoruz.' : ' Profiliniz farklı bir adla açılmış olabilir ya da henüz hiç açılmamış olabilir.'), 'kart-alt'));
+      bd.appendChild(el('p', 'Profiliniz varsa adının tabelanızdaki adla aynı olduğunu kontrol edin. Yoksa business.google.com adresinden ücretsiz açın; yorumlarınızı burada göstermeye başlarız.', 'kart-alt'));
+      kutu.appendChild(bd); ypIsleriCiz(); return;
+    }
+    var liste = y.yorumlar || [];
+    var ozet = el('div', null, 'yorum-ozet');
+    [['Puanınız', puanYaz(y.puan), y.puan != null ? yildiz(y.puan) : ''], ['Toplam yorum', sayi(y.yorum_sayisi), 'Google Haritalar’da'], ['Cevapsız', String(y.cevapsiz_sayi || 0), 'son ' + liste.length + ' yorumda']].forEach(function (x, n) {
+      var d = el('div', null, 'sayi-kutu' + (n === 2 && y.cevapsiz_sayi ? ' dikkat' : ''));
+      d.appendChild(el('span', x[0])); d.appendChild(el('b', x[1])); d.appendChild(el('small', x[2])); ozet.appendChild(d);
+    });
+    kutu.appendChild(ozet);
+    kutu.appendChild(el('p', (y.yer && y.yer.ad ? 'Google’daki profil: ' + y.yer.ad + (y.yer.adres ? ', ' + y.yer.adres : '') + '. ' : '') + 'Son yenileme: ' + tarih(y.tarih) + '.', 'kart-alt yorum-kaynak'));
+    if (!liste.length) { kutu.appendChild(el('p', 'Profilinizde henüz yorum yok. İşlerim sayfasındaki "Her hafta 3-5 yeni Google yorumu toplayın" adımıyla başlayabilirsiniz.', 'kart-alt')); ypIsleriCiz(); return; }
+    if (y.taslak_hata) kutu.appendChild(el('p', 'Cevap taslakları bu sefer yazılamadı. Yarın "Yorumları yenile" ile tekrar deneyin.', 'kart-alt'));
+    var ul = el('ul', null, 'yorum-liste');
+    liste.forEach(function (r) {
+      var li = el('li', null, 'yorum' + (r.cevaplandi ? ' cevapli' : ''));
+      var ust = el('div', null, 'yorum-ust');
+      var sol = el('div'); sol.appendChild(el('b', r.ad || 'Google kullanıcısı')); sol.appendChild(el('span', yorumTarih(r), 'yorum-zaman'));
+      ust.appendChild(sol);
+      var sag = el('div', null, 'yorum-sag');
+      var yz = el('span', yildiz(r.puan), 'yorum-yildiz'); yz.setAttribute('aria-label', (r.puan || 0) + ' yıldız'); sag.appendChild(yz);
+      sag.appendChild(el('span', r.cevaplandi ? 'Cevap verdiniz' : 'Cevapsız', 'pil ' + (r.cevaplandi ? 'pil-y' : 'pil-a')));
+      ust.appendChild(sag); li.appendChild(ust);
+      li.appendChild(el('p', r.metin || '(Yazı yok, sadece puan verilmiş.)', 'yorum-metin' + (r.metin ? '' : ' bos')));
+      if (!r.cevaplandi && r.taslak) {
+        var t = el('div', null, 'hazir-metin yorum-taslak');
+        t.appendChild(el('span', 'Cevap taslağı', 'hazir-baslik'));
+        t.appendChild(el('p', r.taslak));
+        var alt = el('div', null, 'yorum-taslak-alt');
+        alt.appendChild(kopyaDugme(function () { return r.taslak; }));
+        alt.appendChild(el('small', 'Google İşletme Profilinizde yorumun altındaki "Yanıtla"ya yapıştırın.' + (/\[[A-ZÇĞİÖŞÜ ]+\]/.test(r.taslak) ? ' Köşeli parantezli yeri kendi bilginizle doldurun.' : ''), 'kart-alt'));
+        t.appendChild(alt); li.appendChild(t);
+      }
+      ul.appendChild(li);
+    });
+    kutu.appendChild(ul);
+    kutu.appendChild(el('small', 'Taslakları yapay zekâ yazdı. Yayınlamadan önce okuyun, gerekirse düzeltin.', 'kart-alt yazilan-not'));
+    ypIsleriCiz();
+  }
+  function yorumYenile(sessiz) {
+    var b = $('yorum-yenile'); b.disabled = true; b.textContent = 'Getiriliyor… (20-40 saniye)';
+    $('yorum-durum').textContent = '';
+    return yardimci({ islem: 'yorumlar' }).then(function (r) {
+      if (r.yorumlar) isletme.yorumlar = r.yorumlar;
+      if (r.mesaj && !sessiz) $('yorum-durum').textContent = r.mesaj;
+    }).catch(function (e) { if (!sessiz) $('yorum-durum').textContent = e.message; })
+      .then(function () { b.disabled = false; yorumCiz(); isSayaci(); });
+  }
+
+  // ---- Hangi platformlarda varsınız? ----
+  var DURUM = { 'var': ['Var', 'pil-y'], bulunamadi: ['Bulunamadı', 'pil-k'], kendiniz: ['Kendiniz kontrol edin', 'pil-a'] };
+  function platformCiz() {
+    var kutu = $('platform-icerik'); if (!kutu) return;
+    var p = isletme.platformlar; kutu.innerHTML = '';
+    if (!$('platform-yenile').disabled) $('platform-yenile').textContent = p ? 'Yeniden kontrol et' : 'Kontrol et';
+    if (!p) { kutu.appendChild(el('p', 'Henüz kontrol etmedik. "Kontrol et" düğmesine basın, 10-20 saniye sürer.', 'kart-alt')); ypIsleriCiz(); return; }
+    var l = p.liste || [];
+    var say = function (d) { return l.filter(function (x) { return x.durum === d; }).length; };
+    kutu.appendChild(el('p', l.length + ' yerden ' + say('var') + ' tanesinde sizi bulduk, ' + say('bulunamadi') + ' tanesinde bulamadık, ' + say('kendiniz') + ' tanesine sizin bakmanız gerekiyor. Son kontrol: ' + tarih(p.tarih) + '.', 'kart-alt'));
+    var ul = el('ul', null, 'platform-liste');
+    l.forEach(function (x) {
+      var li = el('li', null, 'platform p-' + x.durum);
+      var ust = el('div', null, 'platform-ust');
+      var sol = el('div'); sol.appendChild(el('b', x.ad)); sol.appendChild(el('span', x.alan, 'site-alan')); ust.appendChild(sol);
+      var d = DURUM[x.durum] || DURUM.bulunamadi; ust.appendChild(el('span', d[0], 'pil ' + d[1]));
+      li.appendChild(ust);
+      li.appendChild(el('p', x.ne_yapmali, 'kart-alt'));
+      if (x.adimlar && x.adimlar.length) { var ol = el('ol', null, 'adim-liste'); x.adimlar.forEach(function (a) { ol.appendChild(el('li', a)); }); li.appendChild(ol); }
+      var lk = x.link || (x.durum === 'bulunamadi' && /^[a-z0-9.-]+\.[a-z]{2,}(\/[a-z]*)?$/i.test(x.alan || '') ? 'https://' + x.alan : '');
+      if (lk) { var a = el('a', (x.durum === 'var' ? 'Sayfanızı açın' : x.durum === 'kendiniz' ? 'İşletme ekleme sayfası' : 'Siteye gidin') + ' →'); a.href = lk; a.target = '_blank'; a.rel = 'noopener nofollow'; li.appendChild(a); }
+      ul.appendChild(li);
+    });
+    kutu.appendChild(ul);
+    kutu.appendChild(el('small', '"Bulunamadı", Google’da adınızla yaptığımız aramanın ilk sonuçlarında o siteden bir sayfanız çıkmadığı anlamına gelir. Sayfanız olup da çıkmıyorsa adının işletme adınızla aynı yazıldığını kontrol edin.', 'kart-alt yazilan-not'));
+    ypIsleriCiz();
+  }
+  function platformYenile(sessiz) {
+    var b = $('platform-yenile'); b.disabled = true; b.textContent = 'Kontrol ediliyor…';
+    $('platform-durum').textContent = '';
+    return yardimci({ islem: 'platformlar' }).then(function (r) {
+      if (r.platformlar) isletme.platformlar = r.platformlar;
+      if (r.mesaj && !sessiz) $('platform-durum').textContent = r.mesaj;
+    }).catch(function (e) { if (!sessiz) $('platform-durum').textContent = e.message; })
+      .then(function () { b.disabled = false; platformCiz(); isSayaci(); });
+  }
+
+  // İşlerim: cevapsız yorumlar ve eksik platformlar
+  function ypIsleriCiz() {
+    var kutu = $('yp-isler'); if (!kutu) return;
+    var isler = [], y = isletme.yorumlar, p = isletme.platformlar;
+    if (y && !y.bulunamadi && y.cevapsiz_sayi > 0) {
+      var tas = (y.yorumlar || []).filter(function (r) { return !r.cevaplandi && r.taslak; }).length;
+      isler.push({ k: 'yorum-cevap-' + String(y.gun || '').replace(/-/g, ''), t: y.cevapsiz_sayi + ' yoruma cevap verin', s: '10 dakika · ücretsiz',
+        n: 'Son ' + (y.yorumlar || []).length + ' Google yorumunuzdan ' + y.cevapsiz_sayi + ' tanesine cevap vermemişsiniz.' + (tas ? ' ' + tas + ' tanesi için cevap taslağı hazır.' : '') + ' Cevap verilen yorumlar müşteriye güven verir; Google da yorumlarıyla ilgilenen işletmeyi canlı bulur.',
+        adimlar: ['Google sekmesindeki "Google yorumlarınız" bölümünde her cevapsız yorumun taslağını "Kopyala" ile kopyalayın.', 'Telefonda Google Haritalar’da kendi işletmenizi açın (ya da business.google.com adresine girin) ve "Yorumlar" bölümüne gidin.', 'Yorumun altındaki "Yanıtla"ya basın, taslağı yapıştırın, gerekirse düzeltip gönderin.', 'Kötü yorumlarda tartışmaya girmeyin; özür dileyip çözüm için sizi aramalarını isteyin.'],
+        sonuc: 'Müşteri sizi seçmeden önce yorumlara ve cevaplarınıza bakıyor. Düzenli cevap, puanınızı korumanın en kolay yolu.',
+        l: '#google', lm: 'Yorumlara ve taslaklara gidin' });
+    }
+    if (p && p.liste) p.liste.filter(function (x) { return x.durum === 'bulunamadi'; }).slice(0, 2).forEach(function (x) {
+      var g = /google/i.test(x.ad);
+      isler.push({ k: 'platform-' + sadeK(x.alan).replace(/ /g, '-'), t: g ? 'Google İşletme Profilinizi açın' : bulunma(x.ad) + ' profil açın', s: '15-20 dakika · ücretsiz',
+        n: x.ne_yapmali,
+        adimlar: g ? ['business.google.com adresine Gmail hesabınızla girip "İşletme ekle" deyin.', 'Adı tabelanızdaki gibi, adresi ve telefonu doğru yazın.', 'Google’ın istediği doğrulamayı (genelde kısa bir video) tamamlayın.']
+          : ['Önce ' + bulunma(x.ad) + ' işletmenizin adını arayın; sayfanız varsa bilgilerini güncelleyin.', 'Yoksa sitedeki "İşletme ekle", "Firma ekle" ya da "Sayfa oluştur" bölümünden ücretsiz kayıt olun.', 'Adı, adresi ve telefonu Google’daki ile harfi harfine aynı yazın.'],
+        sonuc: 'Yapay zekâ sizi ne kadar çok yerde aynı bilgiyle görürse size o kadar güveniyor.',
+        l: x.link || ('https://' + x.alan), lm: x.ad });
+    });
+    $('yp-isler-kart').hidden = !isler.length;
+    if (!isler.length) { kutu.innerHTML = ''; kutu._isler = null; return; }
+    isEkle(kutu, isler);
+  }
+
   function genelCiz() {
     var i = isletme, m = i.calisma_sekli || [];
     var saat = new Date().getHours();
@@ -906,6 +1038,8 @@
     isEkle($('isler'), isler);
     isEkle($('metin-isler'), metinIsleri(i));
     siteCiz();
+    yorumCiz();
+    platformCiz();
   }
 
   var zamanlayici;
@@ -1003,6 +1137,8 @@
   });
 
   $('site-tara').addEventListener('click', function () { siteTara(false); });
+  $('yorum-yenile').addEventListener('click', function () { yorumYenile(false); });
+  $('platform-yenile').addEventListener('click', function () { platformYenile(false); });
 
   $('olc').addEventListener('click', olc);
   $('yeniden').addEventListener('click', olc);
@@ -1026,6 +1162,9 @@
       if (/^arama-\d+$/.test(ilkHash)) sayfaGoster(ilkHash, false);
       // Sitesi olup hiç taranmamışsa ilk açılışta arka planda tara
       if (isletme.site && !isletme.site_saglik) siteTara(true);
+      // Yorumlar ve platformlar hiç getirilmemişse ilk açılışta bir kez getir (önce yorumlar: platform kontrolü harita kaydını kullanır)
+      if (!isletme.yorumlar) yorumYenile(true).then(function () { if (!isletme.platformlar) platformYenile(true); });
+      else if (!isletme.platformlar) platformYenile(true);
       $('yukleniyor').hidden = true; $('panel').hidden = false;
     });
   }).catch(function (err) {

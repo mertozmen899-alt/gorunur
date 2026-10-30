@@ -14,12 +14,12 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap"></noscript>
 <script>(function(){var t;try{t=localStorage.getItem('gorunur_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t;if(t==='koyu'){var m=document.querySelector('meta[name="theme-color"]');if(m)m.content='#0F1217'}})()</script>
-<link rel="stylesheet" href="assets/style.css?v=29">
+<link rel="stylesheet" href="assets/style.css?v=30">
 <script src="assets/tema.js?v=1" defer></script>
 <script src="assets/iletisim.js?v=1" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/auth.js?v=4"></script>
-<script src="assets/panel.js?v=24" defer></script>
+<script src="assets/panel.js?v=25" defer></script>
 <script src="assets/sayac.js?v=1" defer></script>
 </head>
 <body class="olcum-yok">
@@ -130,6 +130,11 @@
 <p class="kart-alt">Sitenizi taradık; eksikleri tek mesajda topladık.</p>
 <div class="isler" id="site-isler"></div>
 </section>
+<section class="kart genis" id="yp-isler-kart" hidden>
+<div class="kart-bas"><h3>Yorumlar ve platformlar</h3><a href="#google">Ayrıntılar →</a></div>
+<p class="kart-alt">Google yorumlarınıza ve platform kontrolüne göre.</p>
+<div class="isler" id="yp-isler"></div>
+</section>
 <section class="kart genis" id="metin-isler-kart">
 <div class="kart-bas"><h3>Hazır metinleriniz</h3><span class="pil pil-a">Yapay zekâ yazar, siz yapıştırırsınız</span></div>
 <p class="kart-alt">Google profiliniz için gereken metinleri sizin işletmenize göre yazıyoruz.</p>
@@ -193,6 +198,18 @@
 <p class="kart-alt">Google’ın ve yapay zekânın sitenizi rahat okuyup okuyamadığına bakıyoruz: başlık, açıklama, telefonda görünüm, hız, adres ve telefon bilgisi.</p>
 <p class="uyari" id="site-durum" role="status"></p>
 <div id="site-saglik" style="margin-top:12px"></div>
+</section>
+<section class="kart genis" id="yorum-kart">
+<div class="kart-bas"><h3>Google yorumlarınız</h3><button type="button" class="btn btn-cizgi kucuk-btn" id="yorum-yenile">Yorumları yenile</button></div>
+<p class="kart-alt">Google Haritalar’daki son yorumlarınızı getiriyoruz. Cevap vermediğiniz yorumlar için sizin adınıza bir cevap taslağı yazıyoruz; taslağı kopyalayıp kendiniz yayınlarsınız, biz hiçbir şeyi sizin yerinize paylaşmayız.</p>
+<p class="uyari" id="yorum-durum" role="status"></p>
+<div id="yorum-icerik" style="margin-top:12px"></div>
+</section>
+<section class="kart genis" id="platform-kart">
+<div class="kart-bas"><h3>Hangi platformlarda varsınız?</h3><button type="button" class="btn btn-cizgi kucuk-btn" id="platform-yenile">Yeniden kontrol et</button></div>
+<p class="kart-alt">Google’da işletmenizin adıyla arama yapıp hangi sitelerde sayfanız çıktığına bakıyoruz. Yapay zekâ bir işletmeyi önermeden önce bu sitelere bakıyor.</p>
+<p class="uyari" id="platform-durum" role="status"></p>
+<div id="platform-icerik" style="margin-top:12px"></div>
 </section>
 <section class="kart genis" id="kelime-kart">
 <div class="kart-bas"><h3>Hangi aramalarda ölçüyoruz?</h3><span class="pil pil-a">10 arama</span></div>

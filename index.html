@@ -16,7 +16,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap"></noscript>
 <script>(function(){var t;try{t=localStorage.getItem('gorunur_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t;if(t==='koyu'){var m=document.querySelector('meta[name="theme-color"]');if(m)m.content='#0F1217'}})()</script>
-<link rel="stylesheet" href="assets/style.css?v=28">
+<link rel="stylesheet" href="assets/style.css?v=30">
 <script src="assets/tema.js?v=1" defer></script>
 <script src="assets/iletisim.js?v=1" defer></script>
 <script src="assets/app.js?v=12" defer></script>
@@ -241,8 +241,8 @@
 <button class="konu" role="tab" id="t2" aria-controls="p2" aria-selected="false" tabindex="-1"><span class="sayi">2</span><span><strong>Hangi aramalarda çıkıyorsunuz?</strong><small>Müşterilerinizin yazdığı aramalarda kaçıncı sırada olduğunuzu her hafta takip ediyoruz.</small></span></button>
 <button class="konu" role="tab" id="t3" aria-controls="p3" aria-selected="false" tabindex="-1"><span class="sayi">3</span><span><strong>Yapay zekâ sizi öneriyor mu?</strong><small>Gemini’ye, ChatGPT’ye ve Google Yapay Zekâ Modu’na müşteri gibi soru sorup cevaplarda adınızın geçip geçmediğini sayıyoruz.</small></span></button>
 <button class="konu" role="tab" id="t4" aria-controls="p4" aria-selected="false" tabindex="-1"><span class="sayi">4</span><span><strong>Sitenizde sizi geri iten hata var mı?</strong><small>Başlık, hız, telefonda görünüm, eksik bilgiler. Bulup düzeltme mesajını hazır yazıyoruz.</small></span></button>
-<button class="konu" role="tab" id="t5" aria-controls="p5" aria-selected="false" tabindex="-1"><span class="sayi">5</span><span><strong>Yorumlarda geride misiniz? <span class="yakinda">yakında</span></strong><small>Google yorumlarınızı okuyup cevapsız olanlara hazır cevap taslağı çıkarıyoruz.</small></span></button>
-<button class="konu" role="tab" id="t6" aria-controls="p6" aria-selected="false" tabindex="-1"><span class="sayi">6</span><span><strong>Hangi platformlarda yoksunuz? <span class="yakinda">yakında</span></strong><small>Apple Haritalar ve sektör sitelerinde profiliniz var mı, kontrol etmenize yardım ediyoruz.</small></span></button>
+<button class="konu" role="tab" id="t5" aria-controls="p5" aria-selected="false" tabindex="-1"><span class="sayi">5</span><span><strong>Yorumlarda geride misiniz?</strong><small>Google yorumlarınızı okuyup cevapsız olanlara cevap taslağı yazıyoruz. Taslağı siz kopyalayıp yayınlarsınız.</small></span></button>
+<button class="konu" role="tab" id="t6" aria-controls="p6" aria-selected="false" tabindex="-1"><span class="sayi">6</span><span><strong>Hangi platformlarda yoksunuz?</strong><small>Google’da adınızla arayıp hangi sitelerde sayfanız çıktığına bakıyoruz. Apple ve Bing Haritalar için nasıl kontrol edeceğinizi gösteriyoruz.</small></span></button>
 </div>
 
 <div class="ekran">
@@ -301,22 +301,22 @@
 
 <div id="p5" role="tabpanel" aria-labelledby="t5" hidden>
 <h3>Yorumlar ve hazır cevaplar</h3>
-<p class="k">Cevapsız kalan her yoruma sizin ağzınızdan bir taslak yazıyoruz.</p>
+<p class="k">Cevapsız kalan son yorumlarınıza sizin ağzınızdan bir taslak yazıyoruz. Siz kopyalayıp Google'da yayınlarsınız; biz sizin yerinize bir şey paylaşmayız.</p>
 <div class="oge" style="display:block;margin-top:20px">
 <div style="display:flex;justify-content:space-between;gap:12px"><b>Ayşe K.</b><span style="color:var(--amberyazi);font-weight:700">★★★★☆</span></div>
 <p style="margin:8px 0 0;color:var(--yazi2)">Kedimiz Pamuk'la çok ilgilendiler, sadece bekleme biraz uzun sürdü.</p>
-<div class="taslak"><div class="etiket" style="font-size:12px">Hazır cevap taslağı</div><p style="margin:6px 0 0">Ayşe Hanım, Pamuk'a selamlar! Güzel sözleriniz için teşekkürler. Bekleme süresi için haklısınız, randevulu saatlerimizi artırdık.</p></div>
+<div class="taslak"><div class="etiket" style="font-size:12px">Hazır cevap taslağı</div><p style="margin:6px 0 0">Ayşe, Pamuk'a selamlar! Güzel sözleriniz için teşekkür ederiz. Bekleme süresi için haklısınız, özür dileriz; geri bildiriminizi dikkate alıyoruz.</p></div>
 </div>
 </div>
 
 <div id="p6" role="tabpanel" aria-labelledby="t6" hidden>
 <h3>Hangi platformda varsınız?</h3>
-<p class="k">Yapay zekâ önerirken bu sitelere bakıyor. Eksikler yapılacaklar listenize eklenir.</p>
+<p class="k">Yapay zekâ önerirken bu sitelere bakıyor. Bulamadıklarımız yapılacaklar listenize eklenir.</p>
 <div class="liste">
 <div class="oge"><span class="ad">Google İşletme Profili</span><span class="pil pil-y">Var</span></div>
-<div class="oge"><span class="ad">Apple Haritalar</span><span class="pil pil-a">Telefon eksik</span></div>
-<div class="oge"><span class="ad">Instagram</span><span class="pil pil-a">Profile bağlı değil</span></div>
-<div class="oge"><span class="ad">Sektör rehberi</span><span class="pil pil-k">Yok</span></div>
+<div class="oge"><span class="ad">Instagram</span><span class="pil pil-y">Var</span></div>
+<div class="oge"><span class="ad">Yandex Haritalar</span><span class="pil pil-k">Bulunamadı</span></div>
+<div class="oge"><span class="ad">Apple Haritalar</span><span class="pil pil-a">Kendiniz kontrol edin</span></div>
 </div>
 </div>
 </div>
@@ -418,7 +418,8 @@
 <div class="giris">Başlangıç'takilerin hepsi, ayrıca</div>
 <div class="ozellik"><span>Hazır sayfa metni</span><button type="button" class="bilgi" aria-expanded="false" aria-label="Hazır sayfa metni hakkında">i<span class="balon">Eksik sayfanın metnini işinize göre yazarız. Yazmadan önce size 2-3 kısa soru sorarız.</span></button></div>
 <div class="ozellik"><span>5 rakip karşılaştırması</span><button type="button" class="bilgi" aria-expanded="false" aria-label="5 rakip karşılaştırması hakkında">i<span class="balon">Öndeki 5 işletmeyle sizi yan yana koyarız.</span></button></div>
-<p class="pk-yakinda"><span class="yakinda">yakında</span>Yorum cevap taslağı, WhatsApp'tan haber, rakip sayfa takibi, mahalle haritası</p>
+<div class="ozellik"><span>Yorum cevap taslağı</span><button type="button" class="bilgi" aria-expanded="false" aria-label="Yorum cevap taslağı hakkında">i<span class="balon">Google'daki cevapsız yorumlarınıza sizin ağzınızdan taslak yazarız. Siz kopyalayıp yayınlarsınız; biz sizin yerinize bir şey paylaşmayız.</span></button></div>
+<p class="pk-yakinda"><span class="yakinda">yakında</span>WhatsApp'tan haber, rakip sayfa takibi, mahalle haritası</p>
 <a href="#liste" class="btn btn-amber">Listeye katıl</a>
 </div>
 
