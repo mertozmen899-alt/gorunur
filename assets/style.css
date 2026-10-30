@@ -1197,13 +1197,13 @@ body:has(.lp-promo:not([hidden])) .wa-dugme{opacity:0;pointer-events:none}
 
 /* Kim yapıyor şeridi */
 .kim-serit{display:flex;align-items:center;gap:18px;margin-top:20px;padding:18px 22px;border:1px solid var(--cizgi);border-radius:20px;background:var(--kart)}
-.kim-foto{flex:none;width:60px;height:60px;border-radius:50%;background:var(--amber);color:var(--siyah);display:grid;place-items:center;font-weight:800;font-size:20px;letter-spacing:.02em;overflow:hidden}
-.kim-foto img{width:100%;height:100%;object-fit:cover}
+.kim-foto{flex:none;width:80px;height:80px;border-radius:50%;background:var(--amber);color:var(--siyah);display:grid;place-items:center;font-weight:800;font-size:20px;letter-spacing:.02em;overflow:hidden}
+.kim-foto picture,.kim-foto img{display:block;width:100%;height:100%;object-fit:cover}.kim-foto{box-shadow:0 0 0 3px var(--kart),0 0 0 5px var(--amber)}
 .kim-metin{flex:1;min-width:0}
 .kim-metin p{margin:0;font-size:15px;line-height:1.55;color:var(--yazi2)}
 .kim-metin .kim-bas{font-size:12.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--yazi3);margin-bottom:4px}
 .kim-dugme{flex:none}
-@media (max-width:720px){.kim-serit{flex-wrap:wrap;padding:16px}.kim-metin{flex-basis:calc(100% - 80px)}.kim-dugme{width:100%;justify-content:center}}
+@media (max-width:720px){.kim-serit{flex-wrap:wrap;padding:16px}.kim-metin{flex-basis:calc(100% - 100px)}.kim-dugme{width:100%;justify-content:center}}
 
 /* v28: hazırlık düzeltmeleri */
 /* Hesap açma: aydınlatma metni onay kutusundan ayrı, sadece bilgi */
