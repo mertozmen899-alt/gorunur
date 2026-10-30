@@ -1,0 +1,58 @@
+name: Android uygulaması sanal telefonda test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/android-test.yml'
+      - 'android/emulator-test.sh'
+  workflow_run:
+    workflows: ['Android uygulaması (APK)']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [29, 35]
+    env:
+      API: ${{ matrix.api }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Son APK'yı al
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download android -p Gorunur.apk --repo "${{ github.repository }}"
+
+      - name: Sanallaştırmayı aç
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Sanal telefonda aç
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: bash android/emulator-test.sh
+
+      - name: Sonuçları yükle
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPO: ${{ github.repository }}
+        run: |
+          gh release view android-test --repo "$DEPO" > /dev/null 2>&1 || gh release create android-test --prerelease --title "Android test sonuçları" --notes "Sanal telefon testi çıktıları" --repo "$DEPO"
+          cd "sonuc-$API"
+          for f in *; do cp "$f" "api$API-$f"; gh release upload android-test "api$API-$f" --clobber --repo "$DEPO"; done

@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - 'android/**'
+      - '!android/emulator-test.sh'
       - '.github/workflows/android-apk.yml'
   workflow_dispatch:
 
