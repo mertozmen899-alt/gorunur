@@ -4,7 +4,8 @@
 // (4) "Hangi platformlarda varsınız?" kontrolü (günde 1 yenileme; 1 SerpApi araması)
 // Günlük sınırlar isletmeler.kullanim sütununda tutulur (sadece sunucu yazar, işletme adı değişince silinmez):
 //   SerpApi araması (yorumlar + platformlar) kişi başı günde 6, site taraması günde 5, hazır metin günde 15.
-//   Ayrıca tüm sistem için günlük SerpApi bütçesi: public.serp_harca (SERP_GUNLUK_SINIR, varsayılan 150).
+//   Ayrıca tüm sistem için SerpApi bütçesi: public.serp_harca (günlük SERP_GUNLUK_SINIR, varsayılan 25;
+//   aylık SERPAPI_AYLIK_SINIR, varsayılan 230).
 // Deneme yolu: x-gorunur-cron başlığı cron_ayar.olcum_anahtari ile aynıysa ve gövdede deneme_isletme_id varsa
 // işlem o işletme için (oturum olmadan) yapılır.
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -415,7 +416,8 @@ Deno.serve(async (req) => {
   }
   if (!isl || !isl.kurulum_bitti) return json({ hata: "Önce kurulumu tamamlayın." }, 400);
   const SERP = (Deno.env.get("SERPAPI_KEY") || "").trim();
-  const SERP_SINIR = parseInt(Deno.env.get("SERP_GUNLUK_SINIR") || "150", 10) || 150;
+  const SERP_SINIR = parseInt(Deno.env.get("SERP_GUNLUK_SINIR") || "25", 10) || 25;
+  const SERP_AYLIK = parseInt(Deno.env.get("SERPAPI_AYLIK_SINIR") || "230", 10) || 230;
   // Kişi başı günlük sayaç (atomik). Deneme yolunda kişi sınırı uygulanmaz, sistem bütçesi uygulanır.
   const harca = async (alan: string, adet: number, sinir: number) => {
     if (deneme) return true;
@@ -425,9 +427,13 @@ Deno.serve(async (req) => {
   };
   const kapi: Kapi = async () => {
     if (!(await harca("serp", 1, 6))) throw new KotaHatasi("Bugünkü arama hakkınız doldu. Yarın tekrar deneyin.");
-    const { data, error } = await db.rpc("serp_harca", { adet: 1, sinir: SERP_SINIR });
+    const { data, error } = await db.rpc("serp_harca", { adet: 1, sinir: SERP_SINIR, p_aylik: SERP_AYLIK });
     if (error) console.log("serp_harca hata", error.message);
-    if (data !== true) throw new KotaHatasi("Bugün çok yoğunuz, günlük arama sınırımıza ulaştık. Yarın tekrar deneyin.");
+    if (data !== true) {
+      const { data: ayN } = await db.rpc("serp_aylik_kullanim");
+      if ((Number(ayN) || 0) + 1 > SERP_AYLIK) throw new KotaHatasi("Bu ayki arama kapasitemiz doldu, aramalar ay başında devam edecek.");
+      throw new KotaHatasi("Bugün çok yoğunuz, günlük arama sınırımıza ulaştık. Yarın tekrar deneyin.");
+    }
   };
 
   if (govde.islem === "yorumlar") {

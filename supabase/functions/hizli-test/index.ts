@@ -1,11 +1,13 @@
 // Görünür hızlı test: ana sayfadaki 3 soruluk testin gerçek sonucu.
 // Girdi: { sehir, is }. Çıktı: Google Haritalar'da ilk 20 işletme + Gemini (yz), ChatGPT (cg, OPENAI_API_KEY varsa)
 // ve Google Yapay Zekâ Modu (gyz, SerpApi) önerdiği işletmeler. Yeni testte SerpApi: haritalar 1 + yapay zekâ modu 1 arama.
-// Aynı şehir + iş 7 gün önbellekte tutulur. Kötüye kullanım sınırı: IP başına günde 6, toplam günde 25 yeni arama.
+// Aynı şehir + iş 7 gün önbellekte tutulur. Kötüye kullanım sınırı: IP başına günde 6, toplam günde 8 yeni arama.
 // Giriş gerektirmez (verify_jwt kapalı); ham IP saklanmaz, sadece günlük tuzlu özeti.
 // IP: sadece cf-connecting-ip; yoksa x-forwarded-for'un SON değeri (ilk değeri ziyaretçi kendisi yazabilir).
 // Yarış durumuna karşı istek kaydı dış API'lerden ÖNCE eklenir, sonra sayılır (aynı anda gelen istekler birbirini görür).
-// Sistem geneli günlük SerpApi bütçesi: public.serp_harca (SERP_GUNLUK_SINIR, varsayılan 150).
+// Sistem geneli SerpApi bütçesi: public.serp_harca (günlük SERP_GUNLUK_SINIR, varsayılan 25; aylık SERPAPI_AYLIK_SINIR, varsayılan 230).
+// Hızlı test, ücretli kullanıcılara yer kalsın diye aylık sınırın sadece %60'ına kadar harcar. Aylık pay dolduysa
+// Haritalar ve Google Yapay Zekâ Modu atlanır, Gemini/ChatGPT ile cevap verilir ve harita_yok: 'kapasite' döner.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const CORS = {
@@ -17,7 +19,7 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 const sade = (x: string) => (x || "").toLocaleLowerCase("tr").replace(/ı/g, "i").replace(/ş/g, "s").replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ö/g, "o").replace(/ç/g, "c").replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
 const temiz = (x: unknown) => String(x || "").replace(/[^\p{L}\p{N} .,'’&-]+/gu, " ").replace(/\s+/g, " ").trim().slice(0, 60);
-const IP_GUNLUK = 6, TOPLAM_GUNLUK = 25;
+const IP_GUNLUK = 6, TOPLAM_GUNLUK = 8;
 
 function yerde(ad: string) {
   if (ad === "Türkiye geneli") return "Türkiye'de";
@@ -144,10 +146,12 @@ Deno.serve(async (req) => {
 
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const SERP0 = (Deno.env.get("SERPAPI_KEY") || "").trim();
-  const SERP_SINIR = parseInt(Deno.env.get("SERP_GUNLUK_SINIR") || "150", 10) || 150;
+  const SERP_SINIR = parseInt(Deno.env.get("SERP_GUNLUK_SINIR") || "25", 10) || 25;
+  const AYLIK = parseInt(Deno.env.get("SERPAPI_AYLIK_SINIR") || "230", 10) || 230;
+  const AYLIK_TEST = Math.floor(AYLIK * 0.6); // hızlı test sadece aylık sınırın %60'ına kadar
   const serpHarca = async (adet: number) => {
     if (adet <= 0) return true;
-    const { data, error } = await db.rpc("serp_harca", { adet, sinir: SERP_SINIR });
+    const { data, error } = await db.rpc("serp_harca", { adet, sinir: SERP_SINIR, p_aylik: AYLIK_TEST });
     if (error) console.log("serp_harca hata", error.message);
     return data === true;
   };
@@ -194,6 +198,12 @@ Deno.serve(async (req) => {
   // Sistem geneli SerpApi bütçesi: haritalar (varsa) + Google Yapay Zekâ Modu
   const serpVar = !!SERP && await serpHarca((haritaIstek ? 1 : 0) + 1);
   const haritaAcik = haritaIstek && serpVar;
+  // Bütçe neden yok? Aylık pay dolduysa ön yüz kısa bir açıklama gösterir
+  let haritaYok: string | null = null;
+  if (SERP && !serpVar) {
+    const { data: ayN } = await db.rpc("serp_aylik_kullanim");
+    haritaYok = (Number(ayN) || 0) + (haritaIstek ? 2 : 1) > AYLIK_TEST ? "kapasite" : "gunluk";
+  }
   const [h, y, c, gy] = await Promise.allSettled([
     haritaAcik ? haritalar(`${isK} ${sehir}`, SERP) : Promise.resolve(null),
     GEM && kotaVar ? yapayZeka(soru, GEM) : Promise.resolve(null),
@@ -207,6 +217,7 @@ Deno.serve(async (req) => {
     cg: c.status === "fulfilled" ? c.value : null,
     gyz: gy.status === "fulfilled" ? gy.value : null,
     tarih: new Date().toISOString(),
+    ...(haritaYok ? { harita_yok: haritaYok } : {}),
   };
   if (h.status === "rejected") console.log("hizli-test harita", String(h.reason).slice(0, 200));
   if (y.status === "rejected") console.log("hizli-test yz", String(y.reason).slice(0, 200));
@@ -214,6 +225,6 @@ Deno.serve(async (req) => {
   if (gy.status === "rejected") console.log("hizli-test gyz", String(gy.reason).slice(0, 200));
   if (!sonuc.harita && !sonuc.yz) return json({ hata: "olcum", mesaj: "Şu an ölçemedik. Birkaç dakika sonra tekrar deneyin." }, 502);
   // Sadece iki parça da geldiyse önbelleğe al (yarım sonuç bir hafta takılı kalmasın)
-  if (sonuc.yz && (sonuc.harita || sehir === "Türkiye geneli")) await db.from("hizli_testler").upsert({ anahtar, sonuc, olusturma: sonuc.tarih });
+  if (sonuc.yz && !haritaYok && (sonuc.harita || sehir === "Türkiye geneli")) await db.from("hizli_testler").upsert({ anahtar, sonuc, olusturma: sonuc.tarih });
   return json(sonuc);
 });
