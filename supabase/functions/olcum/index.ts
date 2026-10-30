@@ -56,6 +56,25 @@ function tekillestir(liste: string[]): string[] {
   }
   return sonuc;
 }
+// Google otomatik tamamlama: insanların en çok yazdığı aramalar (Google'ın kendi sırasıyla)
+const ALAKASIZ = /(iş ilan|is ilan|eleman|maaş|maas|nedir|nasıl yapılır|nasil yapilir|kariyer|staj|sahibinden|letgo|dolandırıcı|şikayet|sikayet|telefon numarası|haritası|wiki)/i;
+async function populerAramalar(cekir: string, yer: string, anahtar: string): Promise<string[]> {
+  const sorgular = yer ? [`${yer} ${cekir}`, `${cekir} ${yer}`] : [cekir];
+  const sonuc = await Promise.allSettled(sorgular.map((q) => serp({ engine: "google_autocomplete", q, gl: "tr", hl: "tr" }, anahtar)));
+  const listeler = sonuc.map((r) => r.status === "fulfilled" ? ((r.value.suggestions || []) as Array<{ value?: string }>).map((x) => String(x.value || "")) : []);
+  // İki listeyi sırayla birleştir (1. öneri, 1. öneri, 2. öneri, ...)
+  const karisik: string[] = [];
+  for (let i = 0; i < 10; i++) for (const l of listeler) if (l[i]) karisik.push(l[i]);
+  const cekirSade = sade(cekir).split(" ").filter((t) => t.length >= 3);
+  const yerSade = sade(yer);
+  const uygun = karisik.filter((k) => {
+    const ks = " " + sade(k) + " ";
+    return !ALAKASIZ.test(k) && k.split(" ").length <= 6 &&
+      cekirSade.some((t) => ks.includes(" " + t.slice(0, Math.max(4, t.length - 2)))) &&
+      (!yerSade || ks.includes(" " + yerSade));
+  });
+  return tekillestir(uygun.map((k) => k.toLocaleLowerCase("tr")));
+}
 // Adres istenen semt/şehirde mi? (adres yoksa kabul)
 function yerdeMi(adres: unknown, semtKisa: string, sehir: string, turkiye: boolean): boolean {
   if (turkiye || !adres) return true;
@@ -144,9 +163,22 @@ Deno.serve(async (req) => {
   const turkiye = isl.semt === "Türkiye geneli";
   const isK = (isl.is_turu || "").toLocaleLowerCase("tr");
   const yerK = turkiye ? "" : semtKisa.toLocaleLowerCase("tr");
-  const elle = ((isl.anahtar_kelimeler || []) as string[]).map((k) => String(k).toLocaleLowerCase("tr").trim()).filter((k) => k.length >= 2).slice(0, 3);
-  // Kullanıcının yazdıkları önce; 3'e tamamlamak için otomatik olanlar eklenir
-  const kelimeler = tekillestir([...elle, ...otomatikKelimeler(isK, yerK)]).slice(0, 3);
+  const elle = ((isl.anahtar_kelimeler || []) as string[]).map((k) => String(k).toLocaleLowerCase("tr").trim()).filter((k) => k.length >= 2).slice(0, 5);
+  // Sektörün en çok aranan aramaları: Google otomatik tamamlamadan, 30 günde bir yenilenir
+  let populer = (isl.oto_kelimeler || []) as string[];
+  const eski = !isl.oto_kelimeler_tarih || Date.now() - new Date(isl.oto_kelimeler_tarih).getTime() > 30 * 864e5;
+  if (SERP && eski) {
+    try {
+      const cekir = isK.split(/\s+/).filter((k) => k && !EKLER.has(k)).join(" ") || isK;
+      const yeni = await populerAramalar(cekir, yerK, SERP);
+      if (yeni.length) {
+        populer = yeni.slice(0, 8);
+        await db.from("isletmeler").update({ oto_kelimeler: populer, oto_kelimeler_tarih: new Date().toISOString() }).eq("id", isl.id);
+      }
+    } catch (e) { console.log("otomatik tamamlama alinamadi", String(e)); }
+  }
+  // Sıra: kullanıcının yazdıkları, en çok arananlar, kendi ürettiklerimiz. En fazla 5 arama.
+  const kelimeler = tekillestir([...elle, ...populer, ...otomatikKelimeler(isK, yerK)]).slice(0, 5);
   const siteAlan = alanAdi(isl.site);
 
   const { data: kayit } = await db.from("olcumler").insert({ isletme_id: isl.id, sahip: u.user.id, durum: "suruyor" }).select("id").single();

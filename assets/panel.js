@@ -235,8 +235,11 @@
     document.querySelectorAll('#kelime-form input').forEach(function (inp, n) {
       inp.value = kayitli[n] || ''; inp.placeholder = 'Örn. ' + (oto[n] || 'başka bir arama');
     });
-    var olculecek = tekil(kayitli.concat(oto)).slice(0, 3);
-    $('kelime-durum').textContent = 'Ölçülecek aramalar: ' + olculecek.map(function (k) { return '"' + k + '"'; }).join(', ') + (kayitli.length < 3 ? '. Boş kutuları biz tamamlıyoruz.' : '.');
+    var populer = isletme.oto_kelimeler || [];
+    var olculecek = tekil(kayitli.concat(populer, oto)).slice(0, 5);
+    $('kelime-durum').textContent = populer.length
+      ? 'Ölçülecek 5 arama: ' + olculecek.map(function (k) { return '"' + k + '"'; }).join(', ') + '. Kendi yazdıklarınız önce gelir, gerisi Google’da en çok arananlardan.'
+      : 'İlk ölçümde Google’da sektörünüz için en çok yapılan aramaları bulup 5 tanesine bakacağız.' + (kayitli.length ? ' Kendi yazdıklarınız önce gelir.' : '');
   }
   $('kelime-form').addEventListener('submit', function (e) {
     e.preventDefault();

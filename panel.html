@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="assets/style.css?v=5">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/auth.js?v=4"></script>
-<script src="assets/panel.js?v=6" defer></script>
+<script src="assets/panel.js?v=7" defer></script>
 </head>
 <body>
 <header class="ust">
@@ -39,7 +39,7 @@
 <section class="hero-kart" id="ilk">
 <span class="durum"><i></i><span id="durum-yazi">İlk ölçümünüz sırada</span></span>
 <h2 id="hero-cumle"></h2>
-<p id="hero-alt">Müşterilerin yazdığı 3 farklı aramada Google Haritalar'da ve Google aramasında kaçıncı çıktığınıza, yapay zekâ cevaplarında adınızın geçip geçmediğine bakacağız. Yaklaşık 1 dakika sürer.</p>
+<p id="hero-alt">Sektörünüzde en çok yapılan 5 aramada Google Haritalar'da ve Google aramasında kaçıncı çıktığınıza, yapay zekâ cevaplarında adınızın geçip geçmediğine bakacağız. Yaklaşık 1 dakika sürer.</p>
 <div class="adimlar" id="olcum-adimlar" hidden aria-live="polite">
 <div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Google Haritalar'da sıranıza bakıyoruz</div>
 <div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Google aramasına bakıyoruz</div>
@@ -114,8 +114,8 @@
 </section>
 
 <section class="kart genis" id="kelime-kart">
-<div class="kart-bas"><h3>Hangi aramalarda ölçüyoruz?</h3><span class="pil pil-a">En fazla 3</span></div>
-<p class="kart-alt">Müşterilerinizin Google'a yazdığını düşündüğünüz aramaları girin. Boş bırakırsanız işinize ve semtinize göre biz seçeriz.</p>
+<div class="kart-bas"><h3>Hangi aramalarda ölçüyoruz?</h3><span class="pil pil-a">5 arama</span></div>
+<p class="kart-alt">Google'ın kendi önerilerinden sektörünüzde en çok yapılan aramaları buluyoruz. Mutlaka ölçülmesini istediğiniz aramalar varsa buraya yazın, listenin başına koyarız.</p>
 <form id="kelime-form" class="kelime-form" novalidate>
 <input class="girdi" type="text" maxlength="80" aria-label="1. arama" data-k="0">
 <input class="girdi" type="text" maxlength="80" aria-label="2. arama" data-k="1">
