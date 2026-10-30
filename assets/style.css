@@ -288,7 +288,7 @@ h1,h2,h3{margin:0}
 @media (max-width:560px){.hero-kart{padding:22px}.panel-menu #kim{display:none}}
 
 /* Ölçüm sonuçları */
-.yakinda{display:inline-block;vertical-align:middle;margin-left:8px;background:var(--amberkoyu);color:var(--amber);border:1px solid var(--amberkenar);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
+span.yakinda{display:inline-block;vertical-align:middle;margin-left:8px;background:var(--amberkoyu);color:var(--amber);border:1px solid var(--amberkenar);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
 .durum-sakin{background:var(--kart2);color:var(--yazi3)}
 .sonuc-ust{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .kucuk-btn{padding:9px 16px;min-height:40px;font-size:14px}

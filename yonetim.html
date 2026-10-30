@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#0E0E0F">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=12">
+<link rel="stylesheet" href="assets/style.css?v=13">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/auth.js?v=4"></script>
 <style>
@@ -43,6 +43,12 @@
 </section>
 
 <section class="ymt-bolum kart">
+<div class="kart-bas"><h3>Ajan ekibinin raporları</h3><span class="pil pil-a">Her gün otomatik</span></div>
+<p class="kart-alt">Ar-Ge (Zaverno ve yenilikler), kalite ekibi (test, güvenlik, metin, ölçüm denetimi) ve yazılımcı. En yeni en üstte.</p>
+<div id="ajan-liste" class="yz-liste" style="margin-top:14px"></div>
+</section>
+
+<section class="ymt-bolum kart">
 <h3>Günlük raporlar</h3>
 <p class="kart-alt">Her sabah 08:47'de otomatik hazırlanır.</p>
 <div class="kaydir"><table class="tablo"><thead><tr><th>Tarih</th><th>Durum</th><th>Yeni kullanıcı</th><th>Bekleme listesi</th><th>Ölçüm</th><th>Hatalı</th><th>SerpApi kalan</th></tr></thead><tbody id="rapor-tablo"></tbody></table></div>
@@ -62,8 +68,30 @@
     return Promise.all([
       A.sb.from('gunluk_raporlar').select('*').order('tarih', { ascending: false }).limit(30),
       A.sb.from('isletmeler').select('id,ad,semt,is_turu,kurulum_bitti,kurulum_adim,olusturma').order('olusturma', { ascending: false }),
-      A.sb.from('olcumler').select('isletme_id,baslangic,durum,harita_sira,yz_gecen,yz_soru_sayisi,kaynak').order('baslangic', { ascending: false }).limit(500)
+      A.sb.from('olcumler').select('isletme_id,baslangic,durum,harita_sira,yz_gecen,yz_soru_sayisi,kaynak').order('baslangic', { ascending: false }).limit(500),
+      A.sb.from('ajan_raporlari').select('*').order('olusturma', { ascending: false }).limit(30)
     ]).then(function (s) {
+      var AJAN = { arge: 'Ar-Ge', kalite: 'Kalite ekibi', yazilimci: 'Yazılımcı', denetci: 'Ölçüm denetçisi' };
+      var ROL = { test: 'Test', guvenlik: 'Güvenlik', metin: 'Metin', olcum: 'Ölçüm', zaverno: 'Zaverno', fikir: 'Fikir', degisiklik: 'Değişiklik' };
+      var al = $('ajan-liste'); var ar = (s[3] && s[3].data) || [];
+      if (!ar.length) al.appendChild(el('p', 'Henüz ajan raporu yok. İlk raporlar yarın sabah gelecek.', 'kart-alt'));
+      ar.forEach(function (r) {
+        var d = el('details', null, 'yz-cevap'), sm = el('summary');
+        sm.appendChild(el('span', new Date(r.tarih).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) + ' · ' + (AJAN[r.ajan] || r.ajan) + ': ' + r.ozet, 'yz-soru'));
+        sm.appendChild(el('span', ({ iyi: 'İyi', uyari: 'Dikkat', sorun: 'Sorun' })[r.durum], 'pil ' + ({ iyi: 'pil-y', uyari: 'pil-a', sorun: 'pil-k' })[r.durum]));
+        d.appendChild(sm);
+        var ul = el('ul'); ul.style.cssText = 'margin:10px 0 0;padding-left:18px;display:grid;gap:8px;font-size:14px';
+        (r.bulgular || []).forEach(function (b) {
+          var li = el('li'); li.appendChild(el('b', (b.rol ? '[' + (ROL[b.rol] || b.rol) + '] ' : '') + (b.baslik || '')));
+          if (b.detay) li.appendChild(el('div', b.detay, 'kart-alt'));
+          if (b.oneri) li.appendChild(el('div', 'Öneri: ' + b.oneri, 'kart-alt'));
+          if (b.kaynak) { var a = el('a', 'Kaynak'); a.href = b.kaynak; a.target = '_blank'; a.rel = 'noopener'; li.appendChild(a); }
+          ul.appendChild(li);
+        });
+        d.appendChild(ul);
+        if (r.metin) d.appendChild(el('p', r.metin, 'yz-metin'));
+        al.appendChild(d);
+      });
       var raporlar = s[0].data || [], isl = s[1].data || [], olc = s[2].data || [];
       var son = raporlar[0];
       var v = son ? son.veri : {};

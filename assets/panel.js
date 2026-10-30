@@ -750,11 +750,10 @@
     document.querySelectorAll('#kelime-form input').forEach(function (inp, n) {
       inp.value = kayitli[n] || ''; inp.placeholder = 'Örn. ' + (oto[n] || 'başka bir arama');
     });
-    var populer = isletme.oto_kelimeler || [];
-    var olculecek = tekil(kayitli.concat(populer, oto)).slice(0, 5);
-    $('kelime-durum').textContent = populer.length
-      ? 'Ölçülecek 5 arama: ' + olculecek.map(function (k) { return '"' + k + '"'; }).join(', ') + '. Kendi yazdıklarınız önce gelir, gerisi Google’da en çok arananlardan.'
-      : 'İlk ölçümde Google’da sektörünüz için en çok yapılan aramaları bulup 5 tanesine bakacağız.' + (kayitli.length ? ' Kendi yazdıklarınız önce gelir.' : '');
+    var son = (gecmis[0] && gecmis[0].kelimeler) || [];
+    $('kelime-durum').textContent = son.length
+      ? 'Son ölçümde bakılan ' + son.length + ' arama: ' + son.map(function (k) { return '"' + k.kelime + '"'; }).join(', ') + '. Kendi yazdıklarınız temel aramadan hemen sonra gelir.'
+      : 'İlk ölçümde sektörünüz için en çok yapılan 10 aramayı bulup her birinde sıranıza bakacağız.' + (kayitli.length ? ' Kendi yazdıklarınız da listede olacak.' : '');
   }
   $('kelime-form').addEventListener('submit', function (e) {
     e.preventDefault();
