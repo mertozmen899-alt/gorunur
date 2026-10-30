@@ -104,10 +104,17 @@ Deno.serve(async (req) => {
     .eq("sahip", u.user.id).gte("baslangic", new Date(Date.now() - 864e5).toISOString());
   if ((count || 0) >= hak) return json({ hata: `Bugünkü ölçüm hakkınız (${hak}) doldu. Yarın tekrar deneyin.` }, 429);
 
-  const SERP = Deno.env.get("SERPAPI_KEY") || "";
-  const GEM = Deno.env.get("GEMINI_API_KEY") || "";
+  const ortam = Deno.env.toObject();
+  const bul = (ad: string) => (ortam[ad] || Object.entries(ortam).find(([k]) => k.trim().toUpperCase() === ad)?.[1] || "").trim();
+  const SERP = bul("SERPAPI_KEY");
+  const GEM = bul("GEMINI_API_KEY");
   const eksik = [!SERP && "SERPAPI_KEY", !GEM && "GEMINI_API_KEY"].filter(Boolean);
-  if (eksik.length === 2) return json({ hata: "Ölçüm anahtarları henüz eklenmedi: " + eksik.join(", ") }, 503);
+  if (eksik.length === 2) {
+    // Teşhis: sadece değişken ADLARI (değerler asla yazılmaz)
+    const adlar = Object.keys(Deno.env.toObject()).filter((k) => /SERP|GEMINI|_KEY/i.test(k) && !/^SUPABASE_/.test(k)).map((k) => JSON.stringify(k));
+    console.log("anahtar adlari:", adlar.join(" ") || "(hic yok)");
+    return json({ hata: "Ölçüm anahtarları henüz eklenmedi: " + eksik.join(", ") + (adlar.length ? " (bulunan adlar: " + adlar.join(", ") + ")" : "") }, 503);
+  }
 
   const semtKisa = (isl.semt || "").split(",")[0].trim();
   const sehir = ((isl.semt || "").split(",")[1] || "").trim();
