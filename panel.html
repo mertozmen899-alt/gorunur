@@ -10,12 +10,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=10">
+<link rel="stylesheet" href="assets/style.css?v=11">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/auth.js?v=4"></script>
-<script src="assets/panel.js?v=14" defer></script>
+<script src="assets/panel.js?v=15" defer></script>
 </head>
-<body>
+<body class="olcum-yok">
 <header class="ust">
 <div class="kap">
 <a href="./" class="logo" aria-label="Görünür ana sayfa">
@@ -30,16 +30,28 @@
 </header>
 
 <main class="kap panel" id="panel" hidden>
+<div class="panel-duzen">
+<nav class="yan-menu" id="yan-menu" aria-label="Panel">
+<a href="#ozet" data-git="ozet"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>Özet</span></a>
+<a href="#isler" data-git="isler"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg><span>İşlerim</span><em class="menu-sayi" id="isler-sayi" hidden></em></a>
+<a href="#yz" data-git="yz"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 17l.8 2.2L22 20l-2.2.8L19 23l-.8-2.2L16 20l2.2-.8z"/></svg><span>Yapay zekâ</span></a>
+<a href="#google" data-git="google"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><span>Google</span></a>
+<a href="#hesap" data-git="hesap"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span>Hesap</span></a>
+<a href="yonetim.html" id="yonetim-link" class="menu-ymt" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg><span>Yönetim</span></a>
+</nav>
+<div class="panel-icerik">
+
+<!-- ÖZET -->
+<div class="sayfa" data-sayfa="ozet">
 <div class="panel-bas">
 <p class="selam" id="selam"></p>
 <h1 id="baslik">Hoş geldiniz</h1>
 </div>
 
-<!-- Henüz ölçüm yok / ölçüm sürüyor -->
 <section class="hero-kart" id="ilk">
 <span class="durum"><i></i><span id="durum-yazi">İlk ölçümünüz sırada</span></span>
 <h2 id="hero-cumle"></h2>
-<p id="hero-alt">Sektörünüzde en çok yapılan 5 aramada Google Haritalar'da ve Google aramasında kaçıncı çıktığınıza, yapay zekâ cevaplarında adınızın geçip geçmediğine bakacağız. Yaklaşık 1 dakika sürer.</p>
+<p id="hero-alt">Sektörünüzde en çok yapılan 5 aramada Google Haritalar'da ve Google aramasında kaçıncı çıktığınıza, yapay zekânın sizi ne sıklıkla önerdiğine bakacağız. 1-2 dakika sürer.</p>
 <div class="adimlar" id="olcum-adimlar" hidden aria-live="polite">
 <div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Google Haritalar'da sıranıza bakıyoruz</div>
 <div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Google aramasına bakıyoruz</div>
@@ -50,7 +62,6 @@
 <button type="button" class="btn btn-amber" id="olc" style="margin-top:20px">İlk ölçümü başlat</button>
 </section>
 
-<!-- Ölçüm sonucu -->
 <section id="sonuc" hidden>
 <div class="hero-kart sonuc-hero">
 <div class="sonuc-ust">
@@ -61,14 +72,21 @@
 <p id="sonuc-alt"></p>
 <p class="degisim" id="degisim" hidden></p>
 <div class="uc-kutu">
-<div class="sayi-kutu"><span>Google Haritalar</span><b id="k-harita"></b><small id="k-harita-not"></small></div>
-<div class="sayi-kutu"><span>Google arama</span><b id="k-arama"></b><small id="k-arama-not"></small></div>
-<div class="sayi-kutu"><span>Yapay zekâ önerme oranı</span><b id="k-yz"></b><small id="k-yz-not"></small></div>
+<a class="sayi-kutu" href="#google"><span>Google Haritalar</span><b id="k-harita"></b><small id="k-harita-not"></small></a>
+<a class="sayi-kutu" href="#google"><span>Google arama</span><b id="k-arama"></b><small id="k-arama-not"></small></a>
+<a class="sayi-kutu" href="#yz"><span>Yapay zekâ önerme oranı</span><b id="k-yz"></b><small id="k-yz-not"></small></a>
 </div>
 <p class="hata-not" id="sonuc-hata" hidden></p>
 </div>
+</section>
 
-<div class="panel-izgara">
+<div class="panel-izgara olcumlu">
+<section class="kart genis" id="siradaki-kart">
+<div class="kart-bas"><h3>Sıradaki işiniz</h3><a href="#isler">Tüm işler →</a></div>
+<p class="kart-alt" id="siradaki-not"></p>
+<div class="isler" id="siradaki-is"></div>
+</section>
+
 <section class="kart genis" id="gelisim-kart">
 <div class="kart-bas"><h3>Gelişiminiz</h3><span class="pil pil-a" id="gelisim-pil">Her hafta otomatik</span></div>
 <p class="kart-alt" id="gelisim-not"></p>
@@ -77,14 +95,64 @@
 <div class="grafik"><span class="grafik-baslik">Yapay zekânın sizi önerme oranı</span><div id="grafik-yz"></div></div>
 </div>
 </section>
+</div>
+</div>
 
-<section class="kart genis">
+<!-- İŞLERİM -->
+<div class="sayfa" data-sayfa="isler" hidden>
+<div class="panel-bas"><p class="selam">Adım adım</p><h1>İşlerim</h1><p class="kart-alt" id="isler-ozet" style="font-size:15px"></p></div>
+<div class="panel-izgara">
+<section class="kart genis" id="yapilan-kart" hidden>
+<div class="kart-bas"><h3>Yaptığınız işler ve etkisi</h3><span class="pil pil-y" id="yapilan-sayi"></span></div>
+<p class="kart-alt">Google’ın bir değişikliği fark etmesi 1-4 hafta sürer. Bu yüzden 7 gün sonra ilk bakışı, 4 hafta sonra net sonucu gösteriyoruz.</p>
+<div class="yapilan-liste" id="yapilan-liste"></div>
+</section>
+<section class="kart genis olcumlu">
 <div class="kart-bas"><h3>Bu haftanın işleri</h3><span class="pil pil-a">Ölçüme göre</span></div>
-<p class="kart-alt">Ölçümde gördüklerimize göre önem sırasıyla.</p>
+<p class="kart-alt">Ölçümde gördüklerimize göre önem sırasıyla. Bitirdiğiniz işi "Yaptım" ile işaretleyin, etkisini takip edelim.</p>
 <div class="isler" id="olcum-isler"></div>
 </section>
+<section class="kart genis olcumlu" id="yz-yol-kart">
+<div class="kart-bas"><h3>Yapay zekâda önerilmek için</h3><span class="pil pil-a">Adım adım</span></div>
+<p class="kart-alt">ChatGPT ve Gemini bir işletmeyi önermeden önce internette o işletme hakkında ne yazıldığına bakıyor: haritalar, rehber siteler, web siteniz ve yorumlar. Ne kadar çok yerde aynı ve doğru bilgiyle geçerseniz o kadar çok öneriliyorsunuz.</p>
+<div class="isler" id="yz-isler"></div>
+</section>
+<section class="kart genis" id="genel-isler-kart">
+<div class="kart-bas"><h3>Her işletme için geçerli</h3><span class="pil pil-a">Ölçüm beklemeden</span></div>
+<p class="kart-alt">Bunlar ölçümden bağımsız, her zaman işe yarayan adımlar.</p>
+<div class="isler" id="isler"></div>
+</section>
+</div>
+</div>
 
+<!-- YAPAY ZEKÂ -->
+<div class="sayfa" data-sayfa="yz" hidden>
+<div class="panel-bas"><p class="selam">ChatGPT, Gemini ve benzerleri</p><h1>Yapay zekâ</h1></div>
+<div class="kart olcum-bekle"><h3>Önce ilk ölçümü yapalım</h3><p class="kart-alt">Yapay zekânın sizi ne sıklıkla önerdiğini görmek için Özet sayfasından ilk ölçümü başlatın.</p><a href="#ozet" class="btn btn-amber kucuk-btn" style="margin-top:14px">Ölçüme git</a></div>
+<div class="panel-izgara olcumlu">
+<section class="kart genis" id="yz-pay-kart">
+<h3>Yapay zekâ kimi öneriyor?</h3>
+<p class="kart-alt" id="yz-pay-not"></p>
+<div class="pay-liste" id="yz-pay"></div>
+</section>
 <section class="kart genis">
+<h3>Yapay zekâ ne dedi?</h3>
+<p class="kart-alt" id="yz-not"></p>
+<div id="yz-liste" class="yz-liste"></div>
+</section>
+<section class="kart genis">
+<div class="kart-bas"><h3>Önerilmek için ne yapmalı?</h3><a href="#isler">İşlerim →</a></div>
+<p class="kart-alt">Yapay zekâda öne çıkmak için yapmanız gerekenleri adım adım İşlerim sayfasına koyduk.</p>
+</section>
+</div>
+</div>
+
+<!-- GOOGLE -->
+<div class="sayfa" data-sayfa="google" hidden>
+<div class="panel-bas"><p class="selam">Haritalar ve arama</p><h1>Google</h1></div>
+<div class="kart olcum-bekle"><h3>Önce ilk ölçümü yapalım</h3><p class="kart-alt">Haritalarda ve Google aramasında kaçıncı çıktığınızı görmek için Özet sayfasından ilk ölçümü başlatın.</p><a href="#ozet" class="btn btn-amber kucuk-btn" style="margin-top:14px">Ölçüme git</a></div>
+<div class="panel-izgara">
+<section class="kart genis olcumlu">
 <h3>Aramalar tek tek</h3>
 <p class="kart-alt">Müşteriler aynı şeyi farklı kelimelerle arıyor. Her aramada nerede çıktığınız:</p>
 <div class="kaydir" style="margin-top:14px"><table class="tablo">
@@ -92,8 +160,7 @@
 <tbody id="kelime-tablo"></tbody>
 </table></div>
 </section>
-
-<section class="kart genis">
+<section class="kart genis olcumlu">
 <h3>Haritalarda kim önde?</h3>
 <p class="kart-alt" id="rakip-not"></p>
 <div class="kaydir" style="margin-top:14px"><table class="tablo">
@@ -101,40 +168,6 @@
 <tbody id="rakip-tablo"></tbody>
 </table></div>
 </section>
-
-<section class="kart genis" id="yz-pay-kart">
-<h3>Yapay zekâ kimi öneriyor?</h3>
-<p class="kart-alt" id="yz-pay-not"></p>
-<div class="pay-liste" id="yz-pay"></div>
-</section>
-
-<section class="kart genis">
-<h3>Yapay zekâ ne dedi?</h3>
-<p class="kart-alt" id="yz-not"></p>
-<div id="yz-liste" class="yz-liste"></div>
-</section>
-
-<section class="kart genis" id="yz-yol-kart">
-<div class="kart-bas"><h3>Yapay zekâda önerilmek için</h3><span class="pil pil-a">Adım adım</span></div>
-<p class="kart-alt">ChatGPT ve Gemini bir işletmeyi önermeden önce internette o işletme hakkında ne yazıldığına bakıyor: haritalar, rehber siteler, web siteniz ve yorumlar. Ne kadar çok yerde aynı ve doğru bilgiyle geçerseniz o kadar çok öneriliyorsunuz.</p>
-<div class="isler" id="yz-isler"></div>
-</section>
-</div>
-</section>
-
-<div class="panel-izgara">
-<section class="kart">
-<div class="kart-bas"><h3>Görünür sizi böyle anladı</h3><a href="kurulum.html?adim=1">Düzenle</a></div>
-<dl class="ozet" id="ozet"></dl>
-</section>
-
-<section class="kart">
-<h3>Size nasıl ulaşacağız?</h3>
-<p class="kart-alt" id="iletisim"></p>
-<p class="kart-alt" style="margin-top:10px">Haftalık otomatik ölçüm açık. WhatsApp özeti <span class="pil pil-a" style="font-size:11px">yakında</span></p>
-<a href="kurulum.html?adim=5" class="btn btn-cizgi kucuk-btn" style="margin-top:14px">Değiştir</a>
-</section>
-
 <section class="kart genis" id="kelime-kart">
 <div class="kart-bas"><h3>Hangi aramalarda ölçüyoruz?</h3><span class="pil pil-a">5 arama</span></div>
 <p class="kart-alt">Google'ın kendi önerilerinden sektörünüzde en çok yapılan aramaları buluyoruz. Mutlaka ölçülmesini istediğiniz aramalar varsa buraya yazın, listenin başına koyarız.</p>
@@ -145,12 +178,27 @@
 <div class="kelime-alt"><button type="submit" class="btn btn-amber kucuk-btn">Kaydet</button><span id="kelime-durum" class="kart-alt" role="status"></span></div>
 </form>
 </section>
+</div>
+</div>
 
-<section class="kart genis" id="genel-isler-kart">
-<div class="kart-bas"><h3>Her işletme için geçerli</h3><span class="pil pil-a">Ölçüm beklemeden</span></div>
-<p class="kart-alt">Bunlar ölçümden bağımsız, her zaman işe yarayan adımlar.</p>
-<div class="isler" id="isler"></div>
+<!-- HESAP -->
+<div class="sayfa" data-sayfa="hesap" hidden>
+<div class="panel-bas"><p class="selam" id="kim2"></p><h1>Hesap</h1></div>
+<div class="panel-izgara">
+<section class="kart">
+<div class="kart-bas"><h3>Görünür sizi böyle anladı</h3><a href="kurulum.html?adim=1">Düzenle</a></div>
+<dl class="ozet" id="ozet"></dl>
 </section>
+<section class="kart">
+<h3>Size nasıl ulaşacağız?</h3>
+<p class="kart-alt" id="iletisim"></p>
+<p class="kart-alt" style="margin-top:10px">Haftalık otomatik ölçüm açık. WhatsApp özeti <span class="pil pil-a" style="font-size:11px">yakında</span></p>
+<a href="kurulum.html?adim=5" class="btn btn-cizgi kucuk-btn" style="margin-top:14px">Değiştir</a>
+</section>
+</div>
+</div>
+
+</div>
 </div>
 </main>
 <p id="yukleniyor" style="text-align:center;color:#9A958C;padding:80px 24px">Yükleniyor…</p>

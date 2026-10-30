@@ -356,3 +356,39 @@ h1,h2,h3{margin:0}
 .site-alan{color:var(--soluk);font-size:13px}
 .site-liste small{display:block;margin-top:3px;color:var(--yazi2);font-size:13px;line-height:1.5}
 .degisim{margin:12px 0 0;font-size:14px;line-height:1.55;color:var(--yazi2);background:var(--zemin2);border-left:3px solid var(--amber);border-radius:10px;padding:10px 12px;max-width:760px}
+
+/* Panel: sol menü (masaüstü), alt menü (telefon) */
+.panel-duzen{display:grid;grid-template-columns:210px minmax(0,1fr);gap:32px;align-items:start}
+.panel-icerik{min-width:0}
+.yan-menu{position:sticky;top:96px;display:flex;flex-direction:column;gap:4px}
+.yan-menu a{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;color:var(--yazi3);text-decoration:none;font-weight:700;font-size:15px}
+.yan-menu a svg{flex:none}
+.yan-menu a:hover{background:var(--kart);color:var(--yazi)}
+.yan-menu a[aria-current="page"]{background:var(--amberkoyu);color:var(--amber)}
+.menu-sayi{margin-left:auto;font-style:normal;background:var(--amber);color:var(--siyah);font-size:12px;font-weight:800;border-radius:999px;padding:1px 8px;line-height:1.5}
+.menu-ymt{margin-top:12px;border-top:1px solid var(--cizgi2)}
+.sayfa .panel-bas p.kart-alt{margin-top:8px}
+@media (max-width:900px){
+  .panel-duzen{grid-template-columns:minmax(0,1fr)}
+  .yan-menu{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:30;flex-direction:row;gap:0;background:rgba(20,20,21,.97);backdrop-filter:blur(8px);border-top:1px solid var(--cizgi2);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+  .yan-menu a{flex:1 1 0;min-width:0;flex-direction:column;gap:3px;padding:7px 2px;font-size:11.5px;justify-content:center;position:relative;text-align:center}
+  .yan-menu a .menu-sayi{position:absolute;top:1px;left:calc(50% + 6px);margin:0;font-size:10px;padding:0 6px}
+  .menu-ymt{display:none!important}
+  body{padding-bottom:78px}
+}
+a.sayi-kutu{color:inherit;text-decoration:none;transition:border-color .15s;border:1px solid transparent} a.sayi-kutu:hover{border-color:var(--amber);color:inherit}
+.olcum-bekle{display:none;margin-top:16px} .olcum-yok .olcum-bekle{display:block} .olcum-yok .olcumlu{display:none!important}
+
+/* Yaptım */
+.is-alt{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}
+.is-ipucu{color:var(--soluk);font-size:12px}
+.is-satir.yapildi{background:var(--zemin2)} .is-satir.yapildi .is-no{background:var(--yesil)}
+.is-satir.yapildi .is-detay,.is-satir.kapali .is-detay{display:none} .is-satir.yapildi.acik .is-detay,.is-satir.kapali.acik .is-detay{display:block}
+.is-satir.kapali .is-no{background:var(--kart3);color:var(--yazi3);border:1px solid var(--cizgi3)}
+.link-btn{background:none;border:0;color:var(--yazi3);font-weight:700;font-size:13px;cursor:pointer;padding:6px 2px;text-decoration:underline;text-underline-offset:3px}
+.link-btn:hover{color:var(--yazi)}
+.yapilan-liste{display:grid;gap:10px;margin-top:14px}
+.yapilan{background:var(--kart2);border:1px solid var(--cizgi3);border-radius:16px;padding:14px 16px}
+.yapilan-ust{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.yapilan small{display:block;color:var(--soluk);font-size:12px;font-weight:700;margin-top:2px}
+.yapilan p{margin:8px 0 0;font-size:14px;color:var(--yazi2);line-height:1.55}
