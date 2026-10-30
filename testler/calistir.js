@@ -25,7 +25,7 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     p.on('pageerror', (e) => hatalar.push(e.message));
     const tasma = async (ad) => { const [g, e] = await p.evaluate(() => [document.documentElement.scrollWidth, innerWidth]); kontrol(cihaz + ' ' + ad + ' yatay taşma yok', g <= e, g + 'px > ' + e + 'px'); };
     // Açık sayfalar
-    for (const s of ['index.html', 'test.html', 'giris.html', 'aydinlatma.html']) {
+    for (const s of ['index.html', 'test.html', 'giris.html', 'aydinlatma.html', 'gizlilik.html', 'kullanim-sartlari.html', 'cerez.html']) {
       hatalar.length = 0;
       const yanit = await p.goto(ADRES + '/' + s); await p.waitForTimeout(1200);
       kontrol(cihaz + ' ' + s + ' açılıyor', yanit && yanit.ok(), String(yanit && yanit.status()));

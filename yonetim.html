@@ -43,6 +43,12 @@
 </section>
 
 <section class="ymt-bolum kart">
+<div class="kart-bas"><h3>Ziyaretler (son 7 gün)</h3><span class="pil pil-a" id="ziyaret-toplam"></span></div>
+<p class="kart-alt">Çerezsiz sayaç: sayfa açılış sayıları ve ziyaretçilerin nereden geldiği. Kişi bilgisi tutulmaz.</p>
+<div class="kaydir"><table class="tablo"><thead><tr><th>Sayfa</th><th>Toplam</th><th>Nereden geldi</th></tr></thead><tbody id="ziyaret-tablo"></tbody></table></div>
+</section>
+
+<section class="ymt-bolum kart">
 <div class="kart-bas"><h3>Ajan ekibinin raporları</h3><span class="pil pil-a">Her gün otomatik</span></div>
 <p class="kart-alt">Ar-Ge (Zaverno ve yenilikler), kalite ekibi (test, güvenlik, metin, ölçüm denetimi) ve yazılımcı. En yeni en üstte.</p>
 <div id="ajan-liste" class="yz-liste" style="margin-top:14px"></div>
@@ -69,8 +75,18 @@
       A.sb.from('gunluk_raporlar').select('*').order('tarih', { ascending: false }).limit(30),
       A.sb.from('isletmeler').select('id,ad,semt,is_turu,kurulum_bitti,kurulum_adim,olusturma').order('olusturma', { ascending: false }),
       A.sb.from('olcumler').select('isletme_id,baslangic,durum,harita_sira,yz_gecen,yz_soru_sayisi,kaynak').order('baslangic', { ascending: false }).limit(500),
-      A.sb.from('ajan_raporlari').select('*').order('olusturma', { ascending: false }).limit(30)
+      A.sb.from('ajan_raporlari').select('*').order('olusturma', { ascending: false }).limit(30),
+      A.sb.from('ziyaretler').select('*').gte('gun', new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10))
     ]).then(function (s) {
+      var zy = (s[4] && s[4].data) || [], top = {}, genel = 0;
+      zy.forEach(function (z) { var t = top[z.sayfa] || (top[z.sayfa] = { sayi: 0, kaynak: {} }); t.sayi += z.sayi; t.kaynak[z.kaynak] = (t.kaynak[z.kaynak] || 0) + z.sayi; genel += z.sayi; });
+      $('ziyaret-toplam').textContent = genel + ' açılış';
+      Object.keys(top).sort(function (a, b) { return top[b].sayi - top[a].sayi; }).forEach(function (k) {
+        var tr = el('tr'); tr.appendChild(el('td', k)); tr.appendChild(el('td', String(top[k].sayi)));
+        tr.appendChild(el('td', Object.keys(top[k].kaynak).sort(function (a, b) { return top[k].kaynak[b] - top[k].kaynak[a]; }).map(function (q) { return q + ' ' + top[k].kaynak[q]; }).join(', ')));
+        $('ziyaret-tablo').appendChild(tr);
+      });
+      if (!genel) $('ziyaret-tablo').appendChild(el('tr')).appendChild(el('td', 'Henüz ziyaret yok.'));
       var AJAN = { arge: 'Ar-Ge', kalite: 'Kalite ekibi', yazilimci: 'Yazılımcı', denetci: 'Ölçüm denetçisi' };
       var ROL = { test: 'Test', guvenlik: 'Güvenlik', metin: 'Metin', olcum: 'Ölçüm', zaverno: 'Zaverno', fikir: 'Fikir', degisiklik: 'Değişiklik', kullanim: 'Kullanım' };
       var al = $('ajan-liste'); var ar = (s[3] && s[3].data) || [];
