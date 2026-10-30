@@ -551,6 +551,77 @@
     (o.yz_cevaplar || []).forEach(function (c) { if (!c) return; if (!bul[c.soru]) { bul[c.soru] = { soru: c.soru, cevaplar: [] }; g.push(bul[c.soru]); } bul[c.soru].cevaplar.push(c); });
     return g;
   }
+  // Yeni motorlar (Google Yapay Zekâ Modu: gyz_*, ChatGPT: cg_*) Gemini ile aynı yapıda; boş (null) olabilir
+  function motorGruplar(cevaplar) { return yzGruplar({ yz_cevaplar: cevaplar }); }
+  function benimAdim(t, ad) { var a = sadeK(t), b = sadeK(ad); return !!(a && b && (a.indexOf(b) >= 0 || (a.length >= 5 && b.indexOf(a) >= 0))); }
+  // Google Yapay Zekâ Modu özetinin sonuna işletme adları ayrıca eklenmiş; listede gösterdiğimiz için metinden çıkar ve kısalt
+  function kisaOzet(c) {
+    var m = String(c.ozet || ''), l = c.isletmeler || [];
+    if (l.length) { var sat = m.split('\n'); while (sat.length && l.indexOf(sat[sat.length - 1].trim()) >= 0) sat.pop(); m = sat.join('\n'); }
+    m = m.trim();
+    return m.length > 600 ? m.slice(0, 600).replace(/\s+\S*$/, '') + '…' : (m || '(boş cevap)');
+  }
+  function yzSoruKutu(g, ad) {
+    var ok = g.cevaplar.filter(function (c) { return !c.hata; }), gec = ok.filter(function (c) { return c.geciyor; }).length;
+    var d = el('details', null, 'yz-cevap');
+    var s = el('summary');
+    s.appendChild(el('span', '"' + g.soru + '"', 'yz-soru'));
+    var yazi = !ok.length ? 'Sorulamadı' : (g.cevaplar.length === 1 ? (gec ? 'Adınız geçti' : 'Adınız geçmedi') : ok.length + ' cevapta ' + gec + ' kez');
+    s.appendChild(el('span', yazi, 'pil ' + (!ok.length ? 'pil-a' : (gec ? 'pil-y' : 'pil-k'))));
+    d.appendChild(s);
+    g.cevaplar.forEach(function (c, k) {
+      if (g.cevaplar.length > 1) d.appendChild(el('p', (k + 1) + '. cevap' + (c.hata ? '' : (c.geciyor ? ' · adınız geçti' : ' · adınız geçmedi')), 'yz-tekrar'));
+      if (c.hata) { d.appendChild(el('p', c.hata, 'yz-metin')); return; }
+      d.appendChild(el('p', ad ? kisaOzet(c) : (c.ozet || '(boş cevap)'), 'yz-metin'));
+      if (ad && (c.isletmeler || []).length) {
+        d.appendChild(el('p', 'Google’ın listelediği işletmeler', 'yz-tekrar'));
+        var ul = el('ul', null, 'yz-isletmeler');
+        c.isletmeler.forEach(function (t) {
+          var siz = c.geciyor && benimAdim(t, ad);
+          var li = el('li', t, siz ? 'siz' : null); if (siz) li.appendChild(el('span', ' (siz)'));
+          ul.appendChild(li);
+        });
+        d.appendChild(ul);
+      }
+    });
+    return d;
+  }
+  // Bir motorun özet satırı: "X sorunun Y tanesinde adınız geçti", "yakında" veya "bu ölçümde yok"
+  function motorSatir(id, ad, alt, n, gecen, cevaplar, bosYazi) {
+    var d = $(id), s = d.querySelector('summary'); s.innerHTML = '';
+    var sol = el('span', null, 'yz-motor-sol');
+    sol.appendChild(el('b', ad, 'yz-motor-ad'));
+    var gr = motorGruplar(cevaplar), tekrarli = gr.length && gr.length < n;
+    var cumle = bosYazi ? alt : n
+      ? (tekrarli ? gr.length + ' soruyu birkaç kez sorduk: ' + n + ' cevabın ' + (gecen || 0) + ' tanesinde adınız geçti.' : n + ' sorunun ' + (gecen || 0) + ' tanesinde adınız geçti.')
+      : 'Bu ölçümde cevap alınamadı.';
+    sol.appendChild(el('span', cumle, 'yz-motor-cumle'));
+    s.appendChild(sol);
+    s.appendChild(el('span', bosYazi || (n ? (gecen || 0) + ' / ' + n : 'alınamadı'), 'pil ' + (bosYazi || !n ? 'pil-a' : (gecen ? 'pil-y' : 'pil-k'))));
+    d.classList.toggle('bos', !!bosYazi || !(cevaplar || []).length);
+    if (d.classList.contains('bos')) d.open = false;
+    return gr;
+  }
+  function motorlarCiz(o, i) {
+    // Gemini: 6'dan az cevapta yüzde hesaplanmaz (YZ_EN_AZ) ama kaç sorunun kaçında geçtiği yine gösterilir
+    var gN = o.yz_soru_sayisi || o.yz_eksik || 0;
+    motorSatir('motor-gemini', 'Gemini', 'Bu ölçümde Gemini’ye soru sorulamadı.', gN, o.yz_gecen, o.yz_cevaplar, o.yz_cevaplar == null && !gN ? 'bu ölçümde yok' : null);
+    var olcGyz = o.gyz_soru_sayisi != null || o.gyz_cevaplar != null;
+    var gr = motorSatir('motor-gyz', 'Google Yapay Zekâ Modu', 'Bu özellik eklenmeden önceki bir ölçüm.', o.gyz_soru_sayisi || 0, o.gyz_gecen, o.gyz_cevaplar, olcGyz ? null : 'bu ölçümde yok');
+    var ic = $('motor-gyz').querySelector('.yz-motor-ic'); ic.innerHTML = '';
+    if (olcGyz) {
+      ic.appendChild(el('p', 'Google’da arama yapınca çıkan yapay zekâ cevabını müşteri gibi okuduk. Google cevapta işletme listelediyse onları da gösteriyoruz.', 'kart-alt'));
+      var l = el('div', null, 'yz-liste'); gr.forEach(function (g) { l.appendChild(yzSoruKutu(g, i.ad)); }); ic.appendChild(l);
+    }
+    // ChatGPT: hiç ölçüm yoksa "yakında"; daha önce ölçüldüyse ama bu ölçümde yoksa "bu ölçümde yok"
+    var olcCg = o.cg_soru_sayisi != null || o.cg_cevaplar != null;
+    var hicCg = !olcCg && !gecmis.some(function (x) { return x.cg_soru_sayisi != null || x.cg_cevaplar != null; });
+    var gc = motorSatir('motor-cg', 'ChatGPT', hicCg ? 'ChatGPT ölçümünü hazırlıyoruz. Hazır olunca sonuçları burada göreceksiniz.' : 'Bu ölçümde ChatGPT’ye soru sorulmadı.', o.cg_soru_sayisi || 0, o.cg_gecen, o.cg_cevaplar, olcCg ? null : (hicCg ? 'yakında' : 'bu ölçümde yok'));
+    var ic2 = $('motor-cg').querySelector('.yz-motor-ic'); ic2.innerHTML = '';
+    if (olcCg) { var l2 = el('div', null, 'yz-liste'); gc.forEach(function (g) { l2.appendChild(yzSoruKutu(g)); }); ic2.appendChild(l2); }
+  }
+  // Ölçülmemiş motorun satırı açılmasın
+  document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.yz-motor.bos > summary')) e.preventDefault(); });
   // Son 4 haftadaki ölçümlerin ortalama önerilme oranı (en az 2 ölçüm varsa)
   function dortHafta(o) {
     var son = new Date(o.baslangic).getTime();
@@ -561,10 +632,12 @@
   }
   function payCiz(o, i) {
     var kutu = $('yz-pay'); kutu.innerHTML = '';
-    var n = o.yz_soru_sayisi || 0;
-    $('yz-pay-kart').hidden = !n;
-    if (!n) return;
-    var satirlar = [{ ad: i.ad + ' (siz)', sayi: o.yz_gecen || 0, siz: true }].concat((o.yz_rakipler || []).map(function (r) { return { ad: r.ad, sayi: r.sayi }; }));
+    // Gemini yeterli cevap verdiyse göster (YZ_EN_AZ); yz_rakipler tüm motorların cevaplarından sayıldığı için payda da hepsi
+    $('yz-pay-kart').hidden = !o.yz_soru_sayisi;
+    if (!o.yz_soru_sayisi) return;
+    var n = o.yz_soru_sayisi + (o.gyz_soru_sayisi || 0) + (o.cg_soru_sayisi || 0);
+    var ben = (o.yz_gecen || 0) + (o.gyz_gecen || 0) + (o.cg_gecen || 0);
+    var satirlar = [{ ad: i.ad + ' (siz)', sayi: ben, siz: true }].concat((o.yz_rakipler || []).map(function (r) { return { ad: r.ad, sayi: r.sayi }; }));
     satirlar.sort(function (a, b) { return b.sayi - a.sayi || (b.siz ? 1 : 0) - (a.siz ? 1 : 0); });
     satirlar.forEach(function (r) {
       var d = el('div', null, 'pay-satir' + (r.siz ? ' siz' : ''));
@@ -573,9 +646,9 @@
       d.appendChild(el('span', '%' + Math.round(100 * r.sayi / n), 'pay-sayi'));
       kutu.appendChild(d);
     });
-    var onde = (o.yz_rakipler || []).filter(function (r) { return r.sayi > (o.yz_gecen || 0); });
-    $('yz-pay-not').textContent = 'Yapay zekâdan müşteri gibi ' + n + ' cevap aldık ve her işletmenin kaç cevapta önerildiğini saydık (yüzde olarak). ' +
-      (onde.length ? onde.length + ' rakibiniz sizden daha çok öneriliyor.' : (o.yz_gecen ? 'Rakiplerinizden daha çok öneriliyorsunuz.' : 'Rakiplerinizin adı da geçmiyorsa yapay zekâ bu bölgeyi henüz tanımıyor; ilk öne çıkan siz olabilirsiniz.'));
+    var onde = (o.yz_rakipler || []).filter(function (r) { return r.sayi > ben; });
+    $('yz-pay-not').textContent = 'Yapay zekâlardan müşteri gibi ' + n + ' cevap aldık ve her işletmenin kaç cevapta önerildiğini saydık (yüzde olarak). ' +
+      (onde.length ? onde.length + ' rakibiniz sizden daha çok öneriliyor.' : (ben ? 'Rakiplerinizden daha çok öneriliyorsunuz.' : 'Rakiplerinizin adı da geçmiyorsa yapay zekâ bu bölgeyi henüz tanımıyor; ilk öne çıkan siz olabilirsiniz.'));
   }
 
   function sonucCiz(o) {
@@ -648,27 +721,15 @@
       tb.appendChild(tr);
     });
 
-    // Yapay zekâ cevapları
+    // Yapay zekâ cevapları: motor motor (Gemini, Google Yapay Zekâ Modu, ChatGPT)
     var yl = $('yz-liste'); yl.innerHTML = '';
     var aramasiz = (o.yz_cevaplar || []).some(function (c) { return c.aramali === false; });
     $('yz-not').textContent = aramasiz
-      ? 'Yapay zekâya müşteri gibi sorduk. Yapay zekâ aynı soruya her seferinde farklı cevap verebilir; bu yüzden her soruyu birkaç kez soruyoruz. Bu ölçümde internette arama yapmadan kendi bilgisinden cevapladı. Cevapların tamamını açıp okuyabilirsiniz.'
-      : 'Google aramasıyla çalışan bir yapay zekâya müşteri gibi sorduk. Cevapların tamamını açıp okuyabilirsiniz.';
-    yzGruplar(o).forEach(function (g) {
-      var ok = g.cevaplar.filter(function (c) { return !c.hata; }), gec = ok.filter(function (c) { return c.geciyor; }).length;
-      var d = el('details', null, 'yz-cevap');
-      var s = el('summary');
-      s.appendChild(el('span', '"' + g.soru + '"', 'yz-soru'));
-      var yazi = !ok.length ? 'Sorulamadı' : (g.cevaplar.length === 1 ? (gec ? 'Adınız geçti' : 'Adınız geçmedi') : ok.length + ' cevapta ' + gec + ' kez');
-      s.appendChild(el('span', yazi, 'pil ' + (!ok.length ? 'pil-a' : (gec ? 'pil-y' : 'pil-k'))));
-      d.appendChild(s);
-      g.cevaplar.forEach(function (c, k) {
-        if (g.cevaplar.length > 1) d.appendChild(el('p', (k + 1) + '. cevap' + (c.hata ? '' : (c.geciyor ? ' · adınız geçti' : ' · adınız geçmedi')), 'yz-tekrar'));
-        d.appendChild(el('p', c.hata ? c.hata : (c.ozet || '(boş cevap)'), 'yz-metin'));
-      });
-      yl.appendChild(d);
-    });
+      ? 'Gemini aynı soruya her seferinde farklı cevap verebilir; bu yüzden her soruyu birkaç kez soruyoruz. Bu ölçümde internette arama yapmadan kendi bilgisinden cevapladı.'
+      : 'Gemini’ye Google aramasıyla çalışacak şekilde sorduk. Aynı soruya her seferinde farklı cevap verebildiği için her soruyu birkaç kez soruyoruz.';
+    yzGruplar(o).forEach(function (g) { yl.appendChild(yzSoruKutu(g)); });
     if (!yl.children.length) yl.appendChild(el('p', 'Yapay zekâ ölçümü yapılamadı.', 'kart-alt'));
+    motorlarCiz(o, i);
 
     isEkle($('yz-isler'), yzYolu(o, i));
     isEkle($('olcum-isler'), olcumIsleri(o, i));
