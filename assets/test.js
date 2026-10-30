@@ -164,12 +164,25 @@
     }
     var yl = $('t-yz'); yl.innerHTML = '';
     if (v.yz && v.yz.isletmeler) {
-      $('t-yz-soru').textContent = 'Sorduğumuz soru: "' + v.soru + '"';
+      $('t-yz-soru').textContent = 'Sorduğumuz soru: "' + v.soru + '". Gemini önerdikleri:';
       v.yz.isletmeler.forEach(function (x, i) { yl.appendChild(liSatir((i + 1) + '.', x.ad, '')); });
     } else {
       $('t-yz-soru').textContent = 'Yapay zekâ şu an cevap vermedi, birazdan tekrar deneyin.';
     }
+    // Diğer yapay zekâlar (Google Yapay Zekâ Modu, ChatGPT): geldiyse aynı kutuda ayrı liste
+    var ek = $('t-yz-ek'); if (ek) ek.remove();
+    ek = el('div', null); ek.id = 't-yz-ek';
+    [['gyz', 'Google Yapay Zekâ Modu'], ['cg', 'ChatGPT']].forEach(function (m) {
+      var d = v[m[0]];
+      if (!d || !d.isletmeler || !d.isletmeler.length) return;
+      ek.appendChild(el('h3', 't-yz-alt', m[1] + ' önerdikleri'));
+      var ol = el('ol', 't-liste');
+      d.isletmeler.forEach(function (x, i) { ol.appendChild(liSatir((i + 1) + '.', x.ad, '')); });
+      ek.appendChild(ol);
+    });
+    if (ek.childNodes.length) yl.parentNode.insertBefore(ek, yl.nextSibling);
   }
+  function yzListeleri(v) { return ['yz', 'gyz', 'cg'].map(function (k) { return v && v[k] && v[k].isletmeler || []; }); }
   // ---- Rapor kartı: "Bu siz misiniz?" sonra 1. sıradakiyle karşılaştırma ve adımlar ----
   function el(t, sinif, metin) { var e = document.createElement(t); if (sinif) e.className = sinif; if (metin != null) e.textContent = metin; return e; }
   function aramaAdi() { return durum.is.toLocaleLowerCase('tr') + ' ' + durum.sehir.split(',')[0]; }
@@ -228,7 +241,7 @@
     var h = (sonVeri && sonVeri.harita) || [];
     if (sira) document.querySelectorAll('#t-harita li').forEach(function (li, k) { if (h[k] && h[k].sira === sira) li.classList.add('t-siz'); });
     var lider = h.filter(function (x) { return !siz || x.ad !== siz.ad; })[0] || null;
-    var yzVar = !!(siz && sonVeri && sonVeri.yz && sonVeri.yz.isletmeler.some(function (x) { return eslesir(siz.ad, x.ad); }));
+    var yzVar = !!(siz && yzListeleri(sonVeri).some(function (l) { return l.some(function (x) { return eslesir(siz.ad, x.ad); }); }));
     var k = el('div', 't-rapor');
     k.appendChild(el('span', 'pil pil-a', 'Rapor kartınız'));
     var buyuk = el('p', 't-buyuk');
