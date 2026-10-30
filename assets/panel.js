@@ -86,6 +86,7 @@
         });
         hm.appendChild(kb); g.appendChild(hm);
       }
+      if (x.yaz) g.appendChild(yazKutusu(x.yaz));
       if (x.sonuc) g.appendChild(el('p', 'Ne kazanırsınız: ' + x.sonuc, 'is-sonuc'));
       if (x.l) { var a = el('a', x.lm + ' →'); a.href = x.l; if (/^http/.test(x.l)) { a.target = '_blank'; a.rel = 'noopener'; } g.appendChild(a); }
       if (!x.bilgi) {
@@ -175,7 +176,7 @@
   // Ekrandaki önerilen işlerden kaç tanesi yapıldı
   function onerilenler() {
     var gor = {}, out = [];
-    var sira = ['olcum-isler', 'yz-isler', 'isler'];
+    var sira = ['olcum-isler', 'site-isler', 'yz-isler', 'metin-isler', 'isler'];
     kutular.slice().sort(function (a, b) { return sira.indexOf(a.id) - sira.indexOf(b.id); }).forEach(function (k) { (k._isler || []).forEach(function (x) { if (x.bilgi) return; var kod = isKodu(x); if (!gor[kod]) { gor[kod] = 1; out.push({ kod: kod, x: x }); } }); });
     return out;
   }
@@ -201,10 +202,10 @@
   var IS = {
     googleProfil: function (i, b) {
       var yer = yerAdi(i);
-      return { k: 'google-profil', t: yer + ' mağazanız için Google’da kendi profilinizi açın', s: 'En önemli iş · 30 dakika · ücretsiz',
-        n: b && b.baska_sube ? 'Google’da "' + i.ad + '" diye arayınca sadece "' + b.baska_sube.ad + '" çıkıyor' + (b.baska_sube.adres ? ' (' + b.baska_sube.adres.split(',').slice(-2).join(',').trim() + ')' : '') + '. ' + yer + ' mağazanız haritada yok gibi görünüyor, müşteri sizi bulamıyor.' : 'Google Haritalar’da "' + i.ad + '" adıyla ' + yer + ' bölgesinde bir işletme bulamadık. Müşteri sizi haritada göremiyor.',
+      return { k: 'google-profil', t: (i.semt === 'Türkiye geneli' ? 'İşletmeniz' : yerde(i.semt) + 'ki işletmeniz') + ' için Google’da kendi profilinizi açın', s: 'En önemli iş · 30 dakika · ücretsiz',
+        n: b && b.baska_sube ? 'Google’da "' + i.ad + '" diye arayınca sadece "' + b.baska_sube.ad + '" çıkıyor' + (b.baska_sube.adres ? ' (' + b.baska_sube.adres.split(',').slice(-2).join(',').trim() + ')' : '') + '. ' + yer + ' şubeniz haritada yok gibi görünüyor, müşteri sizi bulamıyor.' : 'Google Haritalar’da "' + i.ad + '" adıyla ' + yer + ' bölgesinde bir işletme bulamadık. Müşteri sizi haritada göremiyor.',
         adimlar: [
-          'Önce telefonunuzda Google Haritalar’ı açıp mağazanızın adını yazın. Mağazanız çıkıyorsa altındaki "Bu işletmenin sahibi misiniz?" yazısına basıp sahiplenin, sonra 4. adıma geçin.',
+          'Önce telefonunuzda Google Haritalar’ı açıp işletmenizin adını yazın. İşletmeniz çıkıyorsa altındaki "Bu işletmenin sahibi misiniz?" yazısına basıp sahiplenin, sonra 4. adıma geçin.',
           'Çıkmıyorsa bilgisayardan ya da telefondan business.google.com adresine Gmail hesabınızla girip "İşletme ekle" deyin.',
           'İşletme adını tabelanızdaki gibi yazın (örnek: "' + i.ad + ' ' + yer + '"). Kategori olarak işinize en yakın olanı seçin (örnek: "' + (i.is_turu || 'Mağaza') + '").',
           'Adresi, telefonu ve çalışma saatlerini girin. Telefon, müşterinin sizi aradığı numara olsun.',
@@ -312,7 +313,7 @@
         'Sitenizi yapan kişiye aşağıdaki mesajı gönderin.',
         'Sayfa yayına girince 3-4 hafta bekleyin; Görünür haftalık ölçümde değişimi gösterecek.'
       ],
-      metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemize "' + rakipSayfa[0].kelime.replace(/(^|\s)\S/g, function (h) { return h.toLocaleUpperCase('tr'); }) + '" başlıklı yeni bir sayfa ekleyebilir misiniz? Sayfada ' + yerAdi(i) + ' mağazamızın adresi, telefonu, çalışma saatleri, ürün gruplarımız (fotoğraflı), teslimat bölgelerimiz ve sık sorulan 5 soru ile cevapları olsun. Sayfa başlığı ve ana başlık aynı olsun. Teşekkürler.' },
+      metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemize "' + rakipSayfa[0].kelime.replace(/(^|\s)\S/g, function (h) { return h.toLocaleUpperCase('tr'); }) + '" başlıklı yeni bir sayfa ekleyebilir misiniz? Sayfada ' + yerAdi(i) + ' işletmemizin adresi, telefonu, çalışma saatleri, ürün gruplarımız (fotoğraflı), teslimat bölgelerimiz ve sık sorulan 5 soru ile cevapları olsun. Sayfa başlığı ve ana başlık aynı olsun. Teşekkürler.' },
       sonuc: 'Rakiplerinizin çıktığı aramalarda siz de Google’ın ilk sayfasına çıkma şansı yakalarsınız.'
     });
     if (sayfalar.length) isler.push({
@@ -366,7 +367,7 @@
     else
       adimlar.push({ t: 'Şikayetvar’daki şikâyetlere cevap verin', s: 'Haftada 10 dakika', n: 'Müşteriler ve yapay zekâ "güvenilir mi?" sorusunda Şikayetvar’a bakıyor.', adimlar: ['Google’a "Şikayetvar ' + i.ad + '" yazın. Markanızın sayfası çıkıyorsa Şikayetvar’ın "Marka girişi" bölümünden kurumsal hesap açın.', 'Cevapsız şikâyetlere kısa, kibar ve çözüm teklif eden cevaplar yazın.', 'Sorunu çözünce müşteriden şikâyeti "çözüldü" olarak işaretlemesini rica edin.'], l: 'https://www.sikayetvar.com', lm: 'Şikayetvar' });
     adimlar.push(i.site
-      ? { k: 'site-sayfa', t: 'Sitenize "' + yer + ' ' + cek + '" sayfası ekletin', s: '1-2 saat (sitenizi yapan kişi için)', n: 'Gemini önerirken en çok işletmelerin kendi sitelerini kaynak gösteriyor.', adimlar: ['Sitenizi kim yaptıysa aşağıdaki mesajı ona gönderin.', 'Sayfa yayına girince bağlantısını Google İşletme Profilinize ekleyin.'], metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemize "' + yer + ' ' + cek + '" başlıklı yeni bir sayfa ekleyebilir misiniz? Sayfada şunlar yazı olarak olsun: ' + yer + ' mağazamızın açık adresi, telefonu, çalışma saatleri, sattığımız ürün grupları veya verdiğimiz hizmetler, teslimat/servis bölgelerimiz ve müşterilerin sık sorduğu 5 soru ile cevapları. Sayfa başlığı: "' + i.ad + ' ' + yer + ' | ' + (i.is_turu || '') + '". Teşekkürler.' } }
+      ? { k: 'site-sayfa', yaz: { tur: 'sayfa', kelime: yer + ' ' + cek }, t: 'Sitenize "' + yer + ' ' + cek + '" sayfası ekletin', s: '1-2 saat (sitenizi yapan kişi için)', n: 'Gemini önerirken en çok işletmelerin kendi sitelerini kaynak gösteriyor.', adimlar: ['Sitenizi kim yaptıysa aşağıdaki mesajı ona gönderin.', 'Sayfa yayına girince bağlantısını Google İşletme Profilinize ekleyin.'], metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemize "' + yer + ' ' + cek + '" başlıklı yeni bir sayfa ekleyebilir misiniz? Sayfada şunlar yazı olarak olsun: ' + yer + ' işletmemizin açık adresi, telefonu, çalışma saatleri, sattığımız ürün grupları veya verdiğimiz hizmetler, teslimat/servis bölgelerimiz ve müşterilerin sık sorduğu 5 soru ile cevapları. Sayfa başlığı: "' + i.ad + ' ' + yer + ' | ' + (i.is_turu || '') + '". Teşekkürler.' } }
       : IS.siteYok(i));
     adimlar.push({ t: 'Şehrinizdeki listelerde ve haberlerde adınız geçsin', s: 'Ayda 1 deneme', n: '"En iyi ' + cek + ' yerleri" gibi yazılar ve yerel haber siteleri yapay zekânın en çok okuduğu kaynaklar arasında.', adimlar: ['Google’a "' + yer + ' en iyi ' + cek + '" yazın. Çıkan liste yazılarını ve yerel haber sitelerini not edin.', 'Bu sitelere ve şehrinizin popüler Instagram sayfalarına telefonla veya mesajla ulaşın, işletmenizi tanıtmalarını isteyin.', 'Açılış, kampanya veya yardım kampanyası gibi haber olacak bir şey yaptığınızda yerel gazetelere haber verin.'] });
     return adimlar;
@@ -442,7 +443,7 @@
   function aramaListeCiz(o) {
     var ks = o.kelimeler || [], kutu = $('arama-liste'); kutu.innerHTML = '';
     var ozt = aramaOzet(o);
-    $('arama-ozet').textContent = ozt.aOlculen ? 'Müşterilerin en çok yaptığı ' + ks.length + ' aramanın ' + ozt.ilkSayfa + ' tanesinde Google’ın ilk sayfasındasınız. Bir aramaya tıklayın, o aramada nasıl yükseleceğinizi gösterelim.' : '';
+    $('arama-ozet').textContent = ozt.aOlculen ? 'Müşterilerin en sık yaptığı aramalardan ' + ks.length + ' tanesine baktık. Bunların ' + ozt.ilkSayfa + ' tanesinde Google’ın ilk sayfasındasınız. Bir aramaya tıklayın, o aramada nasıl yükseleceğinizi gösterelim.' : '';
     ks.forEach(function (k, n) {
       var d = aramaDurum(k);
       var a = el('a', null, 'arama-satir'); a.href = '#arama-' + n;
@@ -484,7 +485,7 @@
     if (!i.site) isler.push(IS.siteYok(i));
     else if (!k.arama_sira) {
       var ust = (k.arama_ilk3 || []).filter(function (x) { return x.tur !== 'rehber'; })[0];
-      isler.push({ k: 'sayfa-' + kod, t: 'Sitenize "' + K + '" sayfası ekletin', s: '1-2 saat (sitenizi yapan kişi için)',
+      isler.push({ k: 'sayfa-' + kod, yaz: { tur: 'sayfa', kelime: k.kelime }, t: 'Sitenize "' + K + '" sayfası ekletin', s: '1-2 saat (sitenizi yapan kişi için)',
         n: 'Bu aramada sitenizi ilk 10’da göremedik.' + (ust ? ' 1. sıradaki site: ' + ust.alan + ' ("' + ust.baslik + '").' : '') + ' Google bir aramada, başlığı o aramayla aynı olan sayfaları öne çıkarıyor.',
         adimlar: ['Aşağıdaki mesajı sitenizi yapan kişiye gönderin.', 'Sayfa yayına girince ana sayfanızdan bu sayfaya bağlantı verilsin.', '3-4 hafta sonra burada sıranızın değiştiğini göreceksiniz.'],
         metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemize "' + K + '" başlıklı yeni bir sayfa ekleyebilir misiniz? Sayfa başlığı (title) "' + K + ' | ' + i.ad + '" olsun, sayfadaki ana başlık da "' + K + '". İçinde en az 300 kelimelik açıklama, fotoğraflar, adresimiz, telefonumuz, çalışma saatlerimiz ve bu konuda müşterilerin sık sorduğu 5 soru ile cevapları olsun. Ana sayfadan bu sayfaya bağlantı verelim. Teşekkürler.' },
@@ -541,6 +542,9 @@
     return true;
   }
 
+  // Yapay zekâ 6'dan az cevap verdiyse oran güvenilir değil: ölçülemedi say (kota/zaman aşımı)
+  var YZ_EN_AZ = 6;
+  function yzDuzelt(o) { if (o && o.yz_soru_sayisi && o.yz_soru_sayisi < YZ_EN_AZ) { o.yz_eksik = o.yz_soru_sayisi; o.yz_soru_sayisi = 0; } return o; }
   function yzYuzde(o) { return o && o.yz_soru_sayisi ? Math.round(100 * (o.yz_gecen || 0) / o.yz_soru_sayisi) : null; }
   function yzGruplar(o) {
     var g = [], bul = {};
@@ -616,7 +620,7 @@
     $('k-arama-not').textContent = ozt.aOlculen ? 'aramada Google’ın ilk sayfasındasınız (harita kutusu veya ilk 10 site)' : 'ölçülemedi';
     var dh = dortHafta(o);
     $('k-yz').textContent = o.yz_soru_sayisi ? '%' + yzYuzde(o) : '-';
-    $('k-yz-not').textContent = o.yz_soru_sayisi ? 'her 100 cevapta ' + yzYuzde(o) + ' kez adınız geçti' + (dh ? '. 4 haftalık ortalama: %' + dh.yuzde : '') : 'ölçülemedi';
+    $('k-yz-not').textContent = o.yz_soru_sayisi ? 'her 100 cevapta ' + yzYuzde(o) + ' kez adınız geçti' + (dh ? '. 4 haftalık ortalama: %' + dh.yuzde : '') : o.yz_eksik ? 'yapay zekâ bu sefer yeterli cevap vermedi, sonraki ölçümde tekrar denenecek' : 'ölçülemedi';
     ['k-harita', 'k-arama', 'k-yz'].forEach(function (id) { $(id).className = ''; });
     if (o.harita_sira && o.harita_sira <= 3) $('k-harita').className = 'iyi';
     if (ozt.ilkSayfa) $('k-arama').className = 'iyi';
@@ -677,6 +681,132 @@
     yapilanCiz(); siradakiCiz(); isSayaci();
   }
 
+  // ---- Hazır metinler (yapay zekâ yazar, esnaf kopyalar) ----
+  function yardimci(govde) {
+    return A.sb.functions.invoke('yardimci', { body: govde }).then(function (r) {
+      if (r.error) {
+        var ctx = r.error.context;
+        return (ctx && ctx.json ? ctx.json() : Promise.resolve({})).then(function (j) { var e = new Error((j && j.hata) || 'Şu an yapılamadı. Biraz sonra tekrar deneyin.'); e.veri = j; throw e; }, function () { throw new Error('Şu an yapılamadı. Biraz sonra tekrar deneyin.'); });
+      }
+      return r.data;
+    });
+  }
+  function metinAnahtar(y) { return y.tur === 'sayfa' ? 'sayfa:' + sadeK(y.kelime) : y.tur; }
+  function kopyaDugme(metinFn, etiket) {
+    var b = el('button', etiket || 'Kopyala', 'btn btn-cizgi kucuk-btn'); b.type = 'button';
+    b.addEventListener('click', function () {
+      var bitti = function () { var e = b.textContent; b.textContent = 'Kopyalandı'; setTimeout(function () { b.textContent = e === 'Kopyalandı' ? (etiket || 'Kopyala') : e; }, 1800); };
+      var t = metinFn(); if (navigator.clipboard) navigator.clipboard.writeText(t).then(bitti, function () {}); else bitti();
+    });
+    return b;
+  }
+  function metinCiz(kutu, sonuc) {
+    var ic = sonuc.icerik || {}, alan = el('div', null, 'yazilan');
+    if (sonuc.tur === 'sayfa') {
+      var duz = 'Sayfa başlığı (title): ' + (ic.title || '') + '\nAçıklama (meta description): ' + (ic.aciklama || '') + '\n\n' + (ic.h1 || '') + '\n\n' + (ic.paragraflar || []).join('\n\n') + '\n\nSık sorulan sorular\n\n' + (ic.sss || []).map(function (q) { return q.soru + '\n' + q.cevap; }).join('\n\n');
+      [['Sayfa başlığı', ic.title], ['Google açıklaması', ic.aciklama], ['Ana başlık', ic.h1]].forEach(function (x) { if (x[1]) { alan.appendChild(el('span', x[0], 'hazir-baslik')); alan.appendChild(el('p', x[1], 'yazilan-vurgu')); } });
+      alan.appendChild(el('span', 'Sayfa metni', 'hazir-baslik'));
+      (ic.paragraflar || []).forEach(function (p) { alan.appendChild(el('p', p)); });
+      if ((ic.sss || []).length) { alan.appendChild(el('span', 'Sık sorulan sorular', 'hazir-baslik')); ic.sss.forEach(function (q) { var d = el('p'); d.appendChild(el('b', q.soru)); d.appendChild(document.createTextNode(' ' + q.cevap)); alan.appendChild(d); }); }
+      alan.appendChild(kopyaDugme(function () { return duz; }, 'Hepsini kopyala'));
+    } else if (sonuc.tur === 'aciklama') {
+      alan.appendChild(el('p', ic.metin || ''));
+      alan.appendChild(el('small', (ic.metin || '').length + ' / 750 karakter', 'kart-alt'));
+      alan.appendChild(kopyaDugme(function () { return ic.metin || ''; }));
+    } else if (sonuc.tur === 'gonderi') {
+      (ic.gonderiler || []).forEach(function (g, n) {
+        var d = el('div', null, 'gonderi');
+        d.appendChild(el('span', (n + 1) + '. taslak · ' + (g.konu || ''), 'hazir-baslik'));
+        d.appendChild(el('p', g.metin || ''));
+        if (g.fotograf) d.appendChild(el('small', 'Fotoğraf önerisi: ' + g.fotograf, 'kart-alt'));
+        d.appendChild(kopyaDugme(function () { return g.metin || ''; }));
+        alan.appendChild(d);
+      });
+    }
+    alan.appendChild(el('small', 'Yapay zekâ yazdı. Köşeli parantezli yerleri ([TELEFON] gibi) kendi bilginizle doldurun, yanlış bir şey varsa düzeltin.', 'kart-alt yazilan-not'));
+    kutu.innerHTML = ''; kutu.appendChild(alan);
+  }
+  var YAZ_ETIKET = { sayfa: 'Sayfa metnini bizim için yazın', aciklama: 'Açıklamayı bizim için yazın', gonderi: 'Bu haftanın gönderilerini yazın' };
+  function yazKutusu(y) {
+    var dis = el('div', null, 'yaz-kutu'), sonucK = el('div');
+    var b = el('button', null, 'btn btn-amber kucuk-btn'); b.type = 'button';
+    var kayit = (isletme.hazir_metinler || {})[metinAnahtar(y)];
+    // Haftalık gönderi her hafta yenilenir
+    if (kayit && y.tur === 'gonderi' && Date.now() - new Date(kayit.tarih).getTime() > 6 * 864e5) kayit = null;
+    b.textContent = kayit ? 'Yeniden yazın' : '✍ ' + YAZ_ETIKET[y.tur];
+    if (kayit) metinCiz(sonucK, kayit);
+    var durum = el('small', null, 'kart-alt');
+    b.addEventListener('click', function () {
+      b.disabled = true; var eski = b.textContent; b.textContent = 'Yazılıyor… (20-40 saniye)'; durum.textContent = '';
+      yardimci({ islem: 'metin', tur: y.tur, kelime: y.kelime || '' }).then(function (r) {
+        isletme.hazir_metinler = isletme.hazir_metinler || {}; isletme.hazir_metinler[metinAnahtar(y)] = r.metin;
+        metinCiz(sonucK, r.metin); b.textContent = 'Yeniden yazın';
+      }).catch(function (e) { durum.textContent = e.message; b.textContent = eski; }).then(function () { b.disabled = false; });
+    });
+    var ust = el('div', null, 'yaz-alt'); ust.appendChild(b); ust.appendChild(durum);
+    dis.appendChild(ust); dis.appendChild(sonucK);
+    return dis;
+  }
+  function haftaNo() { var d = new Date(), y = new Date(d.getFullYear(), 0, 1); return d.getFullYear() + '-' + Math.ceil(((d - y) / 864e5 + y.getDay() + 1) / 7); }
+  function metinIsleri(i) {
+    return [
+      { k: 'gonderi-' + haftaNo(), yaz: { tur: 'gonderi' }, t: 'Bu haftanın Google gönderisini paylaşın', s: 'Her hafta · 5 dakika',
+        n: 'Google, düzenli gönderi paylaşan profilleri daha canlı buluyor. Size bu hafta için 3 taslak yazıyoruz, birini seçip paylaşmanız yeter.',
+        adimlar: ['Aşağıdaki düğmeye basın, taslaklar gelsin.', 'Birini seçip "Kopyala" deyin.', 'Telefonda Google Haritalar’da kendi işletmenizi açın, "Güncelleme ekle" ya da "Gönderi ekle" deyin.', 'Metni yapıştırın, taslağın önerdiği gibi bir fotoğraf ekleyip paylaşın.'],
+        sonuc: 'Profiliniz canlı görünür; gönderide geçen kelimeler aramalarda sizi öne çıkarabilir.' },
+      { k: 'aciklama', yaz: { tur: 'aciklama' }, t: 'Google profil açıklamanızı güncelleyin', s: '10 dakika · bir kez',
+        n: 'Profilinizdeki "İşletme açıklaması" Google’a ve yapay zekâya ne iş yaptığınızı anlatır. Google’ın kurallarına uygun bir açıklamayı sizin için yazıyoruz.',
+        adimlar: ['Aşağıdaki düğmeye basın, açıklama gelsin; köşeli parantezli yerleri doldurun.', 'business.google.com adresine girin ya da Google Haritalar’da işletmenizi açıp "Profili düzenle" deyin.', '"Açıklama" bölümüne yapıştırıp kaydedin.'],
+        sonuc: 'Google ve yapay zekâ işinizi doğru anlar; açıklamadaki kelimelerle aramalarda daha kolay bulunursunuz.' }
+    ];
+  }
+
+  // ---- Site sağlığı ----
+  function siteCiz() {
+    var i = isletme, kutu = $('site-saglik'); if (!kutu) return;
+    var ss = i.site_saglik; kutu.innerHTML = '';
+    $('site-tara').hidden = !i.site;
+    if (!$('site-tara').disabled) $('site-tara').textContent = i.site_saglik ? 'Yeniden tara' : 'Siteyi tara';
+    if (!i.site) { kutu.appendChild(el('p', 'Kurulumda web sitesi girmediniz. Siteniz varsa Hesap sayfasından "Düzenle" ile ekleyin; yoksa İşlerim’de basit bir site açma adımları var.', 'kart-alt')); siteIsleriCiz(); return; }
+    if (!ss) { kutu.appendChild(el('p', 'Sitenizi henüz taramadık. "Siteyi tara" düğmesine basın, 10-20 saniye sürer.', 'kart-alt')); siteIsleriCiz(); return; }
+    var ust = el('div', null, 'site-ust');
+    var p = el('div', null, 'site-puan ' + (ss.puan >= 80 ? 'iyi' : ss.puan >= 50 ? 'orta' : 'zayif'));
+    p.appendChild(el('b', String(ss.puan))); p.appendChild(el('span', '/ 100'));
+    ust.appendChild(p);
+    var ac = el('div'); ac.appendChild(el('b', gosterLink(ss.adres || i.site)));
+    ac.appendChild(el('p', (ss.puan >= 80 ? 'Siteniz iyi durumda.' : ss.puan >= 50 ? 'Sitenizde düzeltilecek birkaç şey var.' : 'Sitenizde Google’ı ve müşteriyi zorlayan önemli eksikler var.') + ' Son tarama: ' + tarih(ss.tarih) + '.', 'kart-alt'));
+    ust.appendChild(ac); kutu.appendChild(ust);
+    var ul = el('ul', null, 'site-liste-kontrol');
+    (ss.kontroller || []).slice().sort(function (a, b) { return (a.tamam - b.tamam) || (b.agirlik - a.agirlik); }).forEach(function (k) {
+      var li = el('li', null, k.tamam ? 'tamam' : 'eksik');
+      li.appendChild(el('span', k.tamam ? '✓' : '✗', 'site-isaret'));
+      var g = el('div'); g.appendChild(el('b', k.ad)); g.appendChild(el('small', k.detay)); li.appendChild(g);
+      ul.appendChild(li);
+    });
+    kutu.appendChild(ul);
+    siteIsleriCiz();
+  }
+  function siteIsleriCiz() {
+    var ss = isletme.site_saglik, kutu = $('site-isler'); if (!kutu) return;
+    var eksik = ss && ss.kontroller ? ss.kontroller.filter(function (k) { return !k.tamam; }).sort(function (a, b) { return b.agirlik - a.agirlik; }) : [];
+    $('site-isler-kart').hidden = !eksik.length;
+    if (!eksik.length) { kutu.innerHTML = ''; kutu._isler = null; return; }
+    isEkle(kutu, [{
+      k: 'site-saglik-' + eksik.map(function (k) { return k.kod; }).join('-'), t: 'Sitenizdeki ' + eksik.length + ' eksiği düzelttirin', s: 'Sitenizi yapan kişi için · 1-3 saat',
+      n: 'Sitenizi taradık. Bu eksikler Google’ın ve yapay zekânın sizi anlamasını zorlaştırıyor. Aşağıdaki mesajı sitenizi yapan kişiye gönderin.',
+      adimlar: eksik.map(function (k) { return k.ad + ': ' + k.oneri; }),
+      metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemiz ' + gosterLink(ss.adres || isletme.site) + ' için şu düzeltmeleri yapabilir misiniz?\n\n' + eksik.map(function (k, n) { return (n + 1) + ') ' + k.ad + ': ' + k.oneri; }).join('\n') + '\n\nTeşekkürler.' },
+      sonuc: 'Siteniz Google’da daha iyi anlaşılır, telefonda düzgün açılır; müşteri ve yapay zekâ size daha kolay güvenir.'
+    }]);
+  }
+  function siteTara(sessiz) {
+    var b = $('site-tara'); if (b) { b.disabled = true; b.textContent = 'Taranıyor…'; }
+    $('site-durum').textContent = '';
+    return yardimci({ islem: 'site' }).then(function (r) { isletme.site_saglik = r.site; siteCiz(); isSayaci(); })
+      .catch(function (e) { if (!sessiz) $('site-durum').textContent = e.message; })
+      .then(function () { if (b) { b.disabled = false; b.textContent = 'Yeniden tara'; } });
+  }
+
   function genelCiz() {
     var i = isletme, m = i.calisma_sekli || [];
     var saat = new Date().getHours();
@@ -704,6 +834,8 @@
       { k: 'fotograf', t: 'Ayda 2-3 güncel fotoğraf ekleyin', s: '5 dakika', n: 'Güncel fotoğrafı olan profiller daha canlı görünür ve daha çok tıklanır.', adimlar: ['Telefonla yeni ürünlerin, vitrinin veya yaptığınız işin fotoğrafını çekin.', 'Google İşletme Profilinizde "Fotoğraf ekle" deyip yükleyin.'] }
     ];
     isEkle($('isler'), isler);
+    isEkle($('metin-isler'), metinIsleri(i));
+    siteCiz();
   }
 
   var zamanlayici;
@@ -734,6 +866,7 @@
       return r.data.olcum;
     }).then(function (o) {
       adimlariOynat(false);
+      yzDuzelt(o);
       if (o && o.durum === 'bitti') gecmis.unshift(o);
       return A.isletmeGetir().then(function (yeni) { if (yeni) isletme = yeni; }, function () {}).then(function () { sonucCiz(o); });
     }).then(function () {
@@ -753,7 +886,7 @@
     var son = (gecmis[0] && gecmis[0].kelimeler) || [];
     $('kelime-durum').textContent = son.length
       ? 'Son ölçümde bakılan ' + son.length + ' arama: ' + son.map(function (k) { return '"' + k.kelime + '"'; }).join(', ') + '. Kendi yazdıklarınız temel aramadan hemen sonra gelir.'
-      : 'İlk ölçümde sektörünüz için en çok yapılan 10 aramayı bulup her birinde sıranıza bakacağız.' + (kayitli.length ? ' Kendi yazdıklarınız da listede olacak.' : '');
+      : 'İlk ölçümde sektörünüzde en sık yapılan aramalardan 10 tanesini bulup her birinde sıranıza bakacağız.' + (kayitli.length ? ' Kendi yazdıklarınız da listede olacak.' : '');
   }
   $('kelime-form').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -799,6 +932,8 @@
     }).catch(function (err) { $('sil-durum').textContent = err.message; btn.disabled = false; btn.textContent = 'Hesabımı ve verilerimi sil'; });
   });
 
+  $('site-tara').addEventListener('click', function () { siteTara(false); });
+
   $('olc').addEventListener('click', olc);
   $('yeniden').addEventListener('click', olc);
   $('cikis').addEventListener('click', function () { A.cikis(); });
@@ -814,11 +949,13 @@
       A.sb.from('yapilan_isler').select('*').eq('isletme_id', i.id)
     ]).then(function (s) {
       ((s[1] && s[1].data) || []).forEach(function (y) { yapilanlar[y.is_kodu] = y; });
-      gecmis = (s[0] && s[0].data) || [];
+      gecmis = ((s[0] && s[0].data) || []).map(yzDuzelt);
       genelCiz();
       kelimeFormuDoldur();
       if (gecmis.length) sonucCiz(gecmis[0]); else isSayaci();
       if (/^arama-\d+$/.test(ilkHash)) sayfaGoster(ilkHash, false);
+      // Sitesi olup hiç taranmamışsa ilk açılışta arka planda tara
+      if (isletme.site && !isletme.site_saglik) siteTara(true);
       $('yukleniyor').hidden = true; $('panel').hidden = false;
     });
   }).catch(function (err) {

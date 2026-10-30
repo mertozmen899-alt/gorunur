@@ -10,10 +10,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=15">
+<link rel="stylesheet" href="assets/style.css?v=16">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/auth.js?v=4"></script>
-<script src="assets/panel.js?v=19" defer></script>
+<script src="assets/panel.js?v=20" defer></script>
 <script src="assets/sayac.js?v=1" defer></script>
 </head>
 <body class="olcum-yok">
@@ -52,7 +52,7 @@
 <section class="hero-kart" id="ilk">
 <span class="durum"><i></i><span id="durum-yazi">İlk ölçümünüz sırada</span></span>
 <h2 id="hero-cumle"></h2>
-<p id="hero-alt">Sektörünüzde en çok yapılan 10 aramada Google'da ve Google Haritalar'da kaçıncı çıktığınıza, yapay zekânın sizi ne sıklıkla önerdiğine bakacağız. 1-2 dakika sürer.</p>
+<p id="hero-alt">Sektörünüzde en sık yapılan aramalardan 10 tanesinde Google'da ve Google Haritalar'da kaçıncı çıktığınıza, yapay zekânın sizi ne sıklıkla önerdiğine bakacağız. 1-2 dakika sürer.</p>
 <div class="adimlar" id="olcum-adimlar" hidden aria-live="polite">
 <div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Google Haritalar'da sıranıza bakıyoruz</div>
 <div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Google aramasına bakıyoruz</div>
@@ -118,6 +118,16 @@
 <p class="kart-alt">ChatGPT ve Gemini bir işletmeyi önermeden önce internette o işletme hakkında ne yazıldığına bakıyor: haritalar, rehber siteler, web siteniz ve yorumlar. Ne kadar çok yerde aynı ve doğru bilgiyle geçerseniz o kadar çok öneriliyorsunuz.</p>
 <div class="isler" id="yz-isler"></div>
 </section>
+<section class="kart genis" id="site-isler-kart" hidden>
+<div class="kart-bas"><h3>Sitenizde düzeltilecekler</h3><a href="#google">Site taraması →</a></div>
+<p class="kart-alt">Sitenizi taradık; eksikleri tek mesajda topladık.</p>
+<div class="isler" id="site-isler"></div>
+</section>
+<section class="kart genis" id="metin-isler-kart">
+<div class="kart-bas"><h3>Hazır metinleriniz</h3><span class="pil pil-a">Yapay zekâ yazar, siz yapıştırırsınız</span></div>
+<p class="kart-alt">Google profiliniz için gereken metinleri sizin işletmenize göre yazıyoruz.</p>
+<div class="isler" id="metin-isler"></div>
+</section>
 <section class="kart genis" id="genel-isler-kart">
 <div class="kart-bas"><h3>Her işletme için geçerli</h3><span class="pil pil-a">Ölçüm beklemeden</span></div>
 <p class="kart-alt">Bunlar ölçümden bağımsız, her zaman işe yarayan adımlar.</p>
@@ -154,7 +164,7 @@
 <div class="kart olcum-bekle"><h3>Önce ilk ölçümü yapalım</h3><p class="kart-alt">Haritalarda ve Google aramasında kaçıncı çıktığınızı görmek için Özet sayfasından ilk ölçümü başlatın.</p><a href="#ozet" class="btn btn-amber kucuk-btn" style="margin-top:14px">Ölçüme git</a></div>
 <div class="panel-izgara">
 <section class="kart genis olcumlu">
-<div class="kart-bas"><h3>Aramalarınız</h3><span class="pil pil-a">En çok yapılan aramalar</span></div>
+<div class="kart-bas"><h3>Aramalarınız</h3><span class="pil pil-a">En sık yapılan aramalar</span></div>
 <p class="kart-alt" id="arama-ozet"></p>
 <p class="kart-alt" id="kelime-konum"></p>
 <div class="arama-liste" id="arama-liste"></div>
@@ -166,6 +176,12 @@
 <thead><tr><th>Sıra</th><th>İşletme</th><th>Puan</th><th>Yorum</th></tr></thead>
 <tbody id="rakip-tablo"></tbody>
 </table></div>
+</section>
+<section class="kart genis" id="site-kart">
+<div class="kart-bas"><h3>Sitenizin sağlığı</h3><button type="button" class="btn btn-cizgi kucuk-btn" id="site-tara">Siteyi tara</button></div>
+<p class="kart-alt">Google’ın ve yapay zekânın sitenizi rahat okuyup okuyamadığına bakıyoruz: başlık, açıklama, telefonda görünüm, hız, adres ve telefon bilgisi.</p>
+<p class="uyari" id="site-durum" role="status"></p>
+<div id="site-saglik" style="margin-top:12px"></div>
 </section>
 <section class="kart genis" id="kelime-kart">
 <div class="kart-bas"><h3>Hangi aramalarda ölçüyoruz?</h3><span class="pil pil-a">10 arama</span></div>

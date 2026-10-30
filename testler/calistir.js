@@ -66,6 +66,17 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     if (dugme) { await dugme.click(); await p.waitForTimeout(400); }
     const sonra = (await p.textContent('#isler-ozet')) || '';
     kontrol(cihaz + ' Yaptım düğmesi sayacı değiştiriyor', !!dugme && once !== sonra, once + ' -> ' + sonra);
+    // Hazır metin: açıklamayı yazdır
+    const yazB = await p.$('#metin-isler .yaz-alt .btn-amber');
+    if (yazB) { await yazB.click(); await p.waitForSelector('#metin-isler .yazilan', { timeout: 3000 }).catch(() => {}); }
+    kontrol(cihaz + ' hazır metin yazılıp gösteriliyor', !!yazB && !!(await p.$('#metin-isler .yazilan')));
+    kontrol(cihaz + ' sayfa işinde "metnini yazın" düğmesi var', (await p.$$('#olcum-isler .yaz-alt .btn-amber, #yz-isler .yaz-alt .btn-amber')).length > 0);
+    await tasma('hazır metinler');
+    // Site sağlığı: otomatik tarandı, puan ve eksik işi görünüyor
+    await p.click('#yan-menu [data-git=google]').catch(() => {}); await p.waitForTimeout(200);
+    kontrol(cihaz + ' site sağlığı puanı görünüyor', /62/.test((await p.textContent('#site-saglik')) || ''));
+    kontrol(cihaz + ' site eksikleri İşlerim’e iş oldu', (await p.$$('#site-isler .is-satir')).length === 1);
+    await tasma('site sağlığı');
     kontrol(cihaz + ' panelde sayfa hatası yok', !hatalar.length, hatalar.join(' | '));
     await p.evaluate(() => localStorage.clear());
     await ctx.close();

@@ -62,8 +62,10 @@ function ifadeGeciyor(k: string, ifadeler: string[]): boolean {
   return ifadeler.filter((x) => x && sade(x).length >= 3).some((x) => new RegExp(" " + sade(x).split(" ").join(" ") + "[a-z]{0,6} ").test(m));
 }
 // Aynı aramanın çoğulu/eki aynı sayılır ("restoran" = "restoranlar", "mağazası" = "mağazaları")
+// Anlamı değiştirmeyen dolgu kelimeler: "ceza avukatı bul" = "ceza avukatı", "en iyi kuaför bornova" = "bornova kuaför"
+const DOLGU = new Set(["bul", "bulun", "bulmak", "en", "iyi", "satan", "yerler", "yerleri", "nerede", "tavsiye", "oneri", "onerisi", "onerileri", "uygun", "hangi", "hangisi"]);
 function imza(k: string): string {
-  return sade(k).split(" ").filter(Boolean).map((t) => {
+  return sade(k).split(" ").filter((t) => t && !DOLGU.has(t)).map((t) => {
     let x = t.replace(/(lari|leri|lar|ler)$/, "");
     if (x.length > 5) x = x.replace(/(si|su|i|u)$/, "");
     return x;
