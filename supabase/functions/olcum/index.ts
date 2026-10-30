@@ -71,22 +71,25 @@ async function gemini(soru: string, anahtar: string, modeller: string[]) {
   for (const model of modeller) {
     // Önce Google arama destekli dene; arama ücretsiz kotada yoksa aramasız sor
     for (const aramali of aramaKotasiYok ? [false] : [true, false]) {
+      const t0 = Date.now();
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": anahtar },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: soru }] }],
           ...(aramali ? { tools: [{ google_search: {} }] } : {}),
-          generationConfig: { temperature: 0.4, maxOutputTokens: 900 },
+          generationConfig: { temperature: 0.4, maxOutputTokens: 1500 },
         }),
-        signal: AbortSignal.timeout(45000),
+        signal: AbortSignal.timeout(35000),
       });
       const j = await r.json().catch(() => ({}));
       const mesaj = String(j?.error?.message || r.status);
       if (r.status === 404 || r.status === 400 && /not found|not supported/i.test(mesaj)) { sonHata = `${model}: bulunamadı`; break; }
       if (r.status === 429 || r.status === 403) { sonHata = `${model}${aramali ? " (aramalı)" : ""}: kota`; if (aramali) aramaKotasiYok = true; continue; }
       if (!r.ok) throw new Error("Gemini: " + mesaj);
-      const metin = (j?.candidates?.[0]?.content?.parts || []).map((p: { text?: string }) => p.text || "").join("").trim();
+      const metin = (j?.candidates?.[0]?.content?.parts || []).filter((p: { thought?: boolean }) => !p.thought).map((p: { text?: string }) => p.text || "").join("").trim();
+      console.log("gemini", model, aramali ? "aramali" : "aramasiz", Date.now() - t0, "ms");
+      if (!metin) { sonHata = `${model}: boş cevap`; continue; }
       return { model, metin, aramali };
     }
   }
@@ -164,9 +167,12 @@ Deno.serve(async (req) => {
     if (!SERP) return;
     const j = await serp({ engine: "google", q: sorgu, hl: "tr", gl: "tr", google_domain: "google.com.tr", num: "20" }, SERP);
     const org = ((j.organic_results || []) as Array<Record<string, unknown>>).map((r, i) => ({
-      sira: (r.position as number) || i + 1, baslik: r.title, link: r.link,
+      sira: (r.position as number) || i + 1, baslik: r.title,
+      link: /^https?:/.test(String(r.link || "")) ? r.link : (r.redirect_link && /^https?:/.test(String(r.redirect_link)) && !/google\./.test(String(r.redirect_link)) ? r.redirect_link : null),
+      gorunen: String(r.displayed_link || r.source || "").split(" ")[0],
     }));
-    const ben = org.find((r) => (siteAlan && alanAdi(String(r.link)) === siteAlan) || adGeciyor(String(r.baslik || ""), isl.ad));
+    const alanOf = (r: { link: unknown; gorunen: string }) => alanAdi(r.link ? String(r.link) : r.gorunen);
+    const ben = org.find((r) => (siteAlan && alanOf(r) === siteAlan) || adGeciyor(String(r.baslik || ""), isl.ad));
     const yerel = (((j.local_results || {}) as Record<string, unknown>).places || []) as Array<Record<string, unknown>>;
     const yerelBen = yerel.findIndex((p) => adGeciyor(String(p.title || ""), isl.ad));
     s.arama_sira = ben ? ben.sira : null;
@@ -176,23 +182,24 @@ Deno.serve(async (req) => {
   // 3) Yapay zekâ (Gemini + Google arama)
   const yz = async () => {
     if (!GEM) return;
-    aramaKotasiYok = false;
+    // Ücretsiz planda Google arama aracı yok; GEMINI_ARAMALI=1 ise (ücretli plan) aramalı sorar
+    aramaKotasiYok = (Deno.env.get("GEMINI_ARAMALI") || "") !== "1";
     const yer = turkiye ? "Türkiye'de" : `${semtKisa}${sehir ? ", " + sehir : ""} bölgesinde`;
     const sorular = [
       `${yer} iyi bir ${isK} önerir misin? Birkaç işletme adı ver.`,
       `${turkiye ? "" : semtKisa + " civarında "}en çok tavsiye edilen ${isK} hangileri?`.trim(),
       `${yer} ${isK} arıyorum, güvenilir bir yer söyler misin?`,
     ];
-    const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite"].filter(Boolean) as string[];
-    const cevaplar: Array<Record<string, unknown>> = [];
-    for (const soru of sorular) cevaplar.push(await (async () => {
+    const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.5-flash"].filter(Boolean) as string[];
+    const KISA = " Kısa cevap ver: 3-5 işletme adı ve her biri için tek cümle.";
+    const cevaplar: Array<Record<string, unknown>> = await Promise.all(sorular.map(async (soru) => {
       try {
-        const { model, metin, aramali } = await gemini(soru, GEM, modeller);
+        const { model, metin, aramali } = await gemini(soru + KISA, GEM, modeller);
         return { soru, model, aramali, geciyor: adGeciyor(metin, isl.ad), ozet: metin.slice(0, 1200) };
       } catch (e) {
-        return { soru, hata: String((e as Error).message).slice(0, 200) };
+        return { soru, hata: /timed out|aborted/i.test(String((e as Error).message)) ? "Yapay zekâ zamanında cevap vermedi." : String((e as Error).message).slice(0, 200) };
       }
-    })());
+    }));
     const basarili = cevaplar.filter((c) => !("hata" in c));
     s.yz_soru_sayisi = basarili.length;
     s.yz_gecen = basarili.filter((c) => (c as { geciyor: boolean }).geciyor).length;
