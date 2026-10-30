@@ -948,7 +948,7 @@ body:has(.lp-promo:not([hidden])) .wa-dugme{opacity:0;pointer-events:none}
 .site-mock .sm-dugmeler{display:flex;gap:8px;margin-top:14px} .site-mock .sm-dugmeler b{font-size:12px;padding:7px 12px;border-radius:999px;background:var(--amber);color:#111318} .site-mock .sm-dugmeler b+b{background:var(--kart);color:var(--yazi);border:1px solid var(--cizgi3)}
 .site-mock .sm-rozet{position:absolute;right:-10px;bottom:-14px;background:var(--kart);border:1px solid var(--cizgi2);border-radius:12px 12px 12px 3px;padding:8px 12px;font-size:12px;font-weight:800;color:var(--yazi);box-shadow:0 10px 22px -12px rgba(0,0,0,.35)}
 @media (max-width:720px){.site-teklif{padding:22px}.site-mock .sm-rozet{right:6px}}
-#web-sitesi{padding-bottom:0}
+#web-sitesi{padding-top:0}
 .t-teklif-panel{margin-top:14px;border:1px solid var(--cizgi2);border-radius:14px;padding:14px 16px;background:var(--kart2)} .t-teklif-panel b{display:block;color:var(--yazi)} .t-teklif-panel .kart-alt{margin:4px 0 10px}
 
 /* ==== le-lab.io esintisi (v22): sarı bant, dar dev yazı, eğik ekran kartları, 3B iğne, video alanı, imleç halkası ====
