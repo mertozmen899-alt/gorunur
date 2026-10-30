@@ -354,7 +354,7 @@
     });
   }
 
-  // le-lab.io esintisi: sarı bantta kaydırmaya bağlı hafif kayma, fareyle kullananlara imleç halkası ve mıknatıslı ana düğmeler.
+  // le-lab.io esintisi: sarı bantta kaydırmaya bağlı hafif kayma, fareyle kullananlara mıknatıslı ana düğmeler (imleç halkası sahibin isteğiyle kaldırıldı).
   // Dokunmatik ekranda ve "hareketi azalt" açıkken hiçbiri çalışmaz. Halka gerçek imleci gizlemez, tıklamaları engellemez.
   function leLab() {
     if (!document.querySelector('.lp-hero')) return;
@@ -374,29 +374,6 @@
       kay();
     }
     if (!(window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches)) return;
-
-    // İmleç halkası: farenin biraz arkasından gelir; yalnız fare hareket ederken çizilir
-    var halka = document.createElement('div');
-    halka.className = 'lp-imlec'; halka.setAttribute('aria-hidden', 'true'); halka.innerHTML = '<i></i>';
-    document.body.appendChild(halka);
-    var hx = 0, hy = 0, x = 0, y = 0, cizim = false;
-    var ciz = function () {
-      x += (hx - x) * 0.2; y += (hy - y) * 0.2;
-      halka.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)';
-      if (Math.abs(hx - x) + Math.abs(hy - y) > 0.4) requestAnimationFrame(ciz); else cizim = false;
-    };
-    document.addEventListener('pointermove', function (e) {
-      if (e.pointerType !== 'mouse') return;
-      hx = e.clientX; hy = e.clientY;
-      if (!halka.classList.contains('lp-imlec-var')) { x = hx; y = hy; halka.classList.add('lp-imlec-var'); }
-      if (!cizim) { cizim = true; requestAnimationFrame(ciz); }
-    }, { passive: true });
-    document.addEventListener('pointerover', function (e) {
-      var t = e.target && e.target.closest ? e.target.closest('a[href],button:not(:disabled),summary,label,[role="tab"],input,.lp-ekr') : null;
-      halka.classList.toggle('lp-imlec-ust', !!t);
-    });
-    document.documentElement.addEventListener('mouseleave', function () { halka.classList.remove('lp-imlec-var'); });
-    document.addEventListener('pointerdown', function (e) { if (e.pointerType !== 'mouse') halka.classList.remove('lp-imlec-var'); });
 
     // Mıknatıslı ana düğmeler: fare üstündeyken birkaç piksel ona doğru kayar
     document.querySelectorAll('main .btn-amber, main .btn-siyah').forEach(function (b) {
