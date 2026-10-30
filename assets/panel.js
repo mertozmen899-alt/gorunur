@@ -4,7 +4,7 @@
   var A = window.GorunurAuth;
   var $ = function (id) { return document.getElementById(id); };
   var MOD = { gelir: 'Bana gelirler', giderim: 'Ben onlara giderim', online: 'Online çalışırım' };
-  var SIKLIK = { haftalik: 'her pazartesi kısa bir özet', onemli: 'sadece önemli bir şey olunca', yok: 'mesaj göndermeyeceğiz' };
+  var SIKLIK = { haftalik: 'tercihiniz haftalık kısa özet', onemli: 'tercihiniz sadece önemli bir şey olunca', yok: 'mesaj göndermeyeceğiz' };
   var oturum, isletme;
 
   function el(tag, metin, sinif) { var e = document.createElement(tag); if (metin != null) e.textContent = metin; if (sinif) e.className = sinif; return e; }
