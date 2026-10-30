@@ -9,8 +9,9 @@
 // SerpApi harcaması (bir ölçümde): Haritalar 5 (+1 adla arama, bulunamazsa) + Google arama 10 (+1 marka araması, gerekirse)
 //   + Google Yapay Zekâ Modu 2 (GOOGLE_YZ_SORU; konumlu deneme reddedilirse o soru +1) = ~17-20 arama.
 //   Ayrıca 30 günde bir Google önerileri 2-3 arama. Konum ve hesap sorguları arama hakkı harcamaz.
-// Sistem geneli günlük SerpApi bütçesi: ölçüm başlamadan public.serp_harca(OLCUM_SERP_TAHMIN=20, SERP_GUNLUK_SINIR=150) düşülür;
-//   bütçe yoksa elle ölçüm kibar bir mesajla reddedilir, haftalık ölçüm o tur atlanır.
+// Sistem geneli SerpApi bütçesi: ölçüm başlamadan public.serp_harca(OLCUM_SERP_TAHMIN=20, SERP_GUNLUK_SINIR=25,
+//   SERPAPI_AYLIK_SINIR=230) düşülür; bütçe yoksa elle ölçüm kibar bir mesajla reddedilir (aylık doluysa ay başı mesajı),
+//   haftalık ölçüm o tur atlanır.
 // Yarış durumuna karşı ölçüm kaydı ("suruyor") her dış çağrıdan ÖNCE eklenir; günlük elle ölçüm hakkı bu kayıtlar dahil sayılır.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -174,6 +175,79 @@ function rehberTuru(baslik: string, alan: string): "rehber" | "rakip" | null {
   if (REHBER_BASLIK.test(baslik)) return "rakip";
   return null;
 }
+// ---------------- Güvenli adres denetimi (SSRF koruması) ----------------
+// Sadece http/https, kullanıcı adı/şifre yok, port 80/443, iç ağ adı yok ve alan adı özel/iç IP'ye çözülmüyor.
+class GuvenlikHatasi extends Error {}
+function ozelIp4(ip: string): boolean {
+  const p = ip.split(".").map((x) => Number(x));
+  if (p.length !== 4 || p.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return true;
+  const [a, b, c] = p;
+  return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 192 && b === 0 && c === 0) ||
+    (a === 198 && (b === 18 || b === 19)) || a >= 224;
+}
+function ozelIp6(ip: string): boolean {
+  const x = ip.toLowerCase().replace(/^\[|\]$/g, "");
+  if (x === "::" || x === "::1") return true;
+  if (/^f[cd][0-9a-f]{0,2}:/.test(x)) return true;          // fc00::/7
+  if (/^fe[89ab][0-9a-f]?:/.test(x)) return true;            // fe80::/10
+  if (/^ff/.test(x)) return true;                             // çoklu yayın
+  if (x.startsWith("::ffff:") || x.startsWith("64:ff9b:") || x.startsWith("2002:") || /^::[0-9.]+$/.test(x)) return true; // IPv4 gömülü adresler
+  return false;
+}
+// Alan adının IP adresleri (A ve AAAA). Deno.resolveDns hiç çalışmazsa DNS-over-HTTPS yedeği.
+async function cozumle(host: string): Promise<string[]> {
+  const ipler: string[] = [];
+  let hata = 0;
+  for (const tur of ["A", "AAAA"] as const) {
+    try { ipler.push(...await Deno.resolveDns(host, tur, { signal: AbortSignal.timeout(5000) })); } catch { hata++; }
+  }
+  if (ipler.length || hata < 2) return ipler;
+  for (const tur of ["A", "AAAA"]) {
+    try {
+      const r = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(host)}&type=${tur}`, { headers: { accept: "application/dns-json" }, signal: AbortSignal.timeout(5000) });
+      const j = await r.json();
+      for (const a of (j?.Answer || []) as Array<{ type: number; data: string }>) if (a.type === 1 || a.type === 28) ipler.push(String(a.data));
+    } catch { /* yok */ }
+  }
+  return ipler;
+}
+async function adresDenetle(adres: string | URL): Promise<URL> {
+  let u: URL;
+  try { u = new URL(String(adres)); } catch { throw new GuvenlikHatasi("Web sitesi adresi geçersiz."); }
+  if (u.protocol !== "http:" && u.protocol !== "https:") throw new GuvenlikHatasi("Bu web sitesi adresi taranamıyor.");
+  if (u.username || u.password) throw new GuvenlikHatasi("Bu web sitesi adresi taranamıyor.");
+  if (u.port && u.port !== "80" && u.port !== "443") throw new GuvenlikHatasi("Bu web sitesi adresi taranamıyor.");
+  const host = u.hostname.toLowerCase().replace(/\.$/, "");
+  if (!host.includes(".") || /^[\d.]+$/.test(host) || host.includes(":") || host.includes("[") ||
+    /(^|\.)(localhost|local|internal|lan|localdomain|home|corp)$/.test(host) || /supabase\.(co|in)$/.test(host)) {
+    throw new GuvenlikHatasi("Bu web sitesi adresi taranamıyor.");
+  }
+  const ipler = await cozumle(host);
+  if (!ipler.length) throw new Error("Alan adı çözülemedi.");
+  if (ipler.some((ip) => ip.includes(":") ? ozelIp6(ip) : ozelIp4(ip))) throw new GuvenlikHatasi("Bu web sitesi adresi taranamıyor.");
+  return u;
+}
+// Yönlendirmeleri elle izler (en fazla 3), her adımda adresi yeniden denetler
+async function guvenliGetir(adres: string | URL, ms: number, headers: Record<string, string> = {}) {
+  const sinyal = AbortSignal.timeout(ms);
+  let u = await adresDenetle(adres);
+  for (let adim = 0; ; adim++) {
+    const r = await fetch(u, { redirect: "manual", signal: sinyal, headers });
+    const yer = r.headers.get("location");
+    if ([301, 302, 303, 307, 308].includes(r.status) && yer) {
+      await r.body?.cancel();
+      if (adim >= 3) throw new GuvenlikHatasi("Siteniz çok fazla kez yönlendiriyor, taranamadı.");
+      try { u = await adresDenetle(new URL(yer, u)); } catch (e) {
+        if (e instanceof GuvenlikHatasi) throw new GuvenlikHatasi("Siteniz taranmasına izin verilmeyen bir adrese yönlendiriyor.");
+        throw e;
+      }
+      continue;
+    }
+    return { r, son: u.toString() };
+  }
+}
+
 // Sektöre özel rehber ve platform siteleri: yapay zekâya sorulur, her alan adının gerçekten açıldığı denetlenir
 async function sektorRehberleri(isK: string, GEM: string, modeller: string[]) {
   const soru = `Türkiye'de "${isK}" işletmelerinin müşteriler tarafından bulunduğu ve işletmenin kendine profil, ilan ya da mağaza açabildiği Türk rehber, platform ve pazar yeri sitelerini listele. Sadece gerçekten var olan, Türkiye'de bilinen siteler olsun. Google, Bing, Apple, Yandex haritaları, Instagram ve Facebook'u yazma. En fazla 6 site. Sadece şu biçimde JSON dizi döndür: [{"ad":"Site adı","alan":"ornek.com","ne_ise_yarar":"Bu işletme için neden önemli, tek kısa cümle"}]`;
@@ -185,7 +259,8 @@ async function sektorRehberleri(isK: string, GEM: string, modeller: string[]) {
     .filter((x) => x.ad && /^[a-z0-9.-]+\.[a-z]{2,}$/.test(x.alan) && !/google\.|bing\.|apple\.|yandex\.|instagram\.|facebook\./.test(x.alan));
   // Alan adı gerçekten açılıyor mu? (uydurma siteleri ele)
   const denetim = await Promise.allSettled(temiz.map(async (x) => {
-    const r = await fetch("https://" + x.alan, { redirect: "follow", signal: AbortSignal.timeout(7000), headers: { "User-Agent": "Mozilla/5.0 (GorunurDenetim)" } });
+    // SSRF koruması: yönlendirmeler elle (en fazla 3), sadece http/https, port 80/443, iç adres ve iç IP yok
+    const { r } = await guvenliGetir("https://" + x.alan, 7000, { "User-Agent": "Mozilla/5.0 (GorunurDenetim)" });
     await r.body?.cancel();
     if (r.status >= 500 && r.status !== 503) throw new Error("kapali");
     return x;
@@ -385,7 +460,7 @@ Deno.serve(async (req) => {
       for (const isl of sirada) {
         try {
           const r = await olcumYap(db, isl, SERP, GEM, "haftalik");
-          if (r.butceYok) { console.log("haftalik olcum atlandi: gunluk SerpApi butcesi doldu", isl.id); break; }
+          if (r.butceYok) { console.log("haftalik olcum atlandi: SerpApi butcesi doldu", r.butceYok, isl.id); break; }
         } catch (e) { console.log("haftalik olcum hatasi", isl.id, String(e)); }
       }
     })());
@@ -418,11 +493,12 @@ Deno.serve(async (req) => {
   }
 
   const sonuc = await olcumYap(db, isl, SERP, GEM, "elle", kayit.id);
+  if (sonuc.butceYok === "aylik") { await kayitSil(); return json({ hata: "Bu ayki ölçüm kapasitemiz doldu, ölçümler ay başında devam edecek." }, 503); }
   if (sonuc.butceYok) { await kayitSil(); return json({ hata: "Bugün çok yoğunuz, günlük ölçüm kapasitemiz doldu. Yarın tekrar deneyin." }, 503); }
   return json({ olcum: sonuc.son }, sonuc.hepsiHata ? 502 : 200);
 });
 
-async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "elle" | "haftalik", kayitId?: string): Promise<{ son?: unknown; hepsiHata?: boolean; butceYok?: boolean }> {
+async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "elle" | "haftalik", kayitId?: string): Promise<{ son?: unknown; hepsiHata?: boolean; butceYok?: "gunluk" | "aylik" }> {
   // Ölçüm kaydı her dış çağrıdan (Google önerileri, konum, yapay zekâ) önce
   let kayit: { id: string } | null = kayitId ? { id: kayitId } : null;
   if (!kayit) {
@@ -430,15 +506,17 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     kayit = data as { id: string } | null;
     if (!kayit) throw new Error("olcum kaydi eklenemedi");
   }
-  // Sistem geneli günlük SerpApi bütçesi (bir ölçüm yaklaşık 20 arama)
+  // Sistem geneli SerpApi bütçesi: günlük ve aylık (bir ölçüm yaklaşık 20 arama)
   if (SERP) {
     const tahmin = parseInt(Deno.env.get("OLCUM_SERP_TAHMIN") || "20", 10) || 20;
-    const sinir = parseInt(Deno.env.get("SERP_GUNLUK_SINIR") || "150", 10) || 150;
-    const { data: izin, error } = await db.rpc("serp_harca", { adet: tahmin, sinir });
+    const sinir = parseInt(Deno.env.get("SERP_GUNLUK_SINIR") || "25", 10) || 25;
+    const aylik = parseInt(Deno.env.get("SERPAPI_AYLIK_SINIR") || "230", 10) || 230;
+    const { data: izin, error } = await db.rpc("serp_harca", { adet: tahmin, sinir, p_aylik: aylik });
     if (error) console.log("serp_harca hata", error.message);
     if (izin !== true) {
       if (!kayitId) await db.from("olcumler").delete().eq("id", kayit.id);
-      return { butceYok: true };
+      const { data: ayN } = await db.rpc("serp_aylik_kullanim");
+      return { butceYok: (Number(ayN) || 0) + tahmin > aylik ? "aylik" : "gunluk" };
     }
   }
   const eksik = [!SERP && "SERPAPI_KEY", !GEM && "GEMINI_API_KEY"].filter(Boolean) as string[];
