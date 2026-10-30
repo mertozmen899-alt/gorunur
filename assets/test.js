@@ -122,6 +122,7 @@
           var yer = durum.sehir === 'Türkiye geneli' ? 'Türkiye’de' : durum.sehir.split(',')[0].trim() + '’de';
           document.querySelector('#s5 .yer').textContent = yer;
           document.querySelector('#s5 .is-kucuk').textContent = durum.is.toLocaleLowerCase('tr');
+          try { sessionStorage.setItem('gorunur_test', JSON.stringify({ mod: durum.mod.slice(0, 3), sehir: durum.sehir, is: durum.is })); } catch (e) {}
           durum.adim = 5; guncelle(); odakla();
         }, azalt ? 0 : 500);
       }

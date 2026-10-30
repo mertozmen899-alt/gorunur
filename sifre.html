@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yeni şifre | Görünür</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0E0E0F">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css?v=3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="assets/auth.js?v=3"></script>
+</head>
+<body>
+<main class="test" style="max-width:480px">
+<a href="./" class="logo" aria-label="Görünür ana sayfa" style="margin-bottom:40px"><span class="logo-isaret"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span><span class="logo-ad">Görünür</span></a>
+<form id="f" class="form hesap-form" novalidate>
+<h1>Yeni şifrenizi belirleyin</h1>
+<label class="etk" for="s1">Yeni şifre</label>
+<input id="s1" class="girdi" type="password" autocomplete="new-password" minlength="8" required>
+<label class="etk" for="s2">Yeni şifre (tekrar)</label>
+<input id="s2" class="girdi" type="password" autocomplete="new-password" minlength="8" required>
+<div class="uyari koyu-uyari" role="alert" aria-live="assertive"></div>
+<button type="submit" class="btn btn-amber" style="width:100%;margin-top:8px">Şifreyi kaydet</button>
+</form>
+</main>
+<script>
+(function () {
+  var A = window.GorunurAuth, f = document.getElementById('f'), u = f.querySelector('.uyari');
+  f.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var a = document.getElementById('s1').value, b = document.getElementById('s2').value;
+    if (a.length < 8) { u.textContent = 'Şifre en az 8 karakter olmalı.'; return; }
+    if (a !== b) { u.textContent = 'İki şifre aynı değil.'; return; }
+    A.oturum().then(function (s) {
+      if (!s) throw new Error('Bağlantının süresi dolmuş. Giriş sayfasından tekrar "Şifremi unuttum" deyin.');
+      return A.sb.auth.updateUser({ password: a });
+    }).then(function (r) {
+      if (r && r.error) throw r.error;
+      location.replace(A.KOK + 'panel.html');
+    }).catch(function (err) { u.textContent = err.message && err.message.indexOf('Bağlantı') === 0 ? err.message : A.hataMetni(err); });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kurulum | Görünür</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0E0E0F">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css?v=3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="assets/auth.js?v=3"></script>
+<script src="assets/veri.js?v=3"></script>
+<script src="assets/kurulum.js?v=3" defer></script>
+</head>
+<body>
+<div class="test-govde">
+<div class="kap" style="width:100%">
+<div class="test-ust">
+<a href="./" class="logo" aria-label="Görünür ana sayfa">
+<span class="logo-isaret"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span>
+<span class="logo-ad">Görünür</span>
+</a>
+<div style="display:flex;align-items:center;gap:18px">
+<span id="adim-etiket" style="font-size:14px;font-weight:700;color:#B9B5AD">Adım 1 / 5</span>
+<button type="button" id="cikis" class="geri" style="padding:6px 0;font-size:14px">Çıkış yap</button>
+</div>
+</div>
+<div class="ilerleme" role="progressbar" aria-label="Kurulum ilerlemesi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="20"><i id="ilerleme" style="width:20%"></i></div>
+</div>
+
+<main class="test" id="kurulum" hidden>
+
+<section data-adim="1">
+<h1 tabindex="-1">Müşterileriniz sizi nasıl buluyor?</h1>
+<p class="acik">Birden fazla seçebilirsiniz. Neyi ölçeceğimizi ve size ne önereceğimizi buna göre seçiyoruz.</p>
+<div style="margin-top:18px">
+<button type="button" class="secenek" data-mod="gelir" aria-pressed="false"><span class="ikon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg></span><span class="m"><strong>Bana gelirler</strong><small>Dükkânınız, kliniğiniz ya da ofisiniz var.</small></span><span class="kutu"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span></button>
+<button type="button" class="secenek" data-mod="giderim" aria-pressed="false"><span class="ikon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11zM12 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/></svg></span><span class="m"><strong>Ben onlara giderim</strong><small>Evlere ya da iş yerlerine siz gidersiniz.</small></span><span class="kutu"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span></button>
+<button type="button" class="secenek" data-mod="online" aria-pressed="false"><span class="ikon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 100-18 9 9 0 000 18zM3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg></span><span class="m"><strong>Online çalışırım</strong><small>Müşteriniz her şehirden olabilir.</small></span><span class="kutu"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span></button>
+</div>
+<p style="font-size:13px;color:#9A958C;margin:18px 0 0">Kurulum yaklaşık 3 dakika sürer. Yarıda bırakırsanız kaldığınız yerden devam edersiniz.</p>
+</section>
+
+<section data-adim="2" hidden>
+<h1 tabindex="-1">Nerede hizmet veriyorsunuz?</h1>
+<p class="acik">Müşteriler "Kadıköy'de iyi bir veteriner" diye soruyor. Bu yüzden semt bizim için en önemli bilgi.</p>
+<label for="semt" class="etk" style="margin-top:28px">Semt veya ilçe</label>
+<input id="semt" class="girdi" type="text" autocomplete="off" placeholder="Birkaç harf yazın, örn. Kadı" aria-describedby="semt-not">
+<div id="semt-oneri" class="oneriler" hidden></div>
+<p id="semt-not" style="font-size:13px;color:#9A958C;margin:10px 0 0">Müşterilerinize adres tarif ederken söylediğiniz yeri yazın. Listede yoksa yazdığınız gibi kullanırız.</p>
+<button type="button" id="turkiye" class="btn btn-cizgi" style="margin-top:14px;font-size:14px;padding:10px 16px" hidden>Türkiye geneli hizmet veriyorum</button>
+</section>
+
+<section data-adim="3" hidden>
+<h1 tabindex="-1">İşletmenizin adı ne?</h1>
+<p class="acik">Google'da ve yapay zekâ cevaplarında bu adla arayacağız.</p>
+<label for="ad" class="etk" style="margin-top:28px">İşletme adı</label>
+<input id="ad" class="girdi" type="text" autocomplete="organization" maxlength="120" placeholder="Örn. Pati Veteriner Kliniği">
+<label for="is" class="etk" style="margin-top:22px">Ne iş yapıyorsunuz?</label>
+<input id="is" class="girdi" type="text" autocomplete="off" maxlength="120" placeholder="Birkaç harf yazın, örn. veter">
+<div id="is-oneri" class="oneriler" hidden></div>
+<div id="is-secili" class="secili" hidden></div>
+</section>
+
+<section data-adim="4" hidden>
+<h1 tabindex="-1">Varsa bağlantılarınızı ekleyin</h1>
+<p class="acik">Hepsi isteğe bağlı. Hiçbiri yoksa boş geçin; sitesi olmayan işletmeler de öneriliyor.</p>
+<label for="site" class="etk" style="margin-top:28px">Web siteniz</label>
+<input id="site" class="girdi" type="url" inputmode="url" autocomplete="url" placeholder="ornek.com" maxlength="300">
+<label for="instagram" class="etk" style="margin-top:18px">Instagram hesabınız</label>
+<input id="instagram" class="girdi" type="text" autocomplete="off" placeholder="@isletmeniz" maxlength="300">
+<label for="google" class="etk" style="margin-top:18px">Google Haritalar'daki işletme linkiniz</label>
+<input id="google" class="girdi" type="url" inputmode="url" autocomplete="off" placeholder="maps.app.goo.gl/..." maxlength="500" aria-describedby="google-not">
+<p id="google-not" style="font-size:13px;color:#9A958C;margin:8px 0 0">Google Haritalar'da işletmenizi açıp "Paylaş"a basınca çıkan link. Yoksa boş bırakın, hangisinin gerektiğini biz söyleriz.</p>
+</section>
+
+<section data-adim="5" hidden>
+<h1 tabindex="-1">Size nereden yazalım?</h1>
+<p class="acik">Haftalık sonucunuzu ve sıradaki işinizi buradan göndereceğiz.</p>
+<label for="whatsapp" class="etk" style="margin-top:28px">WhatsApp numaranız (isteğe bağlı)</label>
+<input id="whatsapp" class="girdi" type="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx" maxlength="20">
+<fieldset class="secimler">
+<legend class="etk" style="margin-top:22px">Ne sıklıkla yazalım?</legend>
+<label class="radyo"><input type="radio" name="siklik" value="haftalik" checked><span><b>Her hafta kısa özet</b><small>Pazartesi sabahı, 3-4 cümle.</small></span></label>
+<label class="radyo"><input type="radio" name="siklik" value="onemli"><span><b>Sadece önemli bir şey olunca</b><small>Sıranız değişince ya da rakibiniz bir şey yapınca.</small></span></label>
+<label class="radyo"><input type="radio" name="siklik" value="yok"><span><b>Mesaj istemiyorum</b><small>Sadece panelden bakarım, e-posta yeter.</small></span></label>
+</fieldset>
+<p style="font-size:13px;color:#9A958C;margin:14px 0 0">Bunu sonra panelden değiştirebilirsiniz.</p>
+</section>
+
+<div class="uyari koyu-uyari" id="uyari" role="alert" aria-live="assertive" style="margin-top:16px"></div>
+<div class="gezinme">
+<button type="button" class="geri" id="geri" style="visibility:hidden">← Geri</button>
+<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+<button type="button" class="btn btn-cizgi" id="atla" hidden>Hiçbiri yok, devam</button>
+<button type="button" class="btn btn-amber" id="ileri">Devam</button>
+</div>
+</div>
+</main>
+<p id="yukleniyor" style="text-align:center;color:#9A958C;padding:80px 24px">Yükleniyor…</p>
+</div>
+</body>
+</html>
