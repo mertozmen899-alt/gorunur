@@ -10,10 +10,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=14">
+<link rel="stylesheet" href="assets/style.css?v=15">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/auth.js?v=4"></script>
-<script src="assets/panel.js?v=18" defer></script>
+<script src="assets/panel.js?v=19" defer></script>
 </head>
 <body class="olcum-yok">
 <header class="ust">
@@ -212,6 +212,20 @@
 <p class="kart-alt" id="iletisim"></p>
 <p class="kart-alt" style="margin-top:10px">Haftalık otomatik ölçüm açık. WhatsApp özeti <span class="pil pil-a" style="font-size:11px">yakında</span></p>
 <a href="kurulum.html?adim=5" class="btn btn-cizgi kucuk-btn" style="margin-top:14px">Değiştir</a>
+</section>
+<section class="kart genis tehlike-kart">
+<h3>Hesabımı sil</h3>
+<p class="kart-alt">Hesabınız ve bütün verileriniz (işletme bilgileriniz, ölçümleriniz, yaptığınız işler, bekleme listesi kaydınız) kalıcı olarak silinir. Bu işlem geri alınamaz.</p>
+<button type="button" class="btn btn-cizgi kucuk-btn tehlike-btn" id="sil-ac" style="margin-top:14px">Hesabımı silmek istiyorum</button>
+<form id="sil-form" class="sil-form" hidden novalidate>
+<label for="sil-onay" class="kart-alt" style="display:block;margin-top:14px">Onaylamak için e-posta adresinizi yazın: <b id="sil-eposta"></b></label>
+<input class="girdi" type="email" id="sil-onay" autocomplete="off" style="margin-top:8px;max-width:420px">
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+<button type="submit" class="btn kucuk-btn tehlike-dolu" id="sil-btn">Hesabımı ve verilerimi sil</button>
+<button type="button" class="btn btn-cizgi kucuk-btn" id="sil-vazgec">Vazgeç</button>
+</div>
+<p class="uyari" id="sil-durum" role="alert" style="margin-top:10px"></p>
+</form>
 </section>
 </div>
 </div>

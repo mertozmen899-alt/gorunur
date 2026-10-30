@@ -52,6 +52,13 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
       kontrol(cihaz + ' tek arama sayfasında iş var', (await p.$$('#ar-isler .is-satir')).length > 0);
       await tasma('tek arama sayfası');
     }
+    // Hesabımı sil: form açılıyor, yanlış e-postayla silmiyor
+    await p.goto(ADRES + '/panel.html#hesap'); await p.waitForSelector('#panel:not([hidden])').catch(() => {});
+    await p.click('#sil-ac').catch(() => {});
+    kontrol(cihaz + ' hesap silme formu açılıyor', await p.isVisible('#sil-form'));
+    await p.fill('#sil-onay', 'yanlis@ornek.com').catch(() => {}); await p.click('#sil-btn').catch(() => {}); await p.waitForTimeout(200);
+    kontrol(cihaz + ' yanlış e-postayla silme engelleniyor', /eşleşmedi/.test((await p.textContent('#sil-durum')) || ''));
+    await tasma('hesap sayfası');
     // Yaptım düğmesi
     await p.goto(ADRES + '/panel.html#isler'); await p.waitForSelector('#panel:not([hidden])').catch(() => {});
     const once = (await p.textContent('#isler-ozet')) || '';

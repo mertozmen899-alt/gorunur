@@ -782,6 +782,23 @@
   }
   window.addEventListener('hashchange', function () { sayfaGoster(location.hash.slice(1)); });
 
+  // Hesabımı sil (KVKK): e-posta yazılarak onaylanır, bütün veriler silinir
+  $('sil-ac').addEventListener('click', function () { $('sil-form').hidden = false; $('sil-ac').hidden = true; $('sil-eposta').textContent = oturum.user.email; $('sil-onay').focus(); });
+  $('sil-vazgec').addEventListener('click', function () { $('sil-form').hidden = true; $('sil-ac').hidden = false; $('sil-onay').value = ''; $('sil-durum').textContent = ''; });
+  $('sil-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var deger = $('sil-onay').value.trim().toLowerCase();
+    if (deger !== String(oturum.user.email || '').toLowerCase()) { $('sil-durum').textContent = 'E-posta adresi eşleşmedi. Adresinizi aynen yazın.'; return; }
+    var btn = $('sil-btn'); btn.disabled = true; btn.textContent = 'Siliniyor…'; $('sil-durum').textContent = '';
+    A.sb.functions.invoke('hesap-sil', { body: { onay: deger } }).then(function (r) {
+      if (r.error) {
+        var ctx = r.error.context;
+        return (ctx && ctx.json ? ctx.json() : Promise.resolve({})).then(function (j) { throw new Error((j && j.hata) || 'Hesap şu an silinemedi. Biraz sonra tekrar deneyin.'); });
+      }
+      return A.sb.auth.signOut().catch(function () {}).then(function () { location.replace(A.KOK + 'index.html?hesap=silindi'); });
+    }).catch(function (err) { $('sil-durum').textContent = err.message; btn.disabled = false; btn.textContent = 'Hesabımı ve verilerimi sil'; });
+  });
+
   $('olc').addEventListener('click', olc);
   $('yeniden').addEventListener('click', olc);
   $('cikis').addEventListener('click', function () { A.cikis(); });
