@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
 
 concurrency:
   group: android-apk
@@ -65,6 +66,22 @@ jobs:
           else
             gh release create android Gorunur.apk --title "Görünür Android uygulaması" --notes "$NOT" --repo "$DEPO"
           fi
+
+      - name: Sitedeki indirme sayfasına da koy (indir.html)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPO: ${{ github.repository }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+          mkdir -p indir
+          cp Gorunur.apk indir/Gorunur.apk
+          git add indir/Gorunur.apk
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "APK güncellendi: sürüm 1.0.${{ github.run_number }}"
+          git push origin HEAD:main
+          gh api -X POST "repos/$DEPO/pages/builds" > /dev/null || echo "Site yeniden yayına alınamadı, bir sonraki değişiklikte güncellenir."
 
       - uses: actions/upload-artifact@v4
         with:
