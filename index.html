@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Görünür | Google'da ve yapay zekâda bulunun (SEO ve GEO)</title>
+<title>Görünür | Google'da ve yapay zekâ cevaplarında bulunun</title>
 <meta name="description" content="Google Haritalar'da kaçıncısınız, yapay zekâ sizi öneriyor mu? Görünür her hafta ölçer, yapmanız gerekenleri sıraya koyar ve sonucu takip eder.">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#FFFFFF">
@@ -12,16 +12,18 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Yazı tipleri sayfanın çizilmesini bekletmez: önce sistem yazısıyla açılır, Google Fonts gelince yerine geçer -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap"></noscript>
 <script>(function(){var t;try{t=localStorage.getItem('gorunur_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t;if(t==='koyu'){var m=document.querySelector('meta[name="theme-color"]');if(m)m.content='#0F1217'}})()</script>
-<link rel="stylesheet" href="assets/style.css?v=24">
+<link rel="stylesheet" href="assets/style.css?v=26">
 <script src="assets/tema.js?v=1" defer></script>
 <script src="assets/iletisim.js?v=1" defer></script>
-<script src="assets/app.js?v=10" defer></script>
+<script src="assets/app.js?v=12" defer></script>
 <script src="assets/sayac.js?v=1" defer></script>
 </head>
 <body>
-<a href="#icerik" class="gizli">İçeriğe geç</a>
+<a class="atla" href="#icerik">İçeriğe geç</a>
 
 <!-- Sarı tek renk 3B nesne (kürsü üstünde harita iğnesi): sarı bantta ve video kapağında <use> ile tekrar kullanılır -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -62,25 +64,24 @@
 <a href="#paket">Paketler</a>
 <a href="#sss">Sorular</a>
 <a href="giris.html" class="erken">Giriş yap</a>
-<a href="test.html" class="ust-cta">3 soruda durumunu gör</a>
+<a href="test.html" class="ust-cta">3 soruda durumunuzu görün</a>
 </nav>
 </div>
 </header>
 
-<main id="icerik">
+<main>
 
 <!-- Hero -->
-<section class="kap hero iki lp-hero">
+<section id="icerik" class="kap hero iki lp-hero" tabindex="-1">
 <div>
-<p class="lp-durum lp-in lp-izle" style="--i:0"><i aria-hidden="true"></i><b>Yakında açılıyor</b> <span aria-hidden="true">·</span> Hizmet verenler için</p>
+<p class="lp-durum lp-in" style="--i:0"><i aria-hidden="true"></i><b>Yakında açılıyor</b> <span aria-hidden="true">·</span> Hizmet verenler için</p>
 <h1 class="lp-in" style="--i:1">Müşteriniz <span class="lp-don" aria-hidden="true"><span class="lp-don-ic"><span><span>Google'da</span></span><span><span>Haritalar'da</span></span><span><span>yapay zekâda</span></span><span><span>Google'da</span></span></span></span><span class="gizli">Google'da, Haritalar'da ve yapay zekâda</span> ararken karşısına siz çıkın.</h1>
 <p class="alt lp-in" style="--i:2">Google'da, Haritalar'da ve yapay zekâda kaçıncı olduğunuzu ölçeriz. Yükselmek için ne yapacağınızı sırayla söyler, her hafta takip ederiz.</p>
 <div class="dugmeler lp-in" style="--i:3">
-<a href="test.html" class="btn btn-amber lp-parla">3 soruda durumunu gör
+<a href="test.html" class="btn btn-amber lp-parla">3 soruda durumunuzu görün
 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-<a href="giris.html#kayit" class="btn btn-cizgi">Ücretsiz hesap aç</a>
 </div>
-<p class="kisisel lp-in" style="--i:4">Kadıköy'de veteriner arayanlar için gösteriyoruz · <a href="test.html">Değiştir</a></p>
+<p class="lp-ikincil lp-in" style="--i:4">ya da doğrudan <a href="giris.html#kayit">ücretsiz hesap açın</a></p>
 <div class="tikler lp-in" style="--i:5">
 <span><svg class="tik" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Yaklaşık 1 dakika</span>
 <span><svg class="tik" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Teknik bilgi gerekmez</span>
@@ -89,7 +90,7 @@
 </div>
 
 <div class="lp-in" style="--i:2">
-<div class="lp-sahne lp-izle">
+<div class="lp-sahne">
 <div class="arama" role="img" aria-label="Örnek: veteriner kliniği Kadıköy aramasında işletmeniz 9. sıradan 3. sıraya çıkıyor, Gemini cevaplarının yüzde 21'inde adınız geçiyor">
 <div class="arama-kutu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>veteriner kliniği Kadıköy</div>
 <div class="mini-baslik">Google Haritalar sırası</div>
@@ -102,16 +103,13 @@
 <div class="ucgrid">
 <div class="motor"><div class="ad">Gemini</div><div class="oran" style="color:var(--vurgu)">%21</div><div class="acik">cevapta adınız var</div></div>
 <div class="motor"><div class="ad">ChatGPT <span class="yakinda">yakında</span></div><div class="oran" style="color:var(--soluk2)">-</div><div class="acik">hazırlanıyor</div></div>
-<div class="motor"><div class="ad">Google AI <span class="yakinda">yakında</span></div><div class="oran" style="color:var(--soluk2)">-</div><div class="acik">hazırlanıyor</div></div>
+<div class="motor"><div class="ad">Google <span class="yakinda">yakında</span></div><div class="oran" style="color:var(--soluk2)">-</div><div class="acik">hazırlanıyor</div></div>
 </div>
 </div>
-<span class="lp-cip lp-cip-a" aria-hidden="true"><i class="lp-cip-ikon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></i>Yeni arama: veteriner Kadıköy</span>
-<span class="lp-cip lp-cip-b" aria-hidden="true"><i class="lp-cip-ikon lp-yesil">↑</i>3. sıraya çıktınız</span>
-<span class="lp-cip lp-cip-c" aria-hidden="true"><i class="lp-cip-ikon lp-yesil">✓</i>Gemini sizi önerdi</span>
 </div>
 <p class="not">Örnek veridir. Gerçek sıranızı açılışta ölçüp size söyleyeceğiz.</p>
 </div>
-<a href="#nasil" class="lp-kaydir lp-izle"><span class="lp-fare" aria-hidden="true"></span>Kaydırın</a>
+<a href="#nasil" class="lp-kaydir"><span class="lp-fare" aria-hidden="true"></span>Kaydırın</a>
 </section>
 
 <!-- Nasıl çalışır: sarı bant (kayan yazı, numaralı üç söz, eğik ekran kartları, 3B iğne) -->
@@ -158,7 +156,7 @@
 <section class="kap lp-ozellik" aria-labelledby="nasil-baslik">
 <div class="lp-kartlar">
 
-<article class="lp-kart lp-izle">
+<article class="lp-kart lp-izle-orta">
 <div class="lp-kart-bas"><h3>Haritalarda öne çıkın</h3><a href="#olcum" class="lp-ac" data-sekme="t1" aria-label="Harita ölçümünü göster"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a></div>
 <div class="lp-cizim lp-nokta-amber" aria-hidden="true">
 <span class="lp-cember"></span>
@@ -170,7 +168,7 @@
 <p>Google'da ve Haritalar'da kaçıncı olduğunuzu, önünüzde kimlerin olduğunu her hafta ölçeriz.</p>
 </article>
 
-<article class="lp-kart lp-kart-yz lp-izle">
+<article class="lp-kart lp-kart-yz lp-izle-orta">
 <div class="lp-kart-bas"><h3>Yapay zekâ sizi önersin</h3><a href="#olcum" class="lp-ac" data-sekme="t3" aria-label="Yapay zekâ ölçümünü göster"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a></div>
 <div class="lp-cizim lp-nokta-yesil" aria-hidden="true">
 <div class="lp-sohbet">
@@ -183,7 +181,7 @@
 <p>Gemini'ye müşteri gibi soru sorar, cevapta adınızın geçip geçmediğini sayarız. ChatGPT <span class="yakinda">yakında</span></p>
 </article>
 
-<article class="lp-kart lp-kart-is lp-izle">
+<article class="lp-kart lp-kart-is lp-izle-orta">
 <div class="lp-kart-bas"><h3>Her hafta ne yapacağınızı bilin</h3><a href="#ornek-is" class="lp-ac" aria-label="Örnek iş kartını göster"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a></div>
 <div class="lp-cizim lp-nokta-lacivert" aria-hidden="true">
 <div class="lp-gorev">
@@ -203,10 +201,39 @@
 </div>
 </section>
 
+<!-- Tanıtım videosu
+     VİDEOYU EKLEMEK İÇİN (3 adım):
+     1) Video dosyanızın adını tanitim.mp4 yapın ve assets klasörünün içinde "video" adlı bir klasöre koyun:
+        assets/video/tanitim.mp4
+     2) (İsteğe bağlı) Videonun kapak resmini kapak.jpg adıyla aynı klasöre koyun: assets/video/kapak.jpg
+     3) Hemen aşağıdaki <section ...> satırında data-video="" yazan yeri data-video="assets/video/tanitim.mp4" yapın.
+        Kapak resmi koyduysanız data-kapak="" yazan yeri de data-kapak="assets/video/kapak.jpg" yapın.
+     Başka hiçbir şeyi değiştirmeyin. "Tanıtım videosu çok yakında" yazısı kendiliğinden kalkar,
+     ortadaki oynat düğmesine basınca video sesli başlar (kendi kendine başlamaz). -->
+<section id="tanitim" class="kap lp-video-bolum" data-video="assets/video/tanitim.mp4" data-kapak="assets/video/kapak.jpg" aria-labelledby="video-baslik">
+<div class="lp-video-bas">
+<p class="lp-bolum-bas"><span class="lp-bolum-no">01</span>Tanıtım</p>
+<h2 class="h2" id="video-baslik">Görünür nasıl çalışır, 1&nbsp;dakikada izleyin</h2>
+</div>
+<div class="lp-video lp-izle">
+<div class="lp-video-kapak" aria-hidden="true">
+<svg class="lp-3d" viewBox="0 0 320 340" focusable="false"><use href="#lp3-kaide"/><ellipse class="lp-3d-golge" cx="160" cy="236" rx="40" ry="9"/><use class="lp-3d-pin" href="#lp3-pin"/><use class="lp-3d-top lp-3d-t1" href="#lp3-top" x="18" y="118" width="34" height="34"/><use class="lp-3d-top lp-3d-t2" href="#lp3-top" x="262" y="52" width="22" height="22"/></svg>
+</div>
+<div class="lp-video-orta">
+<button type="button" class="lp-oynat" disabled aria-label="Tanıtım videosu çok yakında">
+<svg class="lp-oynat-halka" viewBox="0 0 120 120" aria-hidden="true" focusable="false"><defs><path id="lp-halka-yol" d="M60 60m-47 0a47 47 0 1 1 94 0a47 47 0 1 1-94 0"/></defs><text><textPath href="#lp-halka-yol" textLength="292" lengthAdjust="spacing">TANITIM VİDEOSU · ÇOK YAKINDA · </textPath></text></svg>
+<span class="lp-oynat-ic" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 001.5.86l10.4-6.5a1 1 0 000-1.72L9.5 4.64A1 1 0 008 5.5z"/></svg></span>
+</button>
+<span class="lp-oynat-yazi" aria-hidden="true">İzleyin · 1 dakika</span>
+</div>
+<p class="lp-video-not"><i aria-hidden="true"></i>Tanıtım videosu çok yakında</p>
+</div>
+</section>
+
 <!-- Ne ölçüyoruz -->
 <section id="olcum" class="bolum bolum-koyu">
 <div class="kap">
-<div class="etiket">Ne ölçüyoruz</div>
+<p class="lp-bolum-bas"><span class="lp-bolum-no">02</span>Ne ölçüyoruz</p>
 <h2 class="h2" style="max-width:720px">Sizi bulunmaz yapan her şeyi tek tek kontrol ediyoruz</h2>
 <div class="iki" style="margin-top:48px;align-items:flex-start;gap:32px">
 <div class="konular" role="tablist" aria-orientation="vertical" aria-label="Ölçtüğümüz konular">
@@ -300,7 +327,7 @@
 <!-- Adım adım -->
 <section class="kap bolum iki">
 <div>
-<div class="etiket">Yapılacaklar</div>
+<p class="lp-bolum-bas"><span class="lp-bolum-no">03</span>Yapılacaklar</p>
 <h2 class="h2">Ne yapacağınızı adım adım yazarız</h2>
 <p class="alt">Her işin neden önemli olduğunu ve nasıl yapılacağını sade dille anlatırız. Gereken metni de biz yazarız. Siz yapınca "Yaptım" dersiniz, sonucuna biz bakarız.</p>
 <div class="lp-maddeler">
@@ -332,7 +359,7 @@
 <section class="bolum bolum-koyu lp-wa-bolum">
 <div class="kap iki">
 <div>
-<div class="etiket">Haftalık özet</div>
+<p class="lp-bolum-bas"><span class="lp-bolum-no">04</span>Haftalık özet</p>
 <h2 class="h2">Sonuçlar WhatsApp'a gelir <span class="yakinda">yakında</span></h2>
 <p class="alt">Haftanın sonucunu WhatsApp'tan yazarız, rapor <span style="white-space:nowrap">e-postanıza</span> da gelir. Sizden önce çıkan biri sitesine yeni sayfa eklerse o gün haber veririz.</p>
 <div class="guven"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg><span>Ölçümleriniz, işleriniz ve yazışmalarınız hesabınızda saklanır. Neyi ne zaman yaptığınız kaybolmaz.</span></div>
@@ -367,33 +394,31 @@
 <!-- Paketler -->
 <section id="paket" class="kap bolum">
 <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap">
-<div><div class="etiket">Paketler</div><h2 class="h2">İşinize göre seçin</h2></div>
-<p style="font-size:16px;color:var(--yazi3);margin:0;max-width:380px">Fiyatları açılışta bekleme listesindekilere ilk biz yazacağız. "Yakında" yazan özellikler hazırlanıyor.</p>
+<div><p class="lp-bolum-bas"><span class="lp-bolum-no">05</span>Paketler</p><h2 class="h2">İşinize göre seçin</h2></div>
+<p style="font-size:16px;color:var(--yazi3);margin:0;max-width:380px">Fiyatları açılışta bekleme listesindekilere ilk biz yazacağız. "Yakında" yazan özellikler henüz hazır değil.</p>
 </div>
+<p class="lp-kaydir-ipucu" aria-hidden="true">4 paket var, yana kaydırarak bakın →</p>
 <div class="paketler lp-bir">
 
 <div class="paket lp-yuksel" style="--i:0">
 <div class="bas"><i class="lp-pk-ikon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></i><strong>Başlangıç</strong></div>
-<div class="kim">Tek adresi olan ya da online çalışan, önce "neredeyim, ne yapmalıyım" diye öğrenmek isteyenler için.</div>
+<div class="kim">Tek adresi olan ya da internetten çalışan, önce "neredeyim, ne yapmalıyım" diye öğrenmek isteyenler için.</div>
 <div class="giris">İçinde neler var</div>
 <div class="ozellik"><span>Google ve harita sırası</span><button type="button" class="bilgi" aria-expanded="false" aria-label="Google ve harita sırası hakkında">i<span class="balon">Müşterilerinizin yazdığı aramalarda ve Google Haritalar'da kaçıncı çıktığınızı her hafta ölçeriz.</span></button></div>
 <div class="ozellik"><span>Yapay zekâ cevapları</span><button type="button" class="bilgi" aria-expanded="false" aria-label="Yapay zekâ cevapları hakkında">i<span class="balon">Şimdilik Gemini'ye (ChatGPT yakında) müşteri gibi soru sorar, cevapta adınızın geçip geçmediğini sayarız.</span></button></div>
-<div class="ozellik"><span>Site sağlığı</span><button type="button" class="bilgi" aria-expanded="false" aria-label="Site sağlığı hakkında">i<span class="balon">Sitenizde sizi geri iten hataları (boş başlık, yavaş açılma, eksik sayfa) buluruz.</span></button></div>
 <div class="ozellik"><span>Haftalık yapılacaklar</span><button type="button" class="bilgi" aria-expanded="false" aria-label="Haftalık yapılacaklar hakkında">i<span class="balon">Her hafta en fazla 3 iş, önem sırasıyla ve sade dille.</span></button></div>
 <div class="ozellik"><span>1 rakip karşılaştırması</span><button type="button" class="bilgi" aria-expanded="false" aria-label="Rakip karşılaştırması hakkında">i<span class="balon">Sizden önce çıkan bir işletmeyle neyin farklı olduğunu gösteririz.</span></button></div>
+<p class="pk-yakinda"><span class="yakinda">yakında</span>Site sağlığı kontrolü</p>
 <a href="#liste" class="btn btn-cizgi">Listeye katıl</a>
 </div>
 
 <div class="paket one lp-yuksel" style="--i:1">
-<div class="bas"><i class="lp-pk-ikon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5.5-5.5 4 4L20 9"/><path d="M14.5 9H20v5.5"/></svg></i><strong>Büyüme</strong><span class="pil lp-tavsiye"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.7 6.3.9-4.5 4.4 1 6.2L12 17l-5.6 3 1-6.2-4.5-4.4 6.3-.9z"/></svg>Tavsiyemiz</span></div>
+<div class="bas"><i class="lp-pk-ikon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5.5-5.5 4 4L20 9"/><path d="M14.5 9H20v5.5"/></svg></i><strong>Büyüme</strong><span class="pil lp-tavsiye">Çoğu işletme için</span></div>
 <div class="kim">İşi kendisi yapacak, ama hazır metin, WhatsApp'tan haber ve rakip takibi isteyenler için.</div>
 <div class="giris">Başlangıç'takilerin hepsi, ayrıca</div>
 <div class="ozellik"><span>Hazır sayfa metni</span><button type="button" class="bilgi" aria-expanded="false" aria-label="Hazır sayfa metni hakkında">i<span class="balon">Eksik sayfanın metnini işinize göre yazarız. Yazmadan önce size 2-3 kısa soru sorarız.</span></button></div>
-<div class="ozellik"><span>Yorum cevap taslağı <span class="yakinda">yakında</span></span><button type="button" class="bilgi" aria-expanded="false" aria-label="Yorum cevap taslağı hakkında">i<span class="balon">Cevapsız her Google yorumu için sizin ağzınızdan bir cevap hazırlarız.</span></button></div>
-<div class="ozellik"><span>WhatsApp'tan haber <span class="yakinda">yakında</span></span><button type="button" class="bilgi" aria-expanded="false" aria-label="WhatsApp'tan haber hakkında">i<span class="balon">Haftanın sonucunu ve sıradaki işinizi WhatsApp'tan yazarız.</span></button></div>
-<div class="ozellik"><span>Rakip sayfa takibi <span class="yakinda">yakında</span></span><button type="button" class="bilgi" aria-expanded="false" aria-label="Rakip sayfa takibi hakkında">i<span class="balon">Sizden önce çıkan biri sitesine yeni sayfa eklerse o gün haber veririz.</span></button></div>
-<div class="ozellik"><span>Mahalle haritası <span class="yakinda">yakında</span></span><button type="button" class="bilgi" aria-expanded="false" aria-label="Mahalle haritası hakkında">i<span class="balon">Çevrenizin farklı noktalarından aradığımızda nerede önde, nerede geride olduğunuzu gösteririz.</span></button></div>
 <div class="ozellik"><span>5 rakip karşılaştırması</span><button type="button" class="bilgi" aria-expanded="false" aria-label="5 rakip karşılaştırması hakkında">i<span class="balon">Öndeki 5 işletmeyle sizi yan yana koyarız.</span></button></div>
+<p class="pk-yakinda"><span class="yakinda">yakında</span>Yorum cevap taslağı, WhatsApp'tan haber, rakip sayfa takibi, mahalle haritası</p>
 <a href="#liste" class="btn btn-amber">Listeye katıl</a>
 </div>
 
@@ -401,9 +426,7 @@
 <div class="bas"><i class="lp-pk-ikon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-10a6 6 0 0112 0c0 4.8-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/><path d="M3.5 20.5h17"/></svg></i><strong>Şubeler</strong><span class="pil" style="color:var(--yazi3)">Her şube ayrı</span></div>
 <div class="kim">2-3 şubeli klinikler ve birkaç ilçede dükkânı olan işletmeler için.</div>
 <div class="giris">Büyüme'dekilerin hepsi, her şube için</div>
-<div class="ozellik"><span>Şube şube ölçüm <span class="yakinda">yakında</span></span><button type="button" class="bilgi" aria-expanded="false" aria-label="Şube şube ölçüm hakkında">i<span class="balon">Her şubenin ayrı Google profili olduğu için her biri ayrı ölçülür.</span></button></div>
-<div class="ozellik"><span>Tek ekranda şubeler <span class="yakinda">yakında</span></span><button type="button" class="bilgi" aria-expanded="false" aria-label="Tek ekranda şubeler hakkında">i<span class="balon">Hangi şubenin önde, hangisinin geride olduğunu tek bakışta görürsünüz.</span></button></div>
-<div class="ozellik"><span>Şube başına rapor <span class="yakinda">yakında</span></span><button type="button" class="bilgi" aria-expanded="false" aria-label="Şube başına rapor hakkında">i<span class="balon">Her şube müdürüne kendi raporunu gönderebilirsiniz.</span></button></div>
+<p class="pk-yakinda"><span class="yakinda">yakında</span>Şube şube ölçüm, tek ekranda bütün şubeler, şube başına rapor</p>
 <a href="#liste" class="btn btn-cizgi">Listeye katıl</a>
 </div>
 
@@ -411,17 +434,18 @@
 <div class="bas"><i class="lp-pk-ikon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 20.5c1.2-3.8 3.8-5.7 7-5.7s5.8 1.9 7 5.7"/></svg></i><strong>Sizin yerinize</strong><span class="pil" style="color:var(--yazi3)">Hazırlanıyor</span></div>
 <div class="kim">Vakti olmayanlar için. Ölçeriz, söyleriz, işi de sizin yerinize biri yapar.</div>
 <div class="giris">Şubeler'dekilerin hepsi, ayrıca</div>
-<div class="ozellik"><span>Sizinle ilgilenen kişi <span class="yakinda">yakında</span></span><button type="button" class="bilgi" aria-expanded="false" aria-label="Sizinle ilgilenen kişi hakkında">i<span class="balon">İşleri sizin yerinize yapan ve size haftalık dönen bir kişi.</span></button></div>
+<div class="ozellik"><span>Sizinle ilgilenen kişi</span><button type="button" class="bilgi" aria-expanded="false" aria-label="Sizinle ilgilenen kişi hakkında">i<span class="balon">İşleri sizin yerinize yapan ve size haftalık dönen bir kişi.</span></button></div>
 <a href="#liste" class="btn btn-cizgi">Haber ver</a>
 </div>
 </div>
 </section>
 
-<!-- Web sitesi teklifi (paketlerden sonra) -->
+
+<!-- Web sitesi teklifi (paketlerden hemen sonra) -->
 <section id="web-sitesi" class="kap bolum">
 <div class="site-teklif">
 <div>
-<div class="etiket">Web siteniz yok mu?</div>
+<p class="lp-bolum-bas"><span class="lp-bolum-no">06</span>Web siteniz yok mu?</p>
 <h2 class="h2" style="font-size:clamp(28px,3.6vw,40px)">Google'a uygun web sitenizi biz yapalım</h2>
 <p class="alt" style="max-width:none">Sitesi olmayan işletmeler hem aramalarda hem yapay zekâ cevaplarında geride kalıyor. İşinizi, semtinizi ve telefonunuzu Google'ın anlayacağı şekilde anlatan, telefonda hızlı açılan bir site hazırlıyoruz.</p>
 <ul>
@@ -450,7 +474,7 @@
 <!-- SSS -->
 <section id="sss" class="bolum bolum-koyu">
 <div class="kap iki" style="align-items:flex-start;gap:48px">
-<div class="lp-sss-sol"><h2 class="h2" style="margin:0">Sık sorulanlar</h2><p style="font-size:16px;color:var(--yazi3);margin:16px 0 0">Cevabını bulamadınız mı? <a href="https://wa.me/905556984086?text=Merhaba%2C%20G%C3%B6r%C3%BCn%C3%BCr%20hakk%C4%B1nda%20bir%20sorum%20var." target="_blank" rel="noopener">WhatsApp'tan sorun</a>, biz cevaplayalım.</p>
+<div class="lp-sss-sol"><p class="lp-bolum-bas"><span class="lp-bolum-no">07</span>Sorular</p><h2 class="h2">Sık sorulanlar</h2><p style="font-size:16px;color:var(--yazi3);margin:16px 0 0">Cevabını bulamadınız mı? <a href="https://wa.me/905556984086?text=Merhaba%2C%20G%C3%B6r%C3%BCn%C3%BCr%20hakk%C4%B1nda%20bir%20sorum%20var." target="_blank" rel="noopener">WhatsApp'tan sorun</a>, biz cevaplayalım.</p>
 <div class="lp-soz">
 <h3>Baştan söyleyelim</h3>
 <ul>
@@ -468,38 +492,11 @@
 <details><summary>Teknik bilgi gerekiyor mu?</summary><p>Hayır. Her adımı sade dille yazarız. Site ayarı gereken bir adım varsa işaretleriz, sitenizi yapan kişiye iletebilirsiniz.</p></details>
 <details><summary>Ajansla çalışmaktan farkı ne?</summary><p>Ajans işi sizin yerinize yapar ve pahalıdır. Biz her hafta ölçer, ne yapacağınızı söyler ve işe yarayıp yaramadığını rakamla gösteririz. Ücreti ajansın küçük bir kısmı olur.</p></details>
 <details><summary>Sitem yoksa ne olacak?</summary><p>Sorun değil. Sitesi olmayan işletmeler de Google profili ve Instagram hesabıyla önerilebilir. Neyi ölçeceğimizi buna göre seçeriz. İsterseniz Google'a uygun bir web sitesini de biz yapabiliriz; WhatsApp'tan yazmanız yeterli.</p></details>
-<details><summary>Bu bir SEO hizmeti mi?</summary><p>Hem Google aramalarına (SEO) hem de yapay zekâ cevaplarına (GEO) bakıyoruz. Ama bu kelimeleri bilmeniz gerekmiyor.</p></details>
+<details><summary>Bu bir SEO hizmeti mi?</summary><p>Evet, ama daha geniş. Google aramalarında yükselmenize (SEO denen iş) bakarız, yapay zekâ cevaplarında görünmenize de. Bu kelimeleri bilmeniz gerekmiyor.</p></details>
 </div>
 </div>
 </section>
 
-<!-- Tanıtım videosu
-     VİDEOYU EKLEMEK İÇİN (3 adım):
-     1) Video dosyanızın adını tanitim.mp4 yapın ve assets klasörünün içinde "video" adlı bir klasöre koyun:
-        assets/video/tanitim.mp4
-     2) (İsteğe bağlı) Videonun kapak resmini kapak.jpg adıyla aynı klasöre koyun: assets/video/kapak.jpg
-     3) Hemen aşağıdaki <section ...> satırında data-video="" yazan yeri data-video="assets/video/tanitim.mp4" yapın.
-        Kapak resmi koyduysanız data-kapak="" yazan yeri de data-kapak="assets/video/kapak.jpg" yapın.
-     Başka hiçbir şeyi değiştirmeyin. "Tanıtım videosu çok yakında" yazısı kendiliğinden kalkar,
-     ortadaki oynat düğmesine basınca video sesli başlar (kendi kendine başlamaz). -->
-<section id="tanitim" class="kap lp-video-bolum" data-video="assets/video/tanitim.mp4" data-kapak="assets/video/kapak.jpg" aria-labelledby="video-baslik">
-<div class="lp-video-bas">
-<div class="etiket">Tanıtım</div>
-<h2 class="h2" id="video-baslik">Görünür nasıl çalışır, 1&nbsp;dakikada izleyin</h2>
-</div>
-<div class="lp-video lp-izle">
-<div class="lp-video-kapak" aria-hidden="true">
-<svg class="lp-3d" viewBox="0 0 320 340" focusable="false"><use href="#lp3-kaide"/><ellipse class="lp-3d-golge" cx="160" cy="236" rx="40" ry="9"/><use class="lp-3d-pin" href="#lp3-pin"/><use class="lp-3d-top lp-3d-t1" href="#lp3-top" x="18" y="118" width="34" height="34"/><use class="lp-3d-top lp-3d-t2" href="#lp3-top" x="262" y="52" width="22" height="22"/></svg>
-</div>
-<div class="lp-video-orta">
-<button type="button" class="lp-oynat" disabled aria-label="Tanıtım videosu çok yakında">
-<svg class="lp-oynat-halka" viewBox="0 0 120 120" aria-hidden="true" focusable="false"><defs><path id="lp-halka-yol" d="M60 60m-47 0a47 47 0 1 1 94 0a47 47 0 1 1-94 0"/></defs><text><textPath href="#lp-halka-yol" textLength="292" lengthAdjust="spacing">TANITIM VİDEOSU · ÇOK YAKINDA · </textPath></text></svg>
-<span class="lp-oynat-ic" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 001.5.86l10.4-6.5a1 1 0 000-1.72L9.5 4.64A1 1 0 008 5.5z"/></svg></span>
-</button>
-</div>
-<p class="lp-video-not"><i aria-hidden="true"></i>Tanıtım videosu çok yakında</p>
-</div>
-</section>
 
 <!-- Bekleme listesi -->
 <section id="liste" class="kap" style="padding-top:64px;padding-bottom:80px">
