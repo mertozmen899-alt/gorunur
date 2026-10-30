@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Listeden çıkış · Görünür</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<script>(function(){var t;try{t=localStorage.getItem('gorunur_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css?v=20">
+<script src="assets/tema.js?v=1" defer></script>
+</head>
+<body>
+<main class="kap" style="max-width:560px;padding-top:72px;padding-bottom:72px">
+<a href="./" class="logo" aria-label="Görünür ana sayfa"><span class="logo-isaret"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></span><span class="logo-ad">Görünür</span></a>
+<section id="soru" style="margin-top:40px">
+<h1 style="font-family:var(--baslik);font-size:32px;line-height:1.15;margin:0">Bekleme listesinden çıkmak istiyor musunuz?</h1>
+<p style="color:var(--yazi3);font-size:16px;line-height:1.6;margin:14px 0 24px">Çıkarsanız e-posta adresinizi listeden hemen sileriz ve size bir daha yazmayız.</p>
+<button type="button" class="btn btn-amber" id="cik">Evet, listeden çık</button>
+<a href="./" style="margin-left:16px;font-weight:700">Vazgeç</a>
+<p id="durum" role="status" style="margin-top:16px;color:var(--kirmizi)"></p>
+</section>
+<section id="bitti" hidden style="margin-top:40px">
+<h1 style="font-family:var(--baslik);font-size:32px;line-height:1.15;margin:0">Listeden çıktınız</h1>
+<p style="color:var(--yazi3);font-size:16px;line-height:1.6;margin:14px 0 0">E-posta adresinizi sildik. Fikrinizi değiştirirseniz <a href="./#liste">ana sayfadan</a> yeniden katılabilirsiniz.</p>
+</section>
+</main>
+<script>
+(function () {
+  var a = new URLSearchParams(location.search).get('a') || '';
+  var d = document.getElementById('durum');
+  if (!/^[a-f0-9]{32}$/.test(a)) { d.textContent = 'Bu bağlantı geçersiz. E-postadaki bağlantıyı tekrar açın.'; document.getElementById('cik').disabled = true; return; }
+  document.getElementById('cik').addEventListener('click', function () {
+    var b = this; b.disabled = true; d.textContent = '';
+    fetch('https://drlqbwdupntqqtkmdncc.supabase.co/functions/v1/eposta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tur: 'cikis', anahtar: a }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (j && j.tamam) { document.getElementById('soru').hidden = true; document.getElementById('bitti').hidden = false; } else { throw 0; } })
+      .catch(function () { d.textContent = 'Şu an yapamadık. Birkaç dakika sonra tekrar deneyin.'; b.disabled = false; });
+  });
+})();
+</script>
+</body>
+</html>
