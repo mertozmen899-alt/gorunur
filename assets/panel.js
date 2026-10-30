@@ -486,7 +486,8 @@
     var as = o.arama_sonuclar || {};
     $('k-arama').textContent = o.arama_sira ? o.arama_sira + '.' : (o.arama_sonuclar ? 'Yok' : '-');
     var aOlculen = ks.filter(function (k) { return 'arama_sira' in k; });
-    $('k-arama-not').textContent = aOlculen.length > 1 && !o.arama_sira && !as.yerel_kutuda ? aOlculen.length + ' aramada da ilk sonuçlarda değilsiniz' : o.arama_sira ? 'normal sonuçlarda' : (as.yerel_kutuda ? 'ama harita kutusunda ' + as.yerel_kutuda + '.' : (o.arama_sonuclar ? 'ilk sonuçlarda değilsiniz' : 'ölçülemedi'));
+    var aKel = aOlculen.map(function (k) { return '"' + k.kelime + '"'; }).join(' ve ');
+    $('k-arama-not').textContent = aOlculen.length && !o.arama_sira && !as.yerel_kutuda ? aKel + ' aramasında ilk 10 sonuçta değilsiniz' : o.arama_sira ? 'normal sonuçlarda' : (as.yerel_kutuda ? 'ama harita kutusunda ' + as.yerel_kutuda + '.' : (o.arama_sonuclar ? 'ilk sonuçlarda değilsiniz' : 'ölçülemedi'));
     var dh = dortHafta(o);
     $('k-yz').textContent = o.yz_soru_sayisi ? '%' + yzYuzde(o) : '-';
     $('k-yz-not').textContent = o.yz_soru_sayisi ? 'her 100 cevapta ' + yzYuzde(o) + ' kez adınız geçti' + (dh ? '. 4 haftalık ortalama: %' + dh.yuzde : '') : 'ölçülemedi';
@@ -511,6 +512,7 @@
       kt.appendChild(tr);
     });
     $('kelime-tablo').closest('section').hidden = !ks.length;
+    $('kelime-konum').textContent = 'Google’da ' + (as.konum ? yerde(isletme.semt) + 'ki biri gibi, ' : '') + 'hesabına giriş yapmamış bir müşteri gibi arıyoruz ve ilk 10 sonuca bakıyoruz. Google aramasında ilk 2 aramaya bakıyoruz, haritalara 5 aramanın hepsinde. Kendi bilgisayarınızda sonuçlar biraz farklı çıkabilir, çünkü Google size daha önce girdiğiniz siteleri öne çıkarır.';
 
     // Rakip tablosu
     var tb = $('rakip-tablo'); tb.innerHTML = '';

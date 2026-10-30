@@ -129,6 +129,20 @@ async function serp(params: Record<string, string>, anahtar: string) {
   return j;
 }
 
+// Google aramasını işletmenin şehrinden yapılmış gibi yapmak için SerpApi konum adı (ücretsiz uç nokta, arama hakkı harcamaz)
+async function serpKonumBul(adlar: string[]): Promise<string> {
+  for (const ad of adlar.filter(Boolean)) {
+    try {
+      const r = await fetch(`https://serpapi.com/locations.json?q=${encodeURIComponent(sade(ad))}&limit=10`, { signal: AbortSignal.timeout(8000) });
+      const l = (await r.json()) as Array<{ canonical_name?: string; country_code?: string; target_type?: string }>;
+      const tr = (Array.isArray(l) ? l : []).filter((x) => x.country_code === "TR" && x.canonical_name);
+      const iyi = tr.find((x) => /city|province|neighborhood|district|municipality/i.test(String(x.target_type))) || tr[0];
+      if (iyi) return String(iyi.canonical_name);
+    } catch (e) { console.log("konum bulunamadi", ad, String(e)); }
+  }
+  return "";
+}
+
 let aramaKotasiYok = false; // bir istekte arama kotası yoksa diğer sorularda tekrar denenmez
 async function gemini(soru: string, anahtar: string, modeller: string[], jsonMod = false, sicaklik?: number) {
   let sonHata = "";
@@ -254,7 +268,15 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     } catch (e) { console.log("otomatik tamamlama alinamadi", String(e)); }
   }
   // Sıra: kullanıcının yazdıkları, en çok arananlar, kendi ürettiklerimiz. En fazla 5 arama.
-  const kelimeler = tekillestir([...elle, ...populer, ...otomatikKelimeler(isK, yerK)]).slice(0, 5);
+  // Temel arama ("çorum mobilya") her zaman ölçülür: kullanıcının yazdıklarından hemen sonra gelir
+  const oto = otomatikKelimeler(isK, yerK);
+  const kelimeler = tekillestir([...elle, oto[0], ...populer, ...oto]).slice(0, 5);
+  // Aramanın yapılacağı konum (bir kez bulunur, işletmeye kaydedilir)
+  let konum = turkiye ? "" : (isl.serp_konum || "");
+  if (!turkiye && isl.serp_konum == null && SERP) {
+    konum = await serpKonumBul([semtKisa, sehir]);
+    if (konum) await db.from("isletmeler").update({ serp_konum: konum }).eq("id", isl.id);
+  }
   const siteAlan = alanAdi(isl.site);
   const haric = new Set(sade([semtKisa, sehir, isK, ...kelimeler].join(" ")).split(" ").filter((t) => t.length >= 3));
 
@@ -313,7 +335,12 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
   const arama = async () => {
     if (!SERP) return;
     const aranacak = kelimeler.slice(0, 2);
-    const sonuc = await Promise.allSettled(aranacak.map((q) => serp({ engine: "google", q, hl: "tr", gl: "tr", google_domain: "google.com.tr", num: "20" }, SERP)));
+    const ara = async (q: string) => {
+      const p: Record<string, string> = { engine: "google", q, hl: "tr", gl: "tr", google_domain: "google.com.tr" };
+      if (konum) { try { return await serp({ ...p, location: konum }, SERP); } catch (e) { console.log("konumlu arama olmadi", konum, String(e)); } }
+      return serp(p, SERP);
+    };
+    const sonuc = await Promise.allSettled(aranacak.map(ara));
     let enIyi: Record<string, unknown> | null = null;
     sonuc.forEach((r, i) => {
       if (r.status === "rejected") { kelimeSonuc[i].arama_hata = true; hatalar.push(`Google arama (${aranacak[i]}): ` + String(r.reason?.message || r.reason).slice(0, 120)); return; }
@@ -342,7 +369,7 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     if (enIyi) {
       const e = enIyi as Record<string, unknown>;
       s.arama_sorgu = e.kelime; s.arama_sira = e.sira;
-      s.arama_sonuclar = { organik: e.organik, yerel_kutu: e.yerel_kutu, yerel_kutuda: e.yerel_kutuda };
+      s.arama_sonuclar = { organik: e.organik, yerel_kutu: e.yerel_kutu, yerel_kutuda: e.yerel_kutuda, konum: konum || null, bakilan: aranacak };
     }
   };
 
