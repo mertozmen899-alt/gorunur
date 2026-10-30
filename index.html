@@ -12,16 +12,43 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script>(function(){var t;try{t=localStorage.getItem('gorunur_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t;if(t==='koyu'){var m=document.querySelector('meta[name="theme-color"]');if(m)m.content='#0F1217'}})()</script>
-<link rel="stylesheet" href="assets/style.css?v=21">
+<link rel="stylesheet" href="assets/style.css?v=22">
 <script src="assets/tema.js?v=1" defer></script>
 <script src="assets/iletisim.js?v=1" defer></script>
-<script src="assets/app.js?v=7" defer></script>
+<script src="assets/app.js?v=8" defer></script>
 <script src="assets/sayac.js?v=1" defer></script>
 </head>
 <body>
 <a href="#icerik" class="gizli">İçeriğe geç</a>
+
+<!-- Sarı tek renk 3B nesne (kürsü üstünde harita iğnesi): sarı bantta ve video kapağında <use> ile tekrar kullanılır -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+<defs>
+<radialGradient id="lp3-zgolge" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#6E4300" stop-opacity=".34"/><stop offset="1" stop-color="#6E4300" stop-opacity="0"/></radialGradient>
+<linearGradient id="lp3-govde" x1="0" x2="1"><stop offset="0" stop-color="#D99300"/><stop offset=".2" stop-color="#F0AC0C"/><stop offset=".46" stop-color="#FFD24E"/><stop offset=".64" stop-color="#FFC22A"/><stop offset="1" stop-color="#C78400"/></linearGradient>
+<linearGradient id="lp3-ust" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFEA9E"/><stop offset="1" stop-color="#FFCA3C"/></linearGradient>
+<radialGradient id="lp3-pinr" cx=".36" cy=".28" r=".8"><stop offset="0" stop-color="#FFF5CF"/><stop offset=".22" stop-color="#FFDA62"/><stop offset=".55" stop-color="#FFBD14"/><stop offset=".82" stop-color="#E8A000"/><stop offset="1" stop-color="#C08000"/></radialGradient>
+<linearGradient id="lp3-delik" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B07200"/><stop offset=".55" stop-color="#E3A000"/><stop offset="1" stop-color="#FFD452"/></linearGradient>
+<radialGradient id="lp3-topr" cx=".34" cy=".3" r=".75"><stop offset="0" stop-color="#FFF3C6"/><stop offset=".45" stop-color="#FFC530"/><stop offset="1" stop-color="#CF8C00"/></radialGradient>
+<radialGradient id="lp3-parlak" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+<symbol id="lp3-kaide" viewBox="0 0 320 340">
+<ellipse cx="160" cy="314" rx="152" ry="22" fill="url(#lp3-zgolge)"/>
+<path d="M50 236v50a110 26 0 0 0 220 0v-50z" fill="url(#lp3-govde)"/>
+<ellipse cx="160" cy="236" rx="110" ry="26" fill="url(#lp3-ust)"/>
+<ellipse cx="160" cy="236" rx="108.5" ry="24.8" fill="none" stroke="#FFF6D6" stroke-opacity=".75" stroke-width="1.5"/>
+<text x="160" y="300" text-anchor="middle" font-family="Bricolage Grotesque, system-ui, sans-serif" font-weight="800" font-size="32" fill="#B67700" fill-opacity=".5">1.</text>
+</symbol>
+<symbol id="lp3-pin" viewBox="0 0 320 340">
+<path d="M160 232C140 207 98 162 98 106a62 62 0 0 1 124 0c0 56-42 101-62 126z" fill="url(#lp3-pinr)"/>
+<circle cx="160" cy="104" r="24" fill="url(#lp3-delik)"/>
+<path d="M139 116a24 24 0 0 0 42 0" fill="none" stroke="#FFF1BF" stroke-opacity=".7" stroke-width="2" stroke-linecap="round"/>
+<ellipse cx="132" cy="76" rx="11" ry="20" transform="rotate(38 132 76)" fill="url(#lp3-parlak)"/>
+</symbol>
+<symbol id="lp3-top" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="url(#lp3-topr)"/><ellipse cx="13" cy="12" rx="5" ry="3.4" transform="rotate(-30 13 12)" fill="url(#lp3-parlak)"/></symbol>
+</defs>
+</svg>
 
 <header class="ust">
 <div class="kap">
@@ -44,7 +71,7 @@
 <!-- Hero -->
 <section class="kap hero iki lp-hero">
 <div>
-<div class="rozet lp-in" style="--i:0"><b>Yakında</b>Hizmet verenler için</div>
+<p class="lp-durum lp-in lp-izle" style="--i:0"><i aria-hidden="true"></i><b>Yakında açılıyor</b> <span aria-hidden="true">·</span> Hizmet verenler için</p>
 <h1 class="lp-in" style="--i:1">Müşteriniz <span class="lp-don" aria-hidden="true"><span class="lp-don-ic"><span><span>Google'da</span></span><span><span>Haritalar'da</span></span><span><span>yapay zekâda</span></span><span><span>Google'da</span></span></span></span><span class="gizli">Google'da, Haritalar'da ve yapay zekâda</span> ararken karşısına siz çıkın.</h1>
 <p class="alt lp-in" style="--i:2">Google'da ve Google Haritalar'da kaçıncısınız? Yapay zekâ sizi öneriyor mu? Görünür hepsine bakar, yükselmeniz için yapmanız gerekenleri sıraya koyar ve ilerlemenizi her hafta takip eder.</p>
 <div class="dugmeler lp-in" style="--i:3">
@@ -83,12 +110,51 @@
 </div>
 <p class="not">Örnek veridir. Gerçek sıranızı açılışta ölçüp size söyleyeceğiz.</p>
 </div>
+<a href="#nasil" class="lp-kaydir lp-izle"><span class="lp-fare" aria-hidden="true"></span>Kaydırın</a>
 </section>
 
-<!-- Nasıl çalışır -->
-<section id="nasil" class="kap lp-ozellik" aria-labelledby="nasil-baslik">
-<div class="etiket">Nasıl çalışır</div>
-<h2 class="h2" id="nasil-baslik">Her hafta ölçer, ne yapacağınızı söyleriz</h2>
+<!-- Nasıl çalışır: sarı bant (kayan yazı, numaralı üç söz, eğik ekran kartları, 3B iğne) -->
+<section id="nasil" class="lp-bant lp-izle" aria-labelledby="nasil-baslik">
+<div class="lp-kayan" aria-hidden="true"><div class="lp-kayan-ic">
+<span>Google</span><i><svg viewBox="0 0 24 24"><path d="M12 22.5s-7.5-6.4-7.5-12.3a7.5 7.5 0 0115 0c0 5.9-7.5 12.3-7.5 12.3z"/><circle cx="12" cy="10.2" r="2.7"/></svg></i><span class="lp-bos">Haritalar</span><i><svg viewBox="0 0 24 24"><path d="M12 22.5s-7.5-6.4-7.5-12.3a7.5 7.5 0 0115 0c0 5.9-7.5 12.3-7.5 12.3z"/><circle cx="12" cy="10.2" r="2.7"/></svg></i><span>Yapay zekâ</span><i><svg viewBox="0 0 24 24"><path d="M12 22.5s-7.5-6.4-7.5-12.3a7.5 7.5 0 0115 0c0 5.9-7.5 12.3-7.5 12.3z"/><circle cx="12" cy="10.2" r="2.7"/></svg></i><span class="lp-bos">Google</span><i><svg viewBox="0 0 24 24"><path d="M12 22.5s-7.5-6.4-7.5-12.3a7.5 7.5 0 0115 0c0 5.9-7.5 12.3-7.5 12.3z"/><circle cx="12" cy="10.2" r="2.7"/></svg></i><span>Haritalar</span><i><svg viewBox="0 0 24 24"><path d="M12 22.5s-7.5-6.4-7.5-12.3a7.5 7.5 0 0115 0c0 5.9-7.5 12.3-7.5 12.3z"/><circle cx="12" cy="10.2" r="2.7"/></svg></i><span class="lp-bos">Yapay zekâ</span><i><svg viewBox="0 0 24 24"><path d="M12 22.5s-7.5-6.4-7.5-12.3a7.5 7.5 0 0115 0c0 5.9-7.5 12.3-7.5 12.3z"/><circle cx="12" cy="10.2" r="2.7"/></svg></i>
+</div></div>
+<div class="kap lp-bant-ic">
+<div class="lp-bant-sol">
+<h2 class="lp-bant-bas" id="nasil-baslik">Nasıl çalışır</h2>
+<ol class="lp-sozler lp-bir">
+<li class="lp-yuksel" style="--i:0"><span class="lp-no">01</span><h3>Ölçeriz</h3><p>Google'da, Haritalar'da ve yapay zekâda kaçıncı olduğunuzu, her hafta.</p></li>
+<li class="lp-yuksel" style="--i:1"><span class="lp-no">02</span><h3>Söyleriz</h3><p>Yükselmek için ne yapacağınızı, metinleri hazır olarak.</p></li>
+<li class="lp-yuksel" style="--i:2"><span class="lp-no">03</span><h3>Takip ederiz</h3><p>Yaptığınız işin işe yarayıp yaramadığını, rakamla.</p></li>
+</ol>
+</div>
+<div class="lp-vitrin lp-bir" role="img" aria-label="Örnek ekranlar: rapor kartı, haftanın işi ve Görünür paneli">
+<div class="lp-ekr lp-ekr-1" style="--r:-6deg;--d:0ms;--p:-36">
+<span class="lp-ekr-no">01</span>
+<div class="lp-ekr-ust"><i></i><i></i><i></i><span>Rapor kartınız</span></div>
+<p class="lp-ekr-buyuk">"veteriner Kadıköy" arayanlar sizi Haritalar'da <b>9. sırada</b> görüyor.</p>
+<div class="lp-ekr-tablo"><span></span><small>Siz</small><small>1. sıradaki</small><span>Puan</span><b>4,6 ★</b><b>4,8 ★</b><span>Son ay yorum</span><b class="lp-kotu">3</b><b>12</b></div>
+</div>
+<div class="lp-ekr lp-ekr-2" style="--r:4deg;--d:140ms;--p:24">
+<span class="lp-ekr-no">02</span>
+<div class="lp-ekr-ust"><i></i><i></i><i></i><span>Bu haftanın 1. işi</span></div>
+<b class="lp-ekr-baslik">"Kedi aşı takvimi" sayfası ekleyin</b>
+<ul class="lp-ekr-is"><li class="lp-tamam"><i><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></i>Metnini yazdık</li><li><i></i>Google profilinize ekleyin</li></ul>
+<div class="lp-ekr-alt"><small>Yaklaşık 20 dakika</small><span>Yaptım</span></div>
+</div>
+<div class="lp-ekr lp-ekr-3" style="--r:-2deg;--d:280ms;--p:-14">
+<span class="lp-ekr-no">03</span>
+<div class="lp-ekr-ust"><i></i><i></i><i></i><span>Görünür paneli</span></div>
+<small class="lp-ekr-kucuk">veteriner Kadıköy · Haritalar</small>
+<div class="lp-ekr-sira"><s>9.</s><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b>3.</b><em>6 sıra yükseldiniz</em></div>
+<svg class="lp-ekr-cizgi" viewBox="0 0 220 56" preserveAspectRatio="none"><path class="lp-alan" d="M0 50 L44 46 L88 40 L132 30 L176 18 L220 8 V56 H0z"/><path class="lp-hat" d="M0 50 L44 46 L88 40 L132 30 L176 18 L220 8"/></svg>
+</div>
+<svg class="lp-3d" viewBox="0 0 320 340" focusable="false"><use href="#lp3-kaide"/><ellipse class="lp-3d-golge" cx="160" cy="236" rx="40" ry="9"/><use class="lp-3d-pin" href="#lp3-pin"/><use class="lp-3d-top lp-3d-t1" href="#lp3-top" x="18" y="118" width="34" height="34"/><use class="lp-3d-top lp-3d-t2" href="#lp3-top" x="262" y="52" width="22" height="22"/></svg>
+</div>
+</div>
+</section>
+
+<!-- Nasıl çalışır: hareketli özellik kartları (başlığı yukarıdaki sarı bantta) -->
+<section class="kap lp-ozellik" aria-labelledby="nasil-baslik">
 <div class="lp-kartlar">
 
 <article class="lp-kart lp-izle">
@@ -256,13 +322,6 @@
 <span id="yaptim-not" aria-live="polite">Bitirince "Yaptım" deyin, gerisini biz takip edelim.</span>
 <button type="button" id="yaptim" class="btn btn-amber" aria-pressed="false">Yaptım</button>
 </div>
-<div class="lp-siradaki">
-<div class="lp-siradaki-bas">Sıradaki işler</div>
-<div class="lp-siradaki-liste">
-<span><i aria-hidden="true">2</i><span class="gizli">2. </span>Google profilinize 5 güncel fotoğraf ekleyin<small><span class="gizli">· </span>5 dk</small></span>
-<span><i aria-hidden="true">3</i><span class="gizli">3. </span>Cevapsız 4 yoruma hazır cevapları yapıştırın<small><span class="gizli">· </span>10 dk</small></span>
-</div>
-</div>
 </div>
 <span class="lp-cip lp-cip-f" aria-hidden="true"><i class="lp-cip-ikon lp-yesil"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></i>Metin hazır</span>
 </div>
@@ -408,8 +467,36 @@
 </div>
 </section>
 
+<!-- Tanıtım videosu
+     VİDEOYU EKLEMEK İÇİN (3 adım):
+     1) Video dosyanızın adını tanitim.mp4 yapın ve assets klasörünün içinde "video" adlı bir klasöre koyun:
+        assets/video/tanitim.mp4
+     2) (İsteğe bağlı) Videonun kapak resmini kapak.jpg adıyla aynı klasöre koyun: assets/video/kapak.jpg
+     3) Hemen aşağıdaki <section ...> satırında data-video="" yazan yeri data-video="assets/video/tanitim.mp4" yapın.
+        Kapak resmi koyduysanız data-kapak="" yazan yeri de data-kapak="assets/video/kapak.jpg" yapın.
+     Başka hiçbir şeyi değiştirmeyin. "Tanıtım videosu çok yakında" yazısı kendiliğinden kalkar,
+     ortadaki oynat düğmesine basınca video sesli başlar (kendi kendine başlamaz). -->
+<section id="tanitim" class="kap lp-video-bolum" data-video="" data-kapak="" aria-labelledby="video-baslik">
+<div class="lp-video-bas">
+<div class="etiket">Tanıtım</div>
+<h2 class="h2" id="video-baslik">Görünür nasıl çalışır, 1&nbsp;dakikada izleyin</h2>
+</div>
+<div class="lp-video lp-izle">
+<div class="lp-video-kapak" aria-hidden="true">
+<svg class="lp-3d" viewBox="0 0 320 340" focusable="false"><use href="#lp3-kaide"/><ellipse class="lp-3d-golge" cx="160" cy="236" rx="40" ry="9"/><use class="lp-3d-pin" href="#lp3-pin"/><use class="lp-3d-top lp-3d-t1" href="#lp3-top" x="18" y="118" width="34" height="34"/><use class="lp-3d-top lp-3d-t2" href="#lp3-top" x="262" y="52" width="22" height="22"/></svg>
+</div>
+<div class="lp-video-orta">
+<button type="button" class="lp-oynat" disabled aria-label="Tanıtım videosu çok yakında">
+<svg class="lp-oynat-halka" viewBox="0 0 120 120" aria-hidden="true" focusable="false"><defs><path id="lp-halka-yol" d="M60 60m-47 0a47 47 0 1 1 94 0a47 47 0 1 1-94 0"/></defs><text><textPath href="#lp-halka-yol" textLength="292" lengthAdjust="spacing">TANITIM VİDEOSU · ÇOK YAKINDA · </textPath></text></svg>
+<span class="lp-oynat-ic" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 001.5.86l10.4-6.5a1 1 0 000-1.72L9.5 4.64A1 1 0 008 5.5z"/></svg></span>
+</button>
+</div>
+<p class="lp-video-not"><i aria-hidden="true"></i>Tanıtım videosu çok yakında</p>
+</div>
+</section>
+
 <!-- Bekleme listesi -->
-<section id="liste" class="kap" style="padding-top:80px;padding-bottom:80px">
+<section id="liste" class="kap" style="padding-top:64px;padding-bottom:80px">
 <div class="liste-kutu lp-liste lp-izle">
 <span class="lp-zarf" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg><i></i></span>
 <div>

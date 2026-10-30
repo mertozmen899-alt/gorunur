@@ -126,7 +126,7 @@
       var bitti = kart.classList.toggle('bitti');
       b.textContent = bitti ? '✓ Yaptım' : 'Yaptım';
       b.setAttribute('aria-pressed', bitti ? 'true' : 'false');
-      b.className = bitti ? 'btn pil-y' : 'btn btn-amber';
+      b.classList.toggle('pil-y', bitti); b.classList.toggle('btn-amber', !bitti);
       not.textContent = bitti ? 'Bir sonraki ölçümde işe yarayıp yaramadığını size söyleyeceğiz.' : 'Bitirince "Yaptım" deyin, gerisini biz takip edelim.';
     });
   }
@@ -326,6 +326,91 @@
     }, 6000);
   }
 
+  // Tanıtım videosu: <section data-video="assets/video/tanitim.mp4" data-kapak="assets/video/kapak.jpg">
+  // data-video boşsa yer tutucu kapak kalır ("Tanıtım videosu çok yakında"); doluysa oynat düğmesi açılır.
+  // Video kendi kendine başlamaz; düğmeye basınca sesli oynar.
+  function tanitimVideosu() {
+    var bolum = document.querySelector('.lp-video-bolum[data-video]');
+    if (!bolum) return;
+    var kaynak = (bolum.getAttribute('data-video') || '').trim();
+    var kapak = (bolum.getAttribute('data-kapak') || '').trim();
+    var cerceve = bolum.querySelector('.lp-video'), dugme = bolum.querySelector('.lp-oynat');
+    if (!kaynak || !cerceve || !dugme) return;
+    var kapakEl = cerceve.querySelector('.lp-video-kapak');
+    if (kapak && kapakEl) { kapakEl.style.backgroundImage = 'url("' + kapak.replace(/["\\]/g, '') + '")'; kapakEl.classList.add('lp-kapakli'); }
+    var v = document.createElement('video');
+    v.className = 'lp-video-oynatici'; v.controls = true; v.preload = 'none';
+    v.setAttribute('playsinline', ''); v.playsInline = true;
+    if (kapak) v.poster = kapak;
+    v.src = kaynak;
+    cerceve.appendChild(v);
+    var not = cerceve.querySelector('.lp-video-not'); if (not) not.hidden = true;
+    var yazi = dugme.querySelector('textPath'); if (yazi) yazi.textContent = 'TANITIM VİDEOSU · İZLEYİN · ';
+    dugme.disabled = false; dugme.setAttribute('aria-label', 'Tanıtım videosunu oynat');
+    dugme.addEventListener('click', function () {
+      cerceve.classList.add('lp-video-oynuyor');
+      try { v.focus({ preventScroll: true }); } catch (e) { v.focus(); }
+      var p = v.play(); if (p && p.catch) p.catch(function () { /* tarayıcı izin vermezse kullanıcı videonun kendi düğmesine basar */ });
+    });
+  }
+
+  // le-lab.io esintisi: sarı bantta kaydırmaya bağlı hafif kayma, fareyle kullananlara imleç halkası ve mıknatıslı ana düğmeler.
+  // Dokunmatik ekranda ve "hareketi azalt" açıkken hiçbiri çalışmaz. Halka gerçek imleci gizlemez, tıklamaları engellemez.
+  function leLab() {
+    if (!document.querySelector('.lp-hero')) return;
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var bant = document.querySelector('.lp-bant');
+    if (bant) {
+      var bekliyor = false;
+      var kay = function () {
+        bekliyor = false;
+        var r = bant.getBoundingClientRect();
+        if (r.bottom < -200 || r.top > innerHeight + 200) return;
+        var k = (innerHeight - r.top) / (innerHeight + r.height) - 0.5;
+        bant.style.setProperty('--lp-k', Math.max(-0.5, Math.min(0.5, k)).toFixed(3));
+      };
+      window.addEventListener('scroll', function () { if (!bekliyor) { bekliyor = true; requestAnimationFrame(kay); } }, { passive: true });
+      window.addEventListener('resize', kay);
+      kay();
+    }
+    if (!(window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches)) return;
+
+    // İmleç halkası: farenin biraz arkasından gelir; yalnız fare hareket ederken çizilir
+    var halka = document.createElement('div');
+    halka.className = 'lp-imlec'; halka.setAttribute('aria-hidden', 'true'); halka.innerHTML = '<i></i>';
+    document.body.appendChild(halka);
+    var hx = 0, hy = 0, x = 0, y = 0, cizim = false;
+    var ciz = function () {
+      x += (hx - x) * 0.2; y += (hy - y) * 0.2;
+      halka.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)';
+      if (Math.abs(hx - x) + Math.abs(hy - y) > 0.4) requestAnimationFrame(ciz); else cizim = false;
+    };
+    document.addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      hx = e.clientX; hy = e.clientY;
+      if (!halka.classList.contains('lp-imlec-var')) { x = hx; y = hy; halka.classList.add('lp-imlec-var'); }
+      if (!cizim) { cizim = true; requestAnimationFrame(ciz); }
+    }, { passive: true });
+    document.addEventListener('pointerover', function (e) {
+      var t = e.target && e.target.closest ? e.target.closest('a[href],button:not(:disabled),summary,label,[role="tab"],input,.lp-ekr') : null;
+      halka.classList.toggle('lp-imlec-ust', !!t);
+    });
+    document.documentElement.addEventListener('mouseleave', function () { halka.classList.remove('lp-imlec-var'); });
+    document.addEventListener('pointerdown', function (e) { if (e.pointerType !== 'mouse') halka.classList.remove('lp-imlec-var'); });
+
+    // Mıknatıslı ana düğmeler: fare üstündeyken birkaç piksel ona doğru kayar
+    document.querySelectorAll('main .btn-amber, main .btn-siyah').forEach(function (b) {
+      b.classList.add('lp-miknatis');
+      b.addEventListener('pointermove', function (e) {
+        if (e.pointerType !== 'mouse') return;
+        var r = b.getBoundingClientRect();
+        var dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2), dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+        b.style.translate = (Math.max(-1, Math.min(1, dx)) * 6).toFixed(1) + 'px ' + (Math.max(-1, Math.min(1, dy)) * 4).toFixed(1) + 'px';
+      });
+      b.addEventListener('pointerleave', function () { b.style.translate = ''; });
+    });
+  }
+
   window.Gorunur = { formBagla: formBagla, EPOSTA_RE: EPOSTA_RE };
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -333,6 +418,8 @@
     konular();
     isKarti();
     canlilik();
+    tanitimVideosu();
+    leLab();
     formBagla(document.getElementById('liste-form'));
     var yil = document.getElementById('yil'); if (yil) yil.textContent = new Date().getFullYear();
   });
