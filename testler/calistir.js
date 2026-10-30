@@ -23,17 +23,62 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     const ctx = await b.newContext({ viewport: vp });
     await ctx.route('**/supabase.min.js', (r) => r.fulfill({ body: SAHTE, contentType: 'application/javascript' }));
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    // Haber listesi kaydı ve e-posta işlemleri (onay, çıkış): gerçek sunucuya gitmez
+    await ctx.route('**/rest/v1/rpc/katil_bekleme_listesi', (r) => r.fulfill({ body: '"tamam"', contentType: 'application/json' }));
+    await ctx.route('**/functions/v1/eposta', (r) => {
+      let g = {}; try { g = JSON.parse(r.request().postData() || '{}'); } catch (e) {}
+      const iyi = g.anahtar === 'a'.repeat(32) && (g.tur === 'onay' || g.tur === 'cikis');
+      return r.fulfill({ status: iyi ? 200 : 400, body: JSON.stringify(iyi ? { tamam: true } : { tamam: false, hata: 'gecersiz' }), contentType: 'application/json' });
+    });
     const p = await ctx.newPage(); const hatalar = [];
     p.on('pageerror', (e) => hatalar.push(e.message));
     const tasma = async (ad) => { const [g, e] = await p.evaluate(() => [document.documentElement.scrollWidth, innerWidth]); kontrol(cihaz + ' ' + ad + ' yatay taşma yok', g <= e, g + 'px > ' + e + 'px'); };
     // Açık sayfalar
-    for (const s of ['index.html', 'test.html', 'giris.html', 'aydinlatma.html', 'gizlilik.html', 'kullanim-sartlari.html', 'cerez.html', 'cikis.html']) {
+    for (const s of ['index.html', 'test.html', 'giris.html', 'aydinlatma.html', 'gizlilik.html', 'kullanim-sartlari.html', 'cerez.html', 'cikis.html', 'onay.html', '404.html']) {
       hatalar.length = 0;
       const yanit = await p.goto(ADRES + '/' + s); await p.waitForTimeout(1200);
       kontrol(cihaz + ' ' + s + ' açılıyor', yanit && yanit.ok(), String(yanit && yanit.status()));
       kontrol(cihaz + ' ' + s + ' sayfa hatası yok', !hatalar.length, hatalar.join(' | '));
       await tasma(s);
     }
+    // Haber listesi formu: kayıttan sonra "onay bağlantısı gönderdik" yazıyor
+    await p.goto(ADRES + '/index.html#liste'); await p.waitForTimeout(300);
+    await p.fill('#eposta', 'deneme@ornek.com'); await p.check('#liste-form input[type=checkbox]'); await p.click('#liste-form button[type=submit]');
+    await p.waitForSelector('#liste .tesekkur:not([hidden])', { timeout: 5000 }).catch(() => {});
+    const tsk = (await p.textContent('#liste .tesekkur').catch(() => '')) || '';
+    kontrol(cihaz + ' haber listesi formu onay e-postası gönderildi diyor', /onay bağlantısı gönderdik/.test(tsk) && /deneme@ornek\.com/.test(tsk), tsk.slice(0, 120));
+    // Onay sayfası: doğru anahtar onaylanıyor, geçersiz bağlantı nazik hata veriyor
+    await p.goto(ADRES + '/onay.html?a=' + 'a'.repeat(32)); await p.waitForSelector('#bitti:not([hidden])', { timeout: 5000 }).catch(() => {});
+    kontrol(cihaz + ' onay.html doğru bağlantıyı onaylıyor', /Kaydınız onaylandı/.test((await p.textContent('#bitti').catch(() => '')) || '') && await p.isVisible('#bitti'));
+    await p.goto(ADRES + '/onay.html?a=' + 'b'.repeat(32)); await p.waitForSelector('#hata:not([hidden])', { timeout: 5000 }).catch(() => {});
+    kontrol(cihaz + ' onay.html süresi dolmuş bağlantıda hata gösteriyor', await p.isVisible('#hata') && !(await p.isVisible('#bitti')));
+    await p.goto(ADRES + '/onay.html?a=xyz'); await p.waitForTimeout(200);
+    kontrol(cihaz + ' onay.html bozuk bağlantıda hata gösteriyor', await p.isVisible('#hata'));
+    // Çıkış sayfası: düğmeye basınca listeden çıkılıyor; bozuk bağlantıda düğme kapalı
+    await p.goto(ADRES + '/cikis.html?a=' + 'a'.repeat(32)); await p.click('#cik').catch(() => {});
+    await p.waitForSelector('#bitti:not([hidden])', { timeout: 5000 }).catch(() => {});
+    kontrol(cihaz + ' cikis.html listeden çıkarıyor', await p.isVisible('#bitti'));
+    await p.goto(ADRES + '/cikis.html?a=xyz'); await p.waitForTimeout(150);
+    kontrol(cihaz + ' cikis.html bozuk bağlantıda düğme kapalı', await p.isDisabled('#cik') && /geçersiz/.test((await p.textContent('#durum')) || ''));
+    // 404 sayfası
+    await p.goto(ADRES + '/404.html'); await p.waitForTimeout(150);
+    kontrol(cihaz + ' 404.html başlık ve ana sayfa düğmesi görünüyor', /bulunamadı/.test((await p.textContent('h1')) || '') && await p.isVisible('.yok-dugmeler a[href="./"]'));
+    // Üst menü: oturum kayıtlıysa "Panelim", değilse "Giriş yap"
+    await p.goto(ADRES + '/index.html'); await p.evaluate(() => localStorage.removeItem('sb-test-auth-token')); await p.reload(); await p.waitForTimeout(200);
+    kontrol(cihaz + ' oturum yokken menüde "Giriş yap" var', ((await p.textContent('header a.erken')) || '').trim() === 'Giriş yap');
+    await p.evaluate(() => localStorage.setItem('sb-test-auth-token', JSON.stringify({ refresh_token: 'r' }))); await p.reload(); await p.waitForTimeout(200);
+    const pm = await p.$eval('header a.erken', (a) => [a.textContent.trim(), a.getAttribute('href')].join(' ')).catch(() => '');
+    kontrol(cihaz + ' oturum varken menüde "Panelim" var', pm === 'Panelim panel.html', pm);
+    await p.evaluate(() => localStorage.removeItem('sb-test-auth-token'));
+    // Kurulum düzenleme: son adımda kaydet, upsert çağrılıyor ve panele dönülüyor
+    await p.goto(ADRES + '/kurulum.html?adim=5'); await p.waitForSelector('#kurulum:not([hidden])', { timeout: 8000 }).catch(() => {});
+    const upOnce = await p.evaluate(() => (JSON.parse(localStorage.getItem('fake') || '{}').upsert || 0));
+    await p.fill('#whatsapp', '0532 765 43 21').catch(() => {});
+    await p.click('#ileri').catch(() => {});
+    await p.waitForURL(/panel\.html/, { timeout: 8000 }).catch(() => {});
+    const upSonra = await p.evaluate(() => [JSON.parse(localStorage.getItem('fake') || '{}').upsert || 0, (JSON.parse(localStorage.getItem('fake') || '{}').isl || {}).whatsapp].join(' '));
+    kontrol(cihaz + ' kurulum düzenlemesi kaydediliyor (upsert) ve panele dönülüyor', /panel\.html/.test(p.url()) && upSonra === (upOnce + 1) + ' 05327654321', p.url() + ' ' + upOnce + ' -> ' + upSonra + ' ' + ((await p.textContent('#uyari').catch(() => '')) || ''));
+    await p.evaluate(() => { const st = JSON.parse(localStorage.getItem('fake') || '{}'); delete st.isl; delete st.upsert; localStorage.setItem('fake', JSON.stringify(st)); });
     // Panel: menü sayfaları
     hatalar.length = 0;
     await p.goto(ADRES + '/panel.html#ozet'); await p.waitForSelector('#panel:not([hidden])', { timeout: 10000 }).catch(() => {});

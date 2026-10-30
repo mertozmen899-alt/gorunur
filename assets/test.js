@@ -124,7 +124,13 @@
     var kontrol = window.AbortController ? new AbortController() : null;
     var zaman = setTimeout(function () { if (kontrol) kontrol.abort(); }, 45000);
     return fetch(OLCUM_ADRES, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sehir: durum.sehir.split(',')[0].trim(), is: durum.is }), signal: kontrol ? kontrol.signal : undefined })
-      .then(function (r) { return r.json(); }).then(function (j) { clearTimeout(zaman); return j && (j.harita || j.yz) ? j : null; })
+      .then(function (r) { return r.json().catch(function () { return null; }); }).then(function (j) {
+        clearTimeout(zaman);
+        if (j && (j.harita || j.yz)) return j;
+        // Sunucu açıklama gönderdiyse (ör. hata 'sinir': bugünkü deneme hakkı doldu, HTTP 429) örnek ekran yerine onu gösteririz
+        if (j && j.mesaj) return { hataMesaj: String(j.mesaj).slice(0, 300), sinir: j.hata === 'sinir' };
+        return null;
+      })
       .catch(function () { clearTimeout(zaman); return null; });
   }
   var GENEL = ['ve', 'ltd', 'sti', 'san', 'tic', 'sube', 'subesi', 'merkez', 'merkezi', 'hizmetleri', 'servis', 'servisi', 'firmasi', 'sirketi'];
@@ -148,11 +154,22 @@
     return li;
   }
   function sonucCiz(v) {
+    var hk = $('t-hata');
+    if (v && v.hataMesaj) {
+      // Ölçüm yapılamadı ama sunucu nedenini söyledi: soru işaretli örnek ekran yerine bu açıklamayı gösteririz
+      sonVeri = null;
+      $('t-gercek').hidden = true; $('t-yedek').hidden = true;
+      $('t-etiket').textContent = v.sinir ? 'Bugünlük sınır doldu' : 'Şu an ölçemedik';
+      $('t-aciklama').textContent = v.sinir ? 'Hızlı testi kısa sürede çok kez denediniz.' : 'Ölçümü şu an tamamlayamadık.';
+      if (hk) { hk.querySelector('p').textContent = v.hataMesaj; hk.hidden = false; }
+      return;
+    }
+    if (hk) hk.hidden = true;
     sonVeri = v;
     $('t-gercek').hidden = !v; $('t-yedek').hidden = !!v;
     if (!v) {
       $('t-etiket').textContent = 'Örnek ekranınız';
-      $('t-aciklama').textContent = 'Şu an ölçüm yapamadık. Görünür açılınca bunu sizin için her hafta ölçüp tek bir sayıyla söyleyeceğiz.';
+      $('t-aciklama').textContent = 'Şu an ölçüm yapamadık. Ücretsiz hesap açarsanız bunu sizin için her hafta ölçer, sonucu panelinizde tek bir sayıyla gösteririz.';
       return;
     }
     var hl = $('t-harita'); hl.innerHTML = '';
