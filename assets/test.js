@@ -169,23 +169,110 @@
       $('t-yz-soru').textContent = 'Yapay zekâ şu an cevap vermedi, birazdan tekrar deneyin.';
     }
   }
+  // ---- Rapor kartı: "Bu siz misiniz?" sonra 1. sıradakiyle karşılaştırma ve adımlar ----
+  function el(t, sinif, metin) { var e = document.createElement(t); if (sinif) e.className = sinif; if (metin != null) e.textContent = metin; return e; }
+  function aramaAdi() { return durum.is.toLocaleLowerCase('tr') + ' ' + durum.sehir.split(',')[0]; }
+  function adayKart(x, sec) {
+    var b = el('button', 't-aday'); b.type = 'button';
+    b.appendChild(el('b', null, x.ad));
+    var alt = [x.adres, x.puan ? x.puan.toLocaleString('tr-TR') + ' ★ · ' + (x.yorum || 0) + ' yorum' : 'Henüz puan yok'].filter(Boolean).join(' · ');
+    b.appendChild(el('small', null, alt));
+    b.addEventListener('click', function () { sec(x); });
+    return b;
+  }
+  function adaySor(out, baslik, adaylar, siraVar) {
+    out.innerHTML = '';
+    out.appendChild(el('p', 't-soru-b', baslik));
+    var l = el('div', 't-adaylar');
+    adaylar.forEach(function (x) { l.appendChild(adayKart(x, function (v) { raporCiz(v, siraVar ? v.sira : null); })); });
+    out.appendChild(l);
+    var yok = el('button', 't-baglanti', siraVar ? 'Hiçbiri ben değilim, adımla arayın' : 'Hiçbiri değil, Google\'da kaydım yok'); yok.type = 'button';
+    yok.addEventListener('click', function () { if (siraVar) adlaAra(out); else raporCiz(null, null); });
+    out.appendChild(yok);
+  }
+  function adlaAra(out) {
+    var ad = $('t-ad').value.trim();
+    out.innerHTML = ''; out.appendChild(el('p', 't-not', '"' + ad + '" adıyla Google Haritalar\'da arıyoruz...'));
+    if (!window.fetch || navigator.webdriver && !window.__hizliTestDene) { raporCiz(null, null); return; }
+    fetch(OLCUM_ADRES, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ islem: 'bul', ad: ad, sehir: durum.sehir.split(',')[0].trim(), is: durum.is }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j && j.adaylar && j.adaylar.length) adaySor(out, 'Google\'da bunları bulduk. Hangisi sizsiniz?', j.adaylar, false);
+        else if (j && j.adaylar) raporCiz(null, null);
+        else { out.innerHTML = ''; out.appendChild(el('p', 't-not', (j && j.mesaj) || 'Şu an arayamadık. Birazdan tekrar deneyin.')); }
+      })
+      .catch(function () { out.innerHTML = ''; out.appendChild(el('p', 't-not', 'Şu an arayamadık. Birazdan tekrar deneyin.')); });
+  }
+  function adimlarUret(siz, lider, yzVar) {
+    var A = [];
+    if (!siz) A.push({ t: 'Google İşletme Profilinizi açın', n: 'Haritalarda hiç görünmüyorsunuz. Bu, müşterilerin sizi bulması için en önemli adım ve ücretsiz.', a: ['Telefonunuzda Google Haritalar\'ı açın, işletmenizin adını arayın. Çıkarsa "Bu işletmenin sahibi misiniz?" deyip sahiplenin.', 'Çıkmazsa business.google.com adresinden "İşletme ekle" deyin; adı tabelanızdaki gibi, kategoriyi "' + durum.is + '" olarak seçin.', 'Adres, telefon ve çalışma saatlerini girin, Google\'ın istediği doğrulamayı yapın.'] });
+    if (siz && lider && (siz.yorum || 0) < Math.max(10, (lider.yorum || 0) * 0.6)) A.push({ t: 'Müşterilerinizden Google yorumu isteyin', n: 'Sizde ' + (siz.yorum || 0) + ' yorum var, ' + lider.sira + '. sıradakinde ' + (lider.yorum || 0) + '. Google en çok yorumu olan ve düzenli yorum alan işletmeyi öne çıkarıyor.', a: ['Google İşletme Profilinizde "Yorum iste" bölümünden bağlantınızı kopyalayın.', 'Bu hafta işini yaptığınız 10 müşterinize WhatsApp\'tan kısa bir teşekkürle gönderin.', 'Gelen her yoruma 1-2 cümleyle cevap verin.'] });
+    if (siz && !siz.web) A.push({ t: 'Profilinize web sitesi ya da Instagram bağlantısı ekleyin', n: 'Profilinizde bir bağlantı görünmüyor' + (lider && lider.web ? ', önünüzdekinde var.' : '.'), a: ['Google İşletme Profilinde "Profili düzenle" deyin.', '"Web sitesi" alanına sitenizi, yoksa Instagram adresinizi yazın.', 'Kaydedin; birkaç gün içinde görünür.'] });
+    if (siz && !siz.saat) A.push({ t: 'Çalışma saatlerinizi girin', n: 'Saatleriniz profilde görünmüyor. Google "şimdi açık" olanları öne çıkarır.', a: ['Profili düzenle bölümünde "Saatler"i açın.', 'Her günün açılış ve kapanış saatini girin.', 'Bayram ve tatil günleri için "özel saatler" ekleyin.'] });
+    if (siz && !siz.tel) A.push({ t: 'Telefon numaranızı profile ekleyin', n: 'Profilinizde telefon görünmüyor; müşteri sizi tek dokunuşla arayamıyor.', a: ['Profili düzenle, "İletişim" bölümünü açın.', 'Müşterinin aradığı numarayı yazın.', 'Aynı numarayı sitenizde ve Instagram\'da da kullanın.'] });
+    if (siz && lider && siz.puan && lider.puan && siz.puan < lider.puan - 0.2) A.push({ t: 'Düşük puanlı yorumlara nazikçe cevap verin', n: 'Puanınız ' + siz.puan.toLocaleString('tr-TR') + ', önünüzdekinin ' + lider.puan.toLocaleString('tr-TR') + '.', a: ['3 yıldız ve altındaki yorumları bulun.', 'Kısa bir özür ve çözüm teklifiyle cevap verin.', 'Sorunu çözdüğünüz müşteriden yorumunu güncellemesini rica edin.'] });
+    if (!yzVar) A.push({ t: 'Yapay zekânın baktığı sitelerde yer alın', n: 'Yapay zekâ sizi önermedi. Önerdiği işletmeler, sektör rehberlerinde ve haritalarda bilgisi eksiksiz olanlar.', a: ['Sektörünüzdeki rehber sitelerinde ücretsiz profil açın.', 'Her yerde adınızı, adresinizi, telefonunuzu aynı yazın.', 'Profilinize hizmetlerinizi tek tek ekleyin.'] });
+    A.push({ t: 'Her hafta bir Google gönderisi paylaşın', n: 'Düzenli paylaşım yapan profiller daha canlı görünür.', a: ['Profilinizde "Güncelleme ekle" deyin.', 'Bir iş fotoğrafı ve 2-3 cümle yazın.', 'Her hafta tekrarlayın.'] });
+    return A.slice(0, 3);
+  }
+  function kiyasSatir(tablo, ad, sizV, liderV, iyi) {
+    var tr = el('tr'); tr.appendChild(el('th', null, ad));
+    var a = el('td', iyi === false ? 'kotu' : iyi === true ? 'iyi' : '', sizV); tr.appendChild(a);
+    tr.appendChild(el('td', null, liderV)); tablo.appendChild(tr);
+  }
+  function varYok(x) { return x ? 'Var' : 'Yok'; }
+  function raporCiz(siz, sira) {
+    var out = $('t-ben-sonuc'); out.innerHTML = '';
+    document.querySelectorAll('.t-liste li').forEach(function (li) { li.classList.remove('t-siz'); });
+    var h = (sonVeri && sonVeri.harita) || [];
+    if (sira) document.querySelectorAll('#t-harita li').forEach(function (li, k) { if (h[k] && h[k].sira === sira) li.classList.add('t-siz'); });
+    var lider = h.filter(function (x) { return !siz || x.ad !== siz.ad; })[0] || null;
+    var yzVar = !!(siz && sonVeri && sonVeri.yz && sonVeri.yz.isletmeler.some(function (x) { return eslesir(siz.ad, x.ad); }));
+    var k = el('div', 't-rapor');
+    k.appendChild(el('span', 'pil pil-a', 'Rapor kartınız'));
+    var buyuk = el('p', 't-buyuk');
+    if (sira) { buyuk.appendChild(document.createTextNode('"' + aramaAdi() + '" arayanlar sizi Google Haritalar\'da ')); buyuk.appendChild(el('b', sira <= 3 ? 'iyi' : 'kotu', sira + '. sırada')); buyuk.appendChild(document.createTextNode(' görüyor.')); }
+    else if (siz) { buyuk.appendChild(document.createTextNode('"' + aramaAdi() + '" aramasında Haritalar\'ın ')); buyuk.appendChild(el('b', 'kotu', 'ilk 20\'sinde yoksunuz')); buyuk.appendChild(document.createTextNode('.')); }
+    else { buyuk.appendChild(document.createTextNode('Google Haritalar\'da ')); buyuk.appendChild(el('b', 'kotu', 'görünmüyorsunuz')); buyuk.appendChild(document.createTextNode('. Sizi arayan müşteri rakiplerinizi buluyor.')); }
+    k.appendChild(buyuk);
+    if (siz && lider) {
+      k.appendChild(el('p', 't-alt-b', 'Siz ve ' + lider.sira + '. sıradaki: ' + lider.ad));
+      var t = el('table', 't-kiyas'); var bas = el('tr'); bas.appendChild(el('th')); bas.appendChild(el('th', null, 'Siz')); bas.appendChild(el('th', null, lider.sira + '. sıradaki')); t.appendChild(bas);
+      kiyasSatir(t, 'Puan', siz.puan ? siz.puan.toLocaleString('tr-TR') + ' ★' : 'Yok', lider.puan ? lider.puan.toLocaleString('tr-TR') + ' ★' : 'Yok', siz.puan && lider.puan ? siz.puan >= lider.puan - 0.1 : false);
+      kiyasSatir(t, 'Yorum sayısı', String(siz.yorum || 0), String(lider.yorum || 0), (siz.yorum || 0) >= (lider.yorum || 0) * 0.8);
+      kiyasSatir(t, 'Web sitesi', varYok(siz.web), varYok(lider.web), siz.web ? true : (lider.web ? false : null));
+      kiyasSatir(t, 'Telefon', varYok(siz.tel), varYok(lider.tel), siz.tel ? true : false);
+      kiyasSatir(t, 'Çalışma saatleri', varYok(siz.saat), varYok(lider.saat), siz.saat ? true : false);
+      kiyasSatir(t, 'Yapay zekâ önerdi mi?', yzVar ? 'Evet' : 'Hayır', '', yzVar);
+      k.appendChild(t);
+    }
+    var A = adimlarUret(siz, lider, yzVar);
+    k.appendChild(el('p', 't-alt-b', 'Sizi yukarı taşıyacak ilk 3 adım'));
+    A.forEach(function (x, i) {
+      var d = el('div', 't-adim' + (i ? ' kilitli' : ''));
+      var bas = el('div', 't-adim-bas'); bas.appendChild(el('b', 't-adim-no', String(i + 1))); bas.appendChild(el('b', null, x.t)); d.appendChild(bas);
+      var ic = el('div', 't-adim-ic'); ic.appendChild(el('p', null, x.n));
+      var ol = el('ol'); x.a.forEach(function (s) { ol.appendChild(el('li', null, s)); }); ic.appendChild(ol);
+      if (i) ic.setAttribute('aria-hidden', 'true');
+      d.appendChild(ic); k.appendChild(d);
+    });
+    var kilit = el('div', 't-kilit');
+    kilit.appendChild(el('p', null, '2. ve 3. adımın nasıl yapılacağını ve her hafta sıranızı hesabınızda görün.'));
+    var ac = el('a', 'btn btn-amber', 'Ücretsiz hesap aç, hepsini gör'); ac.href = 'giris.html#kayit'; kilit.appendChild(ac);
+    k.appendChild(kilit);
+    k.appendChild(el('p', 't-not', 'Sonuç bugün yapılan tek bir aramaya göre. Konuma ve güne göre sıra biraz değişebilir; Görünür bunu her hafta ölçer.'));
+    out.appendChild(k);
+    try { sessionStorage.setItem('gorunur_test_rapor', JSON.stringify({ ad: siz && siz.ad, sira: sira })); } catch (e) {}
+    k.scrollIntoView && k.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   $('t-ben-form').addEventListener('submit', function (e) {
     e.preventDefault();
     var ad = $('t-ad').value.trim(), out = $('t-ben-sonuc');
-    out.className = 't-sonuc';
-    document.querySelectorAll('.t-liste li').forEach(function (li) { li.classList.remove('t-siz'); });
-    if (ad.length < 2 || !sonVeri) { out.textContent = 'İşletmenizin adını yazın.'; return; }
-    var h = (sonVeri.harita || []).filter(function (x) { return eslesir(ad, x.ad); })[0];
-    var yzi = (sonVeri.yz && sonVeri.yz.isletmeler || []).map(function (x) { return x.ad; }).filter(function (x) { return eslesir(ad, x); })[0];
-    document.querySelectorAll('.t-liste li').forEach(function (li) { var sp = li.querySelector('span'); if (sp && eslesir(ad, sp.textContent)) li.classList.add('t-siz'); });
-    var parcalar = [];
-    if (h) parcalar.push('Google Haritalar\'da ' + h.sira + '. sıradasınız' + (h.sira <= 3 ? ', çok iyi.' : h.sira <= 5 ? '. İlk 3\'e çok yakınsınız.' : '. Müşterilerin çoğu ilk 3\'e bakıyor, oraya çıkmanız gerekiyor.'));
-    else if (sonVeri.harita && sonVeri.harita.length) parcalar.push('Google Haritalar\'da ilk ' + sonVeri.harita.length + ' içinde çıkmıyorsunuz.');
-    if (yzi) parcalar.push('Yapay zekâ sizi önerdi.');
-    else if (sonVeri.yz) parcalar.push('Yapay zekâ sizi önermedi.');
-    out.textContent = '';
-    var d = document.createElement('b'); d.className = h && h.sira <= 3 ? 'iyi' : 'kotu'; d.textContent = parcalar.join(' ');
-    out.appendChild(d); out.appendChild(document.createTextNode(' Görünür bunu her hafta ölçer ve yükselmek için yapacağınız işleri sıraya koyar.'));
+    out.innerHTML = '';
+    if (ad.length < 2 || !sonVeri) { out.appendChild(el('p', 't-not', 'İşletmenizin adını yazın.')); return; }
+    var h = (sonVeri.harita || []).filter(function (x) { return eslesir(ad, x.ad); });
+    if (h.length) adaySor(out, 'Bu siz misiniz?', h.slice(0, 3), true);
+    else adlaAra(out);
   });
 
   function hazirla() {

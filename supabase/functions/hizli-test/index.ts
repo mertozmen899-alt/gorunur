@@ -26,35 +26,40 @@ async function ozet(x: string) {
   return [...new Uint8Array(b)].slice(0, 12).map((v) => v.toString(16).padStart(2, "0")).join("");
 }
 
-async function haritalar(isK: string, sehir: string, anahtar: string) {
+async function haritalar(sorgu: string, anahtar: string) {
   const u = new URL("https://serpapi.com/search.json");
-  const p: Record<string, string> = { engine: "google_maps", type: "search", q: `${isK} ${sehir}`, hl: "tr", api_key: anahtar };
+  const p: Record<string, string> = { engine: "google_maps", type: "search", q: sorgu, hl: "tr", api_key: anahtar };
   for (const [k, v] of Object.entries(p)) u.searchParams.set(k, v);
   const r = await fetch(u, { signal: AbortSignal.timeout(25000) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || j.error) throw new Error("Haritalar: " + (j.error || r.status));
-  return ((j.local_results || []) as Array<Record<string, unknown>>).slice(0, 20).map((x, i) => ({
+  const ham = (j.local_results && j.local_results.length ? j.local_results : (j.place_results ? [j.place_results] : [])) as Array<Record<string, unknown>>;
+  return ham.slice(0, 20).map((x, i) => ({
     sira: (x.position as number) || i + 1, ad: String(x.title || "").slice(0, 80),
     puan: typeof x.rating === "number" ? x.rating : null, yorum: typeof x.reviews === "number" ? x.reviews : null,
+    adres: String(x.address || "").slice(0, 120), tur: String(x.type || "").slice(0, 60),
+    web: !!x.website, tel: !!x.phone, saat: !!(x.operating_hours || x.hours), foto: !!x.thumbnail,
   })).filter((x) => x.ad);
 }
 
 async function yapayZeka(soru: string, anahtar: string) {
-  const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-2.5-flash-lite", "gemini-2.5-flash"].filter(Boolean) as string[];
+  const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-flash-lite-latest", "gemini-flash-latest"].filter(Boolean) as string[];
   const istek = `${soru} Gerçek bir müşteriye cevap verir gibi 3 ile 5 işletme öner. Sadece şu JSON'u döndür: {"isletmeler":[{"ad":"işletme adı","neden":"tek kısa cümle"}]}`;
   let son = "";
   for (const model of modeller) {
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": anahtar },
-        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: istek }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 2000, responseMimeType: "application/json" } }),
+        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: istek }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 2000, responseMimeType: "application/json" } }),
         signal: AbortSignal.timeout(20000),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { son += ` ${model}: ${r.status} ${String(j?.error?.message || "").slice(0, 80)};`; continue; }
       const metin = (j?.candidates?.[0]?.content?.parts || []).filter((p: { thought?: boolean }) => !p.thought).map((p: { text?: string }) => p.text || "").join("").trim();
-      const v = JSON.parse(metin.replace(/^```(json)?|```$/g, "").trim());
-      const liste = (Array.isArray(v?.isletmeler) ? v.isletmeler : []).map((x: Record<string, unknown>) => ({ ad: String(x.ad || "").slice(0, 80), neden: String(x.neden || "").slice(0, 160) })).filter((x: { ad: string }) => x.ad).slice(0, 5);
+      let v: Record<string, unknown> | null = null;
+      try { v = JSON.parse(metin.replace(/^```(json)?|```$/g, "").trim()); }
+      catch { const adlar = [...metin.matchAll(/"ad"\s*:\s*"([^"]{2,80})"/g)].map((m) => ({ ad: m[1], neden: "" })); if (adlar.length) v = { isletmeler: adlar }; }
+      const liste = (Array.isArray(v?.isletmeler) ? v!.isletmeler as Array<Record<string, unknown>> : []).map((x: Record<string, unknown>) => ({ ad: String(x.ad || "").slice(0, 80), neden: String(x.neden || "").slice(0, 160) })).filter((x: { ad: string }) => x.ad).slice(0, 5);
       if (liste.length) return { model, isletmeler: liste };
       son += ` ${model}: boş;`;
     } catch (e) { son += ` ${model}: ${String(e).slice(0, 60)};`; }
@@ -70,7 +75,25 @@ Deno.serve(async (req) => {
   if (sehir.length < 2 || isK.length < 2) return json({ hata: "Şehir ve iş gerekli." }, 400);
 
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const anahtar = sade(sehir) + "|" + sade(isK);
+  const SERP0 = (Deno.env.get("SERPAPI_KEY") || "").trim();
+  if (g.islem === "bul") {
+    const ad = temiz(g.ad);
+    if (ad.length < 2) return json({ hata: "İşletme adı gerekli." }, 400);
+    const ipB = (req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "").split(",")[0].trim();
+    const ipOzetB = await ozet(new Date().toISOString().slice(0, 10) + "|" + ipB + "|" + (Deno.env.get("SUPABASE_URL") || ""));
+    const basB = new Date(Date.now() - 864e5).toISOString();
+    const [{ count: ipS }, { count: topS }] = await Promise.all([
+      db.from("hizli_test_istek").select("id", { count: "exact", head: true }).eq("ip_ozet", ipOzetB).eq("yeni", true).gte("zaman", basB),
+      db.from("hizli_test_istek").select("id", { count: "exact", head: true }).eq("yeni", true).gte("zaman", basB),
+    ]);
+    if ((ipS || 0) >= IP_GUNLUK + 4 || (topS || 0) >= TOPLAM_GUNLUK + 15 || !SERP0) return json({ hata: "sinir", mesaj: "Şu an arayamıyoruz. Yarın tekrar deneyin." }, 429);
+    await db.from("hizli_test_istek").insert({ ip_ozet: ipOzetB, yeni: true });
+    try {
+      const l = await haritalar(`${ad} ${sehir === "Türkiye geneli" ? "" : sehir}`.trim(), SERP0);
+      return json({ adaylar: l.slice(0, 4) });
+    } catch (e) { console.log("hizli-test bul", String(e).slice(0, 200)); return json({ hata: "olcum", mesaj: "Şu an arayamadık. Birazdan tekrar deneyin." }, 502); }
+  }
+  const anahtar = "v2|" + sade(sehir) + "|" + sade(isK);
   const { data: onb } = await db.from("hizli_testler").select("sonuc, olusturma").eq("anahtar", anahtar).maybeSingle();
   if (onb && Date.now() - new Date(onb.olusturma).getTime() < 7 * 864e5) return json({ ...onb.sonuc, onbellek: true });
 
@@ -89,7 +112,7 @@ Deno.serve(async (req) => {
   const SERP = (Deno.env.get("SERPAPI_KEY") || "").trim(), GEM = (Deno.env.get("GEMINI_API_KEY") || "").trim();
   const soru = `${yerde(sehir)} iyi bir ${isK} önerir misin?`;
   const [h, y] = await Promise.allSettled([
-    haritaAcik && SERP ? haritalar(isK, sehir, SERP) : Promise.resolve(null),
+    haritaAcik && SERP ? haritalar(`${isK} ${sehir}`, SERP) : Promise.resolve(null),
     GEM ? yapayZeka(soru, GEM) : Promise.resolve(null),
   ]);
   const sonuc = {

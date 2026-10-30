@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="assets/style.css?v=19">
 <script src="assets/tema.js?v=1" defer></script>
 <script src="assets/app.js?v=6" defer></script>
-<script src="assets/test.js?v=6" defer></script>
+<script src="assets/test.js?v=7" defer></script>
 <script src="assets/sayac.js?v=1" defer></script>
 </head>
 <body>
@@ -114,6 +114,31 @@
 .t-ben .satir-form input{border:1.5px solid var(--cizgi3);background:var(--zemin2);color:var(--yazi)}
 .t-sonuc{margin:12px 0 0;font-size:15px;line-height:1.6;font-weight:600}
 .t-sonuc{font-weight:500;color:var(--yazi2)} .t-sonuc b.iyi{color:var(--yesil)} .t-sonuc b.kotu{color:var(--kirmizi)}
+.t-soru-b{font-weight:800;font-size:16px;margin:4px 0 10px}
+.t-adaylar{display:grid;gap:8px}
+.t-aday{all:unset;box-sizing:border-box;display:block;cursor:pointer;padding:12px 14px;border:1.5px solid var(--cizgi3);border-radius:12px;background:var(--kart2)}
+.t-aday:hover,.t-aday:focus-visible{border-color:var(--amber);background:var(--amberzemin)}
+.t-aday b{display:block;font-size:15px;color:var(--yazi)} .t-aday small{display:block;font-size:13px;color:var(--soluk);margin-top:2px;font-weight:500}
+.t-baglanti{all:unset;cursor:pointer;display:inline-block;margin-top:10px;font-size:14px;font-weight:700;color:var(--vurgu);text-decoration:underline}
+.t-rapor{display:grid;gap:12px}
+.t-rapor .pil{justify-self:start}
+.t-buyuk{font-family:var(--baslik);font-weight:800;font-size:clamp(20px,3.2vw,26px);line-height:1.25;margin:0;color:var(--yazi)}
+.t-buyuk b.iyi{color:var(--yesil)} .t-buyuk b.kotu{color:var(--kirmizi)}
+.t-alt-b{font-weight:800;font-size:15px;margin:8px 0 0;color:var(--yazi)}
+.t-kiyas{width:100%;border-collapse:separate;border-spacing:0;font-size:14px;border:1px solid var(--cizgi2);border-radius:12px;overflow:hidden}
+.t-kiyas th,.t-kiyas td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--cizgi2)}
+.t-kiyas tr:last-child th,.t-kiyas tr:last-child td{border-bottom:0}
+.t-kiyas tr:first-child th{background:var(--kart2);font-size:12px;color:var(--soluk);text-transform:uppercase;letter-spacing:.04em}
+.t-kiyas th{font-weight:600;color:var(--yazi2)} .t-kiyas td{font-weight:700;color:var(--yazi)}
+.t-kiyas td.iyi{color:var(--yesil)} .t-kiyas td.kotu{color:var(--kirmizi)}
+.t-adim{border:1px solid var(--cizgi2);border-radius:14px;padding:12px 14px;background:var(--kart)}
+.t-adim-bas{display:flex;gap:10px;align-items:center;font-size:15px;color:var(--yazi)}
+.t-adim-no{flex:none;width:26px;height:26px;border-radius:8px;background:var(--amber);color:#111318;display:flex;align-items:center;justify-content:center;font-size:13px}
+.t-adim-ic{margin-top:8px;font-size:14px;line-height:1.55;color:var(--yazi2)}
+.t-adim-ic p{margin:0 0 6px} .t-adim-ic ol{margin:0;padding-left:20px}
+.t-adim.kilitli .t-adim-ic{filter:blur(5px);user-select:none;pointer-events:none;max-height:64px;overflow:hidden}
+.t-kilit{text-align:center;padding:16px;border-radius:14px;background:var(--amberzemin);border:1px dashed var(--amberkenar)}
+.t-kilit p{margin:0 0 12px;font-size:14px;color:var(--yazi2);font-weight:600}
 .t-yukleniyor{margin-top:22px;color:var(--soluk);font-size:15px}
 </style>
 <span class="pil pil-a" style="text-transform:uppercase;letter-spacing:.04em" id="t-etiket">Sonucunuz</span>
@@ -129,7 +154,7 @@
 <label for="t-ad">Siz bu listelerde var mısınız? İşletmenizin adını yazın</label>
 <div class="satir-form"><input id="t-ad" type="text" autocomplete="organization" placeholder="Örnek: Pati Veteriner" maxlength="80"><button type="submit" class="btn btn-amber">Bakalım</button></div>
 </form>
-<p class="t-sonuc" id="t-ben-sonuc" role="status" aria-live="polite"></p>
+<div class="t-sonuc" id="t-ben-sonuc" role="status" aria-live="polite"></div>
 </div>
 </div>
 <div id="t-yedek" hidden>
