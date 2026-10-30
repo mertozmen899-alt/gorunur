@@ -42,7 +42,12 @@
   }
 
   function isletmeGetir() {
-    return sb.from('isletmeler').select('*').maybeSingle().then(function (r) {
+    // Yalnızca giriş yapan kişinin işletmesi (yöneticiler herkesinkini okuyabildiği için sahip süzgeci şart)
+    return oturum().then(function (s) {
+      var q = sb.from('isletmeler').select('*');
+      if (s && s.user) q = q.eq('sahip', s.user.id);
+      return q.maybeSingle();
+    }).then(function (r) {
       if (r.error) throw r.error;
       return r.data;
     });
