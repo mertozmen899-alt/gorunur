@@ -10,10 +10,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=11">
+<link rel="stylesheet" href="assets/style.css?v=12">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/auth.js?v=4"></script>
-<script src="assets/panel.js?v=16" defer></script>
+<script src="assets/panel.js?v=17" defer></script>
 </head>
 <body class="olcum-yok">
 <header class="ust">
@@ -153,13 +153,10 @@
 <div class="kart olcum-bekle"><h3>Önce ilk ölçümü yapalım</h3><p class="kart-alt">Haritalarda ve Google aramasında kaçıncı çıktığınızı görmek için Özet sayfasından ilk ölçümü başlatın.</p><a href="#ozet" class="btn btn-amber kucuk-btn" style="margin-top:14px">Ölçüme git</a></div>
 <div class="panel-izgara">
 <section class="kart genis olcumlu">
-<h3>Aramalar tek tek</h3>
-<p class="kart-alt">Müşteriler aynı şeyi farklı kelimelerle arıyor. Her aramada nerede çıktığınız:</p>
+<div class="kart-bas"><h3>Aramalarınız</h3><span class="pil pil-a">En çok yapılan aramalar</span></div>
+<p class="kart-alt" id="arama-ozet"></p>
 <p class="kart-alt" id="kelime-konum"></p>
-<div class="kaydir" style="margin-top:14px"><table class="tablo">
-<thead><tr><th>Arama</th><th>Haritalar</th><th>Google</th><th>Haritalarda 1. sıradaki</th></tr></thead>
-<tbody id="kelime-tablo"></tbody>
-</table></div>
+<div class="arama-liste" id="arama-liste"></div>
 </section>
 <section class="kart genis olcumlu">
 <h3>Haritalarda kim önde?</h3>
@@ -180,6 +177,26 @@
 </form>
 </section>
 </div>
+</div>
+
+<!-- TEK ARAMA -->
+<div class="sayfa" data-sayfa="arama" hidden>
+<a href="#google" class="geri-link">← Tüm aramalar</a>
+<div class="panel-bas"><p class="selam">Bu aramada durumunuz</p><h1 id="ar-baslik"></h1><span id="ar-rozet" class="rozet"></span></div>
+<p class="ar-hedef" id="ar-hedef"></p>
+<div class="uc-kutu ar-kutular" id="ar-kutular"></div>
+<div class="panel-izgara">
+<section class="kart genis">
+<div class="kart-bas"><h3>Bu aramada yapılacaklar</h3><span class="pil pil-a">Bu aramaya özel</span></div>
+<p class="kart-alt">Ölçümde gördüğümüz farklara göre, önem sırasıyla.</p>
+<div class="isler" id="ar-isler"></div>
+</section>
+<section class="kart genis">
+<h3>Bu aramada kimler önde?</h3>
+<div id="ar-onde" class="ar-onde"></div>
+</section>
+</div>
+<div class="ar-gezinti"><a id="ar-onceki" class="btn btn-cizgi kucuk-btn" href="#">← Önceki arama</a><a id="ar-sonraki" class="btn btn-cizgi kucuk-btn" href="#">Sonraki arama →</a></div>
 </div>
 
 <!-- HESAP -->

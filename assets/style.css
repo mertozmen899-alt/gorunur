@@ -392,3 +392,30 @@ a.sayi-kutu{color:inherit;text-decoration:none;transition:border-color .15s;bord
 .yapilan-ust{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .yapilan small{display:block;color:var(--soluk);font-size:12px;font-weight:700;margin-top:2px}
 .yapilan p{margin:8px 0 0;font-size:14px;color:var(--yazi2);line-height:1.55}
+
+/* Aramalar listesi ve tek arama sayfası */
+.arama-liste{display:grid;gap:8px;margin-top:14px}
+.arama-satir{display:flex;align-items:center;justify-content:space-between;gap:14px;background:var(--kart2);border:1px solid var(--cizgi3);border-radius:14px;padding:13px 16px;color:var(--yazi);text-decoration:none;transition:border-color .15s}
+.arama-satir:hover{border-color:var(--amber);color:var(--yazi)}
+.arama-sol{min-width:0}
+.arama-sol b{font-size:15px}
+.arama-etiket{display:inline-block;margin-left:8px;font-size:11px;font-weight:800;color:var(--amber);background:var(--amberkoyu);border-radius:999px;padding:2px 8px;vertical-align:2px}
+.arama-sayilar{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:4px;font-size:12.5px;color:var(--soluk)}
+.rozet{flex:none;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:800;white-space:nowrap}
+.rozet::after{content:" ›"}
+.rozet-yesil{background:var(--yesilzemin);color:var(--yesil)}
+.rozet-sari{background:var(--amberkoyu);color:var(--amber)}
+.rozet-kirmizi{background:var(--kirmizizemin);color:var(--kirmizi)}
+.rozet-gri{background:var(--kart3);color:var(--soluk)}
+.panel-bas .rozet{display:inline-block;margin-top:10px}
+.panel-bas .rozet::after{content:""}
+.geri-link{display:inline-block;font-weight:700;font-size:14px;text-decoration:none;margin-bottom:4px}
+.ar-hedef{margin:14px 0 0;font-size:16px;font-weight:700;color:var(--yazi2)}
+.ar-kutular{margin-top:16px}
+.ar-onde h4{margin:14px 0 6px;font-size:14px;color:var(--yazi3)}
+.onde-liste{margin:0;padding-left:20px;display:grid;gap:4px;font-size:14px;color:var(--yazi2)}
+.onde-liste li.siz{color:var(--amber)}
+.onde-liste span{color:var(--soluk)}
+.ar-gezinti{display:flex;justify-content:space-between;gap:12px;margin-top:18px}
+@media (max-width:560px){.arama-satir{flex-direction:column;align-items:flex-start}.rozet{align-self:flex-start}}
+@media (max-width:560px){.ar-kutular{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px}.ar-kutular .sayi-kutu{padding:12px}.ar-kutular .sayi-kutu b{font-size:22px}.ar-kutular .sayi-kutu span{font-size:11.5px}.ar-kutular .sayi-kutu small{display:none}}

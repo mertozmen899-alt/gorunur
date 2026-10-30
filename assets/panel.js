@@ -414,6 +414,133 @@
       var y = Math.round(100 * o.yz_gecen / o.yz_soru_sayisi); return { v: y, bos: !y, yazi: '%' + y, t: kisaTarih(o.baslangic) };
     }), { min: 0, max: 100, cizgiler: [0, 50, 100], etiketle: function (v) { return '%' + v; }, etiket: 'Yapay zekâ önerme oranı' });
   }
+  // ---- Aramalar: her arama için durum, ayrı sayfa ve o aramaya özel işler ----
+  function enIyiYer(k) {
+    var l = [];
+    if (k.yerel_kutuda) l.push({ sira: k.yerel_kutuda, yer: 'harita kutusunda' });
+    if (k.arama_sira) l.push({ sira: k.arama_sira, yer: 'sitenizle' });
+    if (k.harita_sira) l.push({ sira: k.harita_sira, yer: 'Haritalar’da' });
+    l.sort(function (a, b) { return a.sira - b.sira; });
+    return l[0] || null;
+  }
+  function ilkSayfada(k) { return !!(k.yerel_kutuda || (k.arama_sira && k.arama_sira <= 10)); }
+  function aramaDurum(k) {
+    var olculdu = ('arama_sira' in k) || k.harita_bakilan != null;
+    if (!olculdu) return { yazi: 'Ölçülmedi', sinif: 'rozet-gri' };
+    var en = enIyiYer(k);
+    if (en && en.sira === 1) return { yazi: '1. sırada · Koru', sinif: 'rozet-yesil' };
+    if (en && en.sira <= 10) return { yazi: en.sira + '. sırada · Yüksel', sinif: 'rozet-sari' };
+    return { yazi: 'Çıkmıyor · Görün', sinif: 'rozet-kirmizi' };
+  }
+  function aramaOzet(o) {
+    var ks = o.kelimeler || [];
+    var a = ks.filter(function (k) { return 'arama_sira' in k && !k.arama_hata; });
+    var h = ks.filter(function (k) { return !k.harita_hata && k.harita_bakilan != null; });
+    return { aOlculen: a.length, ilkSayfa: a.filter(ilkSayfada).length, hOlculen: h.length, hCikan: h.filter(function (k) { return k.harita_sira; }).length };
+  }
+  function siraMetni(v, yok) { return v ? v + '.' : yok; }
+  function aramaListeCiz(o) {
+    var ks = o.kelimeler || [], kutu = $('arama-liste'); kutu.innerHTML = '';
+    var ozt = aramaOzet(o);
+    $('arama-ozet').textContent = ozt.aOlculen ? 'Müşterilerin en çok yaptığı ' + ks.length + ' aramanın ' + ozt.ilkSayfa + ' tanesinde Google’ın ilk sayfasındasınız. Bir aramaya tıklayın, o aramada nasıl yükseleceğinizi gösterelim.' : '';
+    ks.forEach(function (k, n) {
+      var d = aramaDurum(k);
+      var a = el('a', null, 'arama-satir'); a.href = '#arama-' + n;
+      var sol = el('div', null, 'arama-sol');
+      var bas = el('b', '"' + k.kelime + '"'); sol.appendChild(bas);
+      if (k.populer) sol.appendChild(el('span', 'çok aranıyor', 'arama-etiket'));
+      var alt = el('div', null, 'arama-sayilar');
+      alt.appendChild(el('span', 'Harita kutusu: ' + (k.yerel_kutu ? siraMetni(k.yerel_kutuda, 'yok') : '-')));
+      alt.appendChild(el('span', 'Siteler: ' + ('arama_sira' in k ? siraMetni(k.arama_sira, 'ilk 10’da yok') : '-')));
+      if (k.harita_bakilan != null) alt.appendChild(el('span', 'Haritalar: ' + siraMetni(k.harita_sira, 'ilk 20’de yok')));
+      sol.appendChild(alt);
+      a.appendChild(sol);
+      a.appendChild(el('span', d.yazi, 'rozet ' + d.sinif));
+      kutu.appendChild(a);
+    });
+    $('arama-liste').closest('section').hidden = !ks.length;
+  }
+  function baslikHarf(x) { return String(x || '').replace(/(^|\s)\S/g, function (h) { return h.toLocaleUpperCase('tr'); }); }
+  // Bir arama için yapılacaklar: ölçülen farklardan çıkar
+  function aramaIsleri(k, o, i) {
+    var b = o.isletme_bilgi || {}, isler = [], K = baslikHarf(k.kelime), kod = sadeK(k.kelime).replace(/ /g, '-');
+    var bir = k.harita_birinci || null;
+    // Harita tarafı
+    if (b.bulundu === false) isler.push(IS.googleProfil(i, b));
+    else if (!k.yerel_kutuda && !(k.harita_sira && k.harita_sira <= 3)) isler.push({
+      k: 'profil-' + kod, t: 'Google profilinizde "' + k.kelime + '" geçsin', s: '20 dakika · ücretsiz',
+      n: 'Google, harita kutusuna bu aramayla en çok eşleşen profilleri koyuyor. ' + (k.harita_sira ? 'Haritalar’da ' + k.harita_sira + '. sıradasınız.' : 'Haritalar’da ilk 20’de değilsiniz.'),
+      adimlar: [
+        'Google İşletme Profilinize girin, "Profili düzenle" deyin.',
+        'Ana kategori işinizi tam anlatsın. "' + k.kelime + '" aramasına uyan ek kategoriler varsa ekleyin.',
+        '"Ürünler" veya "Hizmetler" bölümüne "' + K.replace(new RegExp('^' + yerAdi(i) + '\\s*', 'i'), '') + '" adıyla bir kalem ekleyin, fotoğraf ve kısa açıklama yazın.',
+        'İşletme açıklamanızda bu ifade doğal bir cümlede geçsin. Örnek: "' + yerde(i.semt) + ' ' + (i.is_turu || '').toLocaleLowerCase('tr') + ' olarak…"',
+        'Haftada bir "Güncelleme" paylaşın, metinde bu aramayı kullanın.'
+      ],
+      sonuc: 'Bu aramada harita kutusuna girme şansınız artar. Harita kutusu sayfanın en üstünde, en çok tıklanan yer.' });
+    if (bir && b.bulundu && b.yorum != null && bir.yorum != null && b.yorum < bir.yorum) isler.push(Object.assign(IS.yorum(i, b.yorum, bir.yorum), {
+      n: 'Bu aramada haritalarda 1. sıradaki "' + bir.ad + '" işletmesinin ' + sayi(bir.yorum) + ' yorumu' + (bir.puan ? ' ve ' + String(bir.puan).replace('.', ',') + ' puanı' : '') + ' var. Sizin ' + sayi(b.yorum) + ' yorumunuz var. Aradaki fark kapandıkça yükselirsiniz.' }));
+    // Site tarafı
+    if (!i.site) isler.push(IS.siteYok(i));
+    else if (!k.arama_sira) {
+      var ust = (k.arama_ilk3 || []).filter(function (x) { return x.tur !== 'rehber'; })[0];
+      isler.push({ k: 'sayfa-' + kod, t: 'Sitenize "' + K + '" sayfası ekletin', s: '1-2 saat (sitenizi yapan kişi için)',
+        n: 'Bu aramada sitenizi ilk 10’da göremedik.' + (ust ? ' 1. sıradaki site: ' + ust.alan + ' ("' + ust.baslik + '").' : '') + ' Google bir aramada, başlığı o aramayla aynı olan sayfaları öne çıkarıyor.',
+        adimlar: ['Aşağıdaki mesajı sitenizi yapan kişiye gönderin.', 'Sayfa yayına girince ana sayfanızdan bu sayfaya bağlantı verilsin.', '3-4 hafta sonra burada sıranızın değiştiğini göreceksiniz.'],
+        metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemize "' + K + '" başlıklı yeni bir sayfa ekleyebilir misiniz? Sayfa başlığı (title) "' + K + ' | ' + i.ad + '" olsun, sayfadaki ana başlık da "' + K + '". İçinde en az 300 kelimelik açıklama, fotoğraflar, adresimiz, telefonumuz, çalışma saatlerimiz ve bu konuda müşterilerin sık sorduğu 5 soru ile cevapları olsun. Ana sayfadan bu sayfaya bağlantı verelim. Teşekkürler.' },
+        sonuc: 'Bu aramada Google’ın ilk sayfasına girme şansı yakalarsınız.' });
+    } else if (k.arama_sira > 1) isler.push({ k: 'guclendir-' + kod, t: '"' + K + '" sayfanızı güçlendirin', s: '1 saat (sitenizi yapan kişi için)',
+      n: 'Siteniz bu aramada ' + k.arama_sira + '. sırada' + (k.arama_link ? ' (' + gosterLink(k.arama_link) + ')' : '') + '. Üstünüzdekiler: ' + (k.arama_ilk3 || []).filter(function (x) { return !x.siz; }).slice(0, 2).map(function (x) { return x.alan; }).join(', ') + '.',
+      adimlar: ['Sayfanın başlığı "' + K + '" ile başlasın.', 'Sayfaya fotoğraf, fiyat aralığı ve sık sorulan sorular eklensin (en az 300 kelime).', 'Google İşletme Profilinizdeki web sitesi bağlantısı bu sayfayı göstersin ya da ana sayfadan bu sayfaya bağlantı verilsin.', 'Aşağıdaki rehber sitelerden sitenize bağlantı alın.'],
+      sonuc: 'Üstünüzdeki sitelerin önüne geçme şansınız artar.' });
+    // Bu aramada çıkan rehberler
+    var reh = (k.rehberler || []);
+    if (reh.length) isler.push({ k: 'rehber-' + kod, t: 'Bu aramada çıkan rehber sitelere eklenin', s: 'Site başına 10 dakika',
+      n: '"' + k.kelime + '" arayanlar Google’da bu sayfaları da görüyor. Buralarda adınız olsun:',
+      siteler: reh.map(function (x) { return { ad: x.baslik, alan: x.alan, url: x.link || ('https://' + x.alan), not: x.sira + '. sırada' }; }),
+      adimlar: ['Her sayfayı açın, işletmeniz listede var mı bakın.', 'Yoksa "Firma ekle" ya da "Ücretsiz kayıt" bölümünden ekleyin. Adı, adresi ve telefonu Google’daki ile aynı yazın.'],
+      sonuc: 'Müşteri rehbere tıklasa bile sizi görür. Yapay zekâ da bu rehberleri okuyor.' });
+    if (!isler.length) isler.push({ bilgi: true, t: 'Bu aramada en öndesiniz', n: 'Yerinizi korumak için her hafta birkaç yeni yorum toplayın ve ayda birkaç fotoğraf ekleyin.' });
+    return isler;
+  }
+  function aramaSayfaCiz(n) {
+    var o = gecmis[0]; if (!o) return false;
+    var k = (o.kelimeler || [])[n]; if (!k) return false;
+    var i = isletme, d = aramaDurum(k), b = o.isletme_bilgi || {};
+    $('ar-baslik').textContent = '"' + k.kelime + '"';
+    $('ar-rozet').textContent = d.yazi; $('ar-rozet').className = 'rozet ' + d.sinif;
+    var en = enIyiYer(k);
+    $('ar-hedef').textContent = en && en.sira === 1 ? 'Bu aramada en öndesiniz. Hedef: yerinizi korumak.'
+      : en && en.sira <= 3 ? 'Hedef: 1. sıra. Çok yakınsınız.'
+      : en && en.sira <= 10 ? 'Hedef: ilk 3. İlk 3’e girenler tıklamaların çoğunu alıyor.'
+      : 'Hedef: önce Google’ın ilk sayfasına girmek (harita kutusu veya ilk 10 site).';
+    var kut = $('ar-kutular'); kut.innerHTML = '';
+    [['Harita kutusu', k.yerel_kutu ? siraMetni(k.yerel_kutuda, 'Yok') : '-', 'Sayfanın en üstündeki 3 işletme'],
+     ['Siteler', 'arama_sira' in k ? siraMetni(k.arama_sira, 'Yok') : '-', k.arama_link ? gosterLink(k.arama_link) : 'ilk 10 sonuç'],
+     ['Google Haritalar', k.harita_bakilan != null ? siraMetni(k.harita_sira, 'Yok') : '-', 'ilk 20 sonuç']].forEach(function (x) {
+      var dv = el('div', null, 'sayi-kutu'); dv.appendChild(el('span', x[0])); var bb = el('b', x[1]); if (/^\d/.test(x[1]) && parseInt(x[1], 10) <= 3) bb.className = 'iyi'; dv.appendChild(bb); dv.appendChild(el('small', x[2])); kut.appendChild(dv);
+    });
+    var on = $('ar-onde'); on.innerHTML = '';
+    if (k.yerel_kutu && k.yerel_kutu.length) {
+      on.appendChild(el('h4', 'Harita kutusunda'));
+      var ol = el('ol', null, 'onde-liste');
+      k.yerel_kutu.forEach(function (ad) { ol.appendChild(el('li', ad)); }); on.appendChild(ol);
+    }
+    if (k.harita_birinci) on.appendChild(el('p', 'Haritalarda 1.: ' + k.harita_birinci.ad + (k.harita_birinci.yorum != null ? ' · ' + sayi(k.harita_birinci.yorum) + ' yorum' : '') + (k.harita_birinci.puan ? ' · ' + String(k.harita_birinci.puan).replace('.', ',') + ' ★' : '') + (b.bulundu && b.yorum != null ? '  (sizde ' + sayi(b.yorum) + ' yorum)' : ''), 'kart-alt'));
+    if (k.arama_ilk3 && k.arama_ilk3.length) {
+      on.appendChild(el('h4', 'Sitelerde ilk sıralar'));
+      var ol2 = el('ol', null, 'onde-liste');
+      k.arama_ilk3.forEach(function (x) { var li = el('li'); li.appendChild(el('b', x.alan || '-')); li.appendChild(el('span', ' ' + (x.baslik || ''))); if (x.siz) li.className = 'siz'; ol2.appendChild(li); });
+      on.appendChild(ol2);
+    }
+    if (!on.children.length) on.appendChild(el('p', 'Bu arama için rakip bilgisi yok.', 'kart-alt'));
+    isEkle($('ar-isler'), aramaIsleri(k, o, i));
+    var ks = o.kelimeler || [];
+    $('ar-onceki').hidden = n <= 0; $('ar-onceki').href = '#arama-' + (n - 1);
+    $('ar-sonraki').hidden = n >= ks.length - 1; $('ar-sonraki').href = '#arama-' + (n + 1);
+    return true;
+  }
+
   function yzYuzde(o) { return o && o.yz_soru_sayisi ? Math.round(100 * (o.yz_gecen || 0) / o.yz_soru_sayisi) : null; }
   function yzGruplar(o) {
     var g = [], bul = {};
@@ -479,40 +606,29 @@
     var ks = o.kelimeler || [];
     var hOlculen = ks.filter(function (k) { return !k.harita_hata && k.harita_bakilan != null; });
     var hCikan = hOlculen.filter(function (k) { return k.harita_sira; });
-    $('k-harita').textContent = o.harita_sira ? o.harita_sira + '.' : (o.harita_sonuclar ? 'Yok' : '-');
-    $('k-harita-not').textContent = hOlculen.length > 1
-      ? (hCikan.length ? hOlculen.length + ' aramadan ' + hCikan.length + ' tanesinde çıktınız, en iyi sıranız' : hOlculen.length + ' aramada da ilk 20’de değilsiniz')
-      : (o.harita_sira ? 'sıradasınız' : (o.harita_sonuclar ? 'ilk 20’de değilsiniz' : 'ölçülemedi'));
     var as = o.arama_sonuclar || {};
-    $('k-arama').textContent = o.arama_sira ? o.arama_sira + '.' : (o.arama_sonuclar ? 'Yok' : '-');
-    var aOlculen = ks.filter(function (k) { return 'arama_sira' in k; });
-    var aKel = aOlculen.map(function (k) { return '"' + k.kelime + '"'; }).join(' ve ');
-    $('k-arama-not').textContent = aOlculen.length && !o.arama_sira && !as.yerel_kutuda ? aKel + ' aramasında ilk 10 sonuçta değilsiniz' : o.arama_sira ? 'normal sonuçlarda' : (as.yerel_kutuda ? 'ama harita kutusunda ' + as.yerel_kutuda + '.' : (o.arama_sonuclar ? 'ilk sonuçlarda değilsiniz' : 'ölçülemedi'));
+    var ozt = aramaOzet(o);
+    $('k-harita').textContent = o.harita_sira ? o.harita_sira + '.' : (o.harita_sonuclar ? 'Yok' : '-');
+    $('k-harita-not').textContent = ozt.hOlculen
+      ? (ozt.hCikan ? ozt.hOlculen + ' aramadan ' + ozt.hCikan + ' tanesinde ilk 20’desiniz, en iyi sıranız' : ozt.hOlculen + ' aramada da ilk 20’de değilsiniz')
+      : (o.harita_sira ? 'sıradasınız' : (o.harita_sonuclar ? 'ilk 20’de değilsiniz' : 'ölçülemedi'));
+    $('k-arama').textContent = ozt.aOlculen ? ozt.ilkSayfa + ' / ' + ozt.aOlculen : '-';
+    $('k-arama-not').textContent = ozt.aOlculen ? 'aramada Google’ın ilk sayfasındasınız (harita kutusu veya ilk 10 site)' : 'ölçülemedi';
     var dh = dortHafta(o);
     $('k-yz').textContent = o.yz_soru_sayisi ? '%' + yzYuzde(o) : '-';
     $('k-yz-not').textContent = o.yz_soru_sayisi ? 'her 100 cevapta ' + yzYuzde(o) + ' kez adınız geçti' + (dh ? '. 4 haftalık ortalama: %' + dh.yuzde : '') : 'ölçülemedi';
     ['k-harita', 'k-arama', 'k-yz'].forEach(function (id) { $(id).className = ''; });
     if (o.harita_sira && o.harita_sira <= 3) $('k-harita').className = 'iyi';
+    if (ozt.ilkSayfa) $('k-arama').className = 'iyi';
     if (o.yz_gecen > 0) $('k-yz').className = 'iyi';
 
     var h = (o.hatalar || []).filter(Boolean);
     $('sonuc-hata').hidden = !h.length;
     if (h.length) $('sonuc-hata').textContent = 'Bazı ölçümler yapılamadı: ' + h.join(' · ');
 
-    // Aramalar tek tek
-    var kt = $('kelime-tablo'); kt.innerHTML = '';
-    ks.forEach(function (k) {
-      var tr = el('tr');
-      tr.appendChild(el('td', '"' + k.kelime + '"'));
-      var h = el('td'); siraYaz(h, k.harita_sira, k.harita_hata, k.harita_bakilan == null && !k.harita_hata); tr.appendChild(h);
-      var g = el('td'); siraYaz(g, k.arama_sira, k.arama_hata, !('arama_sira' in k) && !k.arama_hata);
-      if (!k.arama_sira && k.yerel_kutuda) { g.textContent = 'harita kutusunda ' + k.yerel_kutuda + '.'; g.className = 'sira-iyi'; }
-      tr.appendChild(g);
-      tr.appendChild(el('td', (k.harita_ilk3 && k.harita_ilk3[0]) || '-'));
-      kt.appendChild(tr);
-    });
-    $('kelime-tablo').closest('section').hidden = !ks.length;
-    $('kelime-konum').textContent = 'Google’da ' + (as.konum ? yerde(isletme.semt) + 'ki biri gibi, ' : '') + 'hesabına giriş yapmamış bir müşteri gibi arıyoruz ve ilk 10 sonuca bakıyoruz. Google aramasında ilk 2 aramaya bakıyoruz, haritalara 5 aramanın hepsinde. Kendi bilgisayarınızda sonuçlar biraz farklı çıkabilir, çünkü Google size daha önce girdiğiniz siteleri öne çıkarır.';
+    // Aramalar tek tek: her arama bir satır, rozete tıklayınca o aramanın sayfası açılır
+    aramaListeCiz(o);
+    $('kelime-konum').textContent = 'Google’da ' + (as.konum ? yerde(isletme.semt) + 'ki, ' : '') + 'hesabına giriş yapmamış bir müşteri gibi arıyoruz. Kendi bilgisayarınızda sonuçlar biraz farklı çıkabilir, çünkü Google size daha önce girdiğiniz siteleri öne çıkarır.';
 
     // Rakip tablosu
     var tb = $('rakip-tablo'); tb.innerHTML = '';
@@ -652,12 +768,17 @@
   });
 
   // Sol menü: #ozet, #isler, #yz, #google, #hesap
-  var SAYFALAR = ['ozet', 'isler', 'yz', 'google', 'hesap'];
+  var SAYFALAR = ['ozet', 'isler', 'yz', 'google', 'hesap', 'arama'];
   function sayfaGoster(ad, kaydir) {
+    var m = /^arama-(\d+)$/.exec(ad || ''), hash = ad;
+    if (m) { ad = 'arama'; if (!aramaSayfaCiz(parseInt(m[1], 10))) { ad = 'google'; hash = 'google'; } }
+    else if (ad === 'arama') ad = 'google';
     if (SAYFALAR.indexOf(ad) < 0) ad = 'ozet';
+    if (ad !== 'arama') hash = ad;
     document.querySelectorAll('[data-sayfa]').forEach(function (s) { s.hidden = s.getAttribute('data-sayfa') !== ad; });
-    document.querySelectorAll('#yan-menu [data-git]').forEach(function (a) { if (a.getAttribute('data-git') === ad) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-    if (location.hash.slice(1) !== ad) history.replaceState(null, '', '#' + ad);
+    var menuAd = ad === 'arama' ? 'google' : ad;
+    document.querySelectorAll('#yan-menu [data-git]').forEach(function (a) { if (a.getAttribute('data-git') === menuAd) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    if (location.hash.slice(1) !== hash) history.replaceState(null, '', '#' + hash);
     if (kaydir !== false) window.scrollTo(0, 0);
   }
   window.addEventListener('hashchange', function () { sayfaGoster(location.hash.slice(1)); });
@@ -666,6 +787,7 @@
   $('yeniden').addEventListener('click', olc);
   $('cikis').addEventListener('click', function () { A.cikis(); });
 
+  var ilkHash = location.hash.slice(1);
   A.girisGerekli().then(function (s) { oturum = s; return A.isletmeGetir(); }).then(function (i) {
     if (!i || !i.kurulum_bitti) { location.replace(A.KOK + 'kurulum.html'); return; }
     isletme = i;
@@ -680,6 +802,7 @@
       genelCiz();
       kelimeFormuDoldur();
       if (gecmis.length) sonucCiz(gecmis[0]); else isSayaci();
+      if (/^arama-\d+$/.test(ilkHash)) sayfaGoster(ilkHash, false);
       $('yukleniyor').hidden = true; $('panel').hidden = false;
     });
   }).catch(function (err) {
