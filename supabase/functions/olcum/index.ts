@@ -334,11 +334,14 @@ Deno.serve(async (req) => {
   const { data: isl } = await db.from("isletmeler").select("*").eq("sahip", u.user.id).maybeSingle();
   if (!isl || !isl.kurulum_bitti) return json({ hata: "Önce kurulumu tamamlayın." }, 400);
 
-  // Günlük ölçüm hakkı (otomatik haftalık ölçümler sayılmaz)
-  const hak = parseInt(Deno.env.get("GUNLUK_OLCUM_HAKKI") || "3", 10);
-  const { count } = await db.from("olcumler").select("id", { count: "exact", head: true })
-    .eq("sahip", u.user.id).eq("kaynak", "elle").gte("baslangic", new Date(Date.now() - 864e5).toISOString());
-  if ((count || 0) >= hak) return json({ hata: `Bugünkü ölçüm hakkınız (${hak}) doldu. Yarın tekrar deneyin.` }, 429);
+  // Günlük ölçüm hakkı (otomatik haftalık ölçümler sayılmaz). Yöneticiler (deneme için) sınırsız.
+  const { data: ymt } = await db.from("yoneticiler").select("eposta").eq("eposta", String(u.user.email || "").toLowerCase()).maybeSingle();
+  if (!ymt) {
+    const hak = parseInt(Deno.env.get("GUNLUK_OLCUM_HAKKI") || "3", 10);
+    const { count } = await db.from("olcumler").select("id", { count: "exact", head: true })
+      .eq("sahip", u.user.id).eq("kaynak", "elle").gte("baslangic", new Date(Date.now() - 864e5).toISOString());
+    if ((count || 0) >= hak) return json({ hata: `Bugünkü ölçüm hakkınız (${hak}) doldu. Yarın tekrar deneyin.` }, 429);
+  }
 
   if (!SERP && !GEM) return json({ hata: "Ölçüm anahtarları henüz eklenmedi: SERPAPI_KEY, GEMINI_API_KEY" }, 503);
   const { son, hepsiHata } = await olcumYap(db, isl, SERP, GEM, "elle");
