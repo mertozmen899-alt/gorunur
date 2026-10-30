@@ -70,12 +70,36 @@
       isler.push({ t: 'Sitenizin başlığını aramaya uydurun', s: '15 dakika', n: '"' + o.arama_sorgu + '" aramasında sitenizi ilk sonuçlarda göremedik. Ana sayfa başlığında hem işinizi hem semtinizi yazın (örnek: "' + i.ad + ' | ' + (i.is_turu || '') + ' ' + (i.semt || '').split(',')[0] + '").' });
     }
     if (o.yz_soru_sayisi && o.yz_gecen === 0) {
-      isler.push({ t: 'Yapay zekâ sizi henüz önermiyor', s: 'Birkaç hafta sürer', n: 'Sorduğumuz ' + o.yz_soru_sayisi + ' sorunun hiçbirinde adınız geçmedi. Yapay zekâ önerirken Google profili, yorumlar ve rehber sitelere bakıyor: profilinizdeki hizmet listesini ve açıklamayı doldurun, sektör rehberlerinde profil açın.' });
+      isler.push({ t: 'Yapay zekâ sizi henüz önermiyor', s: 'Birkaç hafta sürer', n: 'Sorduğumuz ' + o.yz_soru_sayisi + ' sorunun hiçbirinde adınız geçmedi. İlk adım olarak ChatGPT’nin baktığı Bing Haritalar’a kaydolun; diğer adımlar aşağıdaki "Yapay zekâda önerilmek için" kartında.', l: '#yz-yol-kart', lm: 'Adımları gör' });
     }
     if (o.harita_sira && o.harita_sira <= 3 && o.yz_gecen > 0) {
       isler.push({ t: 'İyi durumdasınız, yerinizi koruyun', s: 'Her hafta', n: 'Haritalarda ilk 3’tesiniz ve yapay zekâ sizi öneriyor. Yeni yorum gelmeye devam etsin, profilinize ayda 2-3 güncel fotoğraf ekleyin.' });
     }
     return isler.slice(0, 4);
+  }
+
+  // Yapay zekâda önerilmek için somut adımlar; sektöre göre rehber önerir
+  function yzYolu(o, i) {
+    var t = sadeK(i.is_turu || '');
+    var yer = (i.semt || '').split(',')[0].trim();
+    var cek = (i.is_turu || 'işletme').toLocaleLowerCase('tr');
+    var adimlar = [
+      { t: 'Bing Haritalar’a kaydolun', s: '15 dakika · ücretsiz', n: 'ChatGPT yerel işletme bilgisini büyük ölçüde Bing’den alıyor. Google profiliniz varsa Bing Places’te "Google’dan içe aktar" ile bilgileriniz birkaç tıkla taşınır.', l: 'https://www.bingplaces.com', lm: 'Bing Places' },
+      { t: 'Apple Haritalar ve Yandex Haritalar’a ekleyin', s: '20 dakika · ücretsiz', n: 'iPhone kullanıcıları ve Siri Apple Haritalar’a, Türkiye’de birçok kişi Yandex’e bakıyor. Adı, adresi ve telefonu Google’daki ile birebir aynı yazın.', l: 'https://businessconnect.apple.com', lm: 'Apple Business Connect' }
+    ];
+    if (/(dis|doktor|hekim|klinik|psikolog|diyetisyen|fizyoterap|estetik|saglik)/.test(t) && !/veteriner/.test(t))
+      adimlar.push({ t: 'Doktortakvimi’nde profil açın', s: '20 dakika', n: 'Sağlık alanında yapay zekâ ve Google en çok Doktortakvimi profillerini ve yorumlarını gösteriyor. Uzmanlık alanlarınızı ve ' + yer + ' adresinizi ekleyin.', l: 'https://www.doktortakvimi.com', lm: 'Doktortakvimi' });
+    else if (/(tadilat|temizlik|nakliyat|boya|tesisat|elektrik|usta|montaj|tamir|tamirat|ders|fotograf|dugun|organizasyon|bahce|klima|cilingir)/.test(t))
+      adimlar.push({ t: 'Armut’ta hizmet profili açın', s: '20 dakika', n: 'Hizmet işlerinde Armut profilleri ve yorumları aramalarda ve yapay zekâ cevaplarında sık geçiyor. ' + yer + ' bölgesini ve verdiğiniz her hizmeti seçin.', l: 'https://armut.com', lm: 'Armut' });
+    else if (/(restoran|kafe|cafe|lokanta|pastane|otel|pansiyon|bar|meyhane|kebap|doner|pide|balik)/.test(t))
+      adimlar.push({ t: 'Tripadvisor’da işletmenizi sahiplenin', s: '15 dakika', n: 'Yeme-içme ve konaklamada yapay zekâ Tripadvisor yorumlarını sıkça kaynak gösteriyor. Menü, fotoğraf ve çalışma saatlerini ekleyin.', l: 'https://www.tripadvisor.com.tr/Owners', lm: 'Tripadvisor işletme' });
+    else
+      adimlar.push({ t: 'Şikayetvar’da şikâyetlere cevap verin', s: 'Haftada 10 dakika', n: 'Yapay zekâ "güvenilir mi?" sorularında Şikayetvar’a bakıyor. Markanızın sayfası varsa cevapsız şikâyetlere kısa, çözüm odaklı cevap yazın; çözülenler puanınızı yükseltir.', l: 'https://www.sikayetvar.com', lm: 'Şikayetvar' });
+    adimlar.push(i.site
+      ? { t: 'Sitenize "' + yer + ' ' + cek + '" sayfası ekleyin', s: '1-2 saat', n: 'Gemini önerirken en çok işletmelerin kendi sitelerini kaynak gösteriyor. Tek sayfada şunlar olsun: hangi hizmetleri verdiğiniz, ' + yer + ' adresiniz, telefon, çalışma saatleri ve müşterilerin sık sorduğu 5 soru ile cevapları.' }
+      : { t: 'Basit bir web sitesi açın', s: 'Yarım gün', n: 'Gemini önerirken en çok işletmelerin kendi sitelerini kaynak gösteriyor. Tek sayfalık bir site yeter: hizmetler, ' + yer + ' adresi, telefon, çalışma saatleri ve sık sorulan sorular.' });
+    adimlar.push({ t: 'Yerel listelerde ve haberlerde adınız geçsin', s: 'Ayda 1 deneme', n: '"' + yer + '’un en iyi ' + cek + ' yerleri" gibi yazılar ve yerel haber siteleri yapay zekânın en sevdiği kaynaklar. Yerel gazetelere, şehir bloglarına ve Instagram sayfalarına ulaşıp işletmenizi tanıtmalarını isteyin.' });
+    return adimlar;
   }
 
   function sonucCiz(o) {
@@ -159,6 +183,7 @@
     });
     if (!yl.children.length) yl.appendChild(el('p', 'Yapay zekâ ölçümü yapılamadı.', 'kart-alt'));
 
+    isEkle($('yz-isler'), yzYolu(o, i));
     isEkle($('olcum-isler'), olcumIsleri(o, i));
     if (!$('olcum-isler').children.length) isEkle($('olcum-isler'), [{ t: 'Belirgin bir eksik görmedik', n: 'Yine de aşağıdaki genel adımlara göz atın.' }]);
 
