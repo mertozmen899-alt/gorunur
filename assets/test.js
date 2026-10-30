@@ -205,14 +205,14 @@
   }
   function adimlarUret(siz, lider, yzVar) {
     var A = [];
-    if (!siz) A.push({ t: 'Google İşletme Profilinizi açın', n: 'Haritalarda hiç görünmüyorsunuz. Bu, müşterilerin sizi bulması için en önemli adım ve ücretsiz.', a: ['Telefonunuzda Google Haritalar\'ı açın, işletmenizin adını arayın. Çıkarsa "Bu işletmenin sahibi misiniz?" deyip sahiplenin.', 'Çıkmazsa business.google.com adresinden "İşletme ekle" deyin; adı tabelanızdaki gibi, kategoriyi "' + durum.is + '" olarak seçin.', 'Adres, telefon ve çalışma saatlerini girin, Google\'ın istediği doğrulamayı yapın.'] });
-    if (siz && lider && (siz.yorum || 0) < Math.max(10, (lider.yorum || 0) * 0.6)) A.push({ t: 'Müşterilerinizden Google yorumu isteyin', n: 'Sizde ' + (siz.yorum || 0) + ' yorum var, ' + lider.sira + '. sıradakinde ' + (lider.yorum || 0) + '. Google en çok yorumu olan ve düzenli yorum alan işletmeyi öne çıkarıyor.', a: ['Google İşletme Profilinizde "Yorum iste" bölümünden bağlantınızı kopyalayın.', 'Bu hafta işini yaptığınız 10 müşterinize WhatsApp\'tan kısa bir teşekkürle gönderin.', 'Gelen her yoruma 1-2 cümleyle cevap verin.'] });
-    if (siz && !siz.web) A.push({ t: 'Profilinize web sitesi ya da Instagram bağlantısı ekleyin', n: 'Profilinizde bir bağlantı görünmüyor' + (lider && lider.web ? ', önünüzdekinde var.' : '.'), a: ['Google İşletme Profilinde "Profili düzenle" deyin.', '"Web sitesi" alanına sitenizi, yoksa Instagram adresinizi yazın.', 'Kaydedin; birkaç gün içinde görünür.'] });
-    if (siz && !siz.saat) A.push({ t: 'Çalışma saatlerinizi girin', n: 'Saatleriniz profilde görünmüyor. Google "şimdi açık" olanları öne çıkarır.', a: ['Profili düzenle bölümünde "Saatler"i açın.', 'Her günün açılış ve kapanış saatini girin.', 'Bayram ve tatil günleri için "özel saatler" ekleyin.'] });
-    if (siz && !siz.tel) A.push({ t: 'Telefon numaranızı profile ekleyin', n: 'Profilinizde telefon görünmüyor; müşteri sizi tek dokunuşla arayamıyor.', a: ['Profili düzenle, "İletişim" bölümünü açın.', 'Müşterinin aradığı numarayı yazın.', 'Aynı numarayı sitenizde ve Instagram\'da da kullanın.'] });
-    if (siz && lider && siz.puan && lider.puan && siz.puan < lider.puan - 0.2) A.push({ t: 'Düşük puanlı yorumlara nazikçe cevap verin', n: 'Puanınız ' + siz.puan.toLocaleString('tr-TR') + ', önünüzdekinin ' + lider.puan.toLocaleString('tr-TR') + '.', a: ['3 yıldız ve altındaki yorumları bulun.', 'Kısa bir özür ve çözüm teklifiyle cevap verin.', 'Sorunu çözdüğünüz müşteriden yorumunu güncellemesini rica edin.'] });
-    if (!yzVar) A.push({ t: 'Yapay zekânın baktığı sitelerde yer alın', n: 'Yapay zekâ sizi önermedi. Önerdiği işletmeler, sektör rehberlerinde ve haritalarda bilgisi eksiksiz olanlar.', a: ['Sektörünüzdeki rehber sitelerinde ücretsiz profil açın.', 'Her yerde adınızı, adresinizi, telefonunuzu aynı yazın.', 'Profilinize hizmetlerinizi tek tek ekleyin.'] });
-    A.push({ t: 'Her hafta bir Google gönderisi paylaşın', n: 'Düzenli paylaşım yapan profiller daha canlı görünür.', a: ['Profilinizde "Güncelleme ekle" deyin.', 'Bir iş fotoğrafı ve 2-3 cümle yazın.', 'Her hafta tekrarlayın.'] });
+    if (!siz) A.push({ g:'Müşterilerin sizi bulması için ilk adım', t: 'Google İşletme Profilinizi açın', n: 'Haritalarda hiç görünmüyorsunuz. Bu, müşterilerin sizi bulması için en önemli adım ve ücretsiz.', a: ['Telefonunuzda Google Haritalar\'ı açın, işletmenizin adını arayın. Çıkarsa "Bu işletmenin sahibi misiniz?" deyip sahiplenin.', 'Çıkmazsa business.google.com adresinden "İşletme ekle" deyin; adı tabelanızdaki gibi, kategoriyi "' + durum.is + '" olarak seçin.', 'Adres, telefon ve çalışma saatlerini girin, Google\'ın istediği doğrulamayı yapın.'] });
+    if (siz && lider && (siz.yorum || 0) < Math.max(10, (lider.yorum || 0) * 0.6)) A.push({ g:'1. sıradakinin sizden çok daha fazla yaptığı bir şey', t: 'Müşterilerinizden Google yorumu isteyin', n: 'Sizde ' + (siz.yorum || 0) + ' yorum var, ' + lider.sira + '. sıradakinde ' + (lider.yorum || 0) + '. Google en çok yorumu olan ve düzenli yorum alan işletmeyi öne çıkarıyor.', a: ['Google İşletme Profilinizde "Yorum iste" bölümünden bağlantınızı kopyalayın.', 'Bu hafta işini yaptığınız 10 müşterinize WhatsApp\'tan kısa bir teşekkürle gönderin.', 'Gelen her yoruma 1-2 cümleyle cevap verin.'] });
+    if (siz && !siz.web) A.push({ g:'Profilinizde müşterinin göremediği önemli bir bilgi', t: 'Profilinize web sitesi ya da Instagram bağlantısı ekleyin', n: 'Profilinizde bir bağlantı görünmüyor' + (lider && lider.web ? ', önünüzdekinde var.' : '.'), a: ['Google İşletme Profilinde "Profili düzenle" deyin.', '"Web sitesi" alanına sitenizi, yoksa Instagram adresinizi yazın.', 'Kaydedin; birkaç gün içinde görünür.'] });
+    if (siz && !siz.saat) A.push({ g:'Google\'ın öne çıkardığı işletmelerde olup sizde olmayan bir şey', t: 'Çalışma saatlerinizi girin', n: 'Saatleriniz profilde görünmüyor. Google "şimdi açık" olanları öne çıkarır.', a: ['Profili düzenle bölümünde "Saatler"i açın.', 'Her günün açılış ve kapanış saatini girin.', 'Bayram ve tatil günleri için "özel saatler" ekleyin.'] });
+    if (siz && !siz.tel) A.push({ g:'Müşterinin size ulaşmasını zorlaştıran bir eksik', t: 'Telefon numaranızı profile ekleyin', n: 'Profilinizde telefon görünmüyor; müşteri sizi tek dokunuşla arayamıyor.', a: ['Profili düzenle, "İletişim" bölümünü açın.', 'Müşterinin aradığı numarayı yazın.', 'Aynı numarayı sitenizde ve Instagram\'da da kullanın.'] });
+    if (siz && lider && siz.puan && lider.puan && siz.puan < lider.puan - 0.2) A.push({ g:'Puanınızı yukarı taşıyacak bir alışkanlık', t: 'Düşük puanlı yorumlara nazikçe cevap verin', n: 'Puanınız ' + siz.puan.toLocaleString('tr-TR') + ', önünüzdekinin ' + lider.puan.toLocaleString('tr-TR') + '.', a: ['3 yıldız ve altındaki yorumları bulun.', 'Kısa bir özür ve çözüm teklifiyle cevap verin.', 'Sorunu çözdüğünüz müşteriden yorumunu güncellemesini rica edin.'] });
+    if (!yzVar) A.push({ g:'Yapay zekânın sizi önermesi için yapılacak bir iş', t: 'Yapay zekânın baktığı sitelerde yer alın', n: 'Yapay zekâ sizi önermedi. Önerdiği işletmeler, sektör rehberlerinde ve haritalarda bilgisi eksiksiz olanlar.', a: ['Sektörünüzdeki rehber sitelerinde ücretsiz profil açın.', 'Her yerde adınızı, adresinizi, telefonunuzu aynı yazın.', 'Profilinize hizmetlerinizi tek tek ekleyin.'] });
+    A.push({ g:'Öndeki işletmelerin düzenli yaptığı bir şey', t: 'Her hafta bir Google gönderisi paylaşın', n: 'Düzenli paylaşım yapan profiller daha canlı görünür.', a: ['Profilinizde "Güncelleme ekle" deyin.', 'Bir iş fotoğrafı ve 2-3 cümle yazın.', 'Her hafta tekrarlayın.'] });
     return A.slice(0, 3);
   }
   function kiyasSatir(tablo, ad, sizV, liderV, iyi) {
@@ -250,10 +250,18 @@
     k.appendChild(el('p', 't-alt-b', 'Sizi yukarı taşıyacak ilk 3 adım'));
     A.forEach(function (x, i) {
       var d = el('div', 't-adim' + (i ? ' kilitli' : ''));
-      var bas = el('div', 't-adim-bas'); bas.appendChild(el('b', 't-adim-no', String(i + 1))); bas.appendChild(el('b', null, x.t)); d.appendChild(bas);
-      var ic = el('div', 't-adim-ic'); ic.appendChild(el('p', null, x.n));
-      var ol = el('ol'); x.a.forEach(function (s) { ol.appendChild(el('li', null, s)); }); ic.appendChild(ol);
-      if (i) ic.setAttribute('aria-hidden', 'true');
+      var bas = el('div', 't-adim-bas'); bas.appendChild(el('b', 't-adim-no', String(i + 1))); bas.appendChild(el('b', null, i ? x.g : x.t));
+      if (i) bas.appendChild(el('span', 't-kilit-ikon', '🔒'));
+      d.appendChild(bas);
+      var ic = el('div', 't-adim-ic');
+      if (i) {
+        // Gerçek adım metni sayfaya hiç yazılmaz; yerine anlamsız, bulanık yer tutucu
+        ic.setAttribute('aria-hidden', 'true');
+        ['Bu adımı hesabınızda adım adım anlatıyoruz, hazır metniyle birlikte.', 'Ne kadar süreceğini ve nereden yapılacağını da yazıyoruz.', 'Yaptıktan sonra etkisini bir sonraki ölçümde gösteriyoruz.'].forEach(function (t) { ic.appendChild(el('p', null, t)); });
+      } else {
+        ic.appendChild(el('p', null, x.n));
+        var ol = el('ol'); x.a.forEach(function (s) { ol.appendChild(el('li', null, s)); }); ic.appendChild(ol);
+      }
       d.appendChild(ic); k.appendChild(d);
     });
     var kilit = el('div', 't-kilit');
