@@ -14,12 +14,12 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap"></noscript>
 <script>(function(){var t;try{t=localStorage.getItem('gorunur_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t;if(t==='koyu'){var m=document.querySelector('meta[name="theme-color"]');if(m)m.content='#0F1217'}})()</script>
-<link rel="stylesheet" href="assets/style.css?v=28">
+<link rel="stylesheet" href="assets/style.css?v=29">
 <script src="assets/tema.js?v=1" defer></script>
 <script src="assets/iletisim.js?v=1" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/auth.js?v=4"></script>
-<script src="assets/panel.js?v=22" defer></script>
+<script src="assets/panel.js?v=23" defer></script>
 <script src="assets/sayac.js?v=1" defer></script>
 </head>
 <body class="olcum-yok">
@@ -155,8 +155,12 @@
 </section>
 <section class="kart genis">
 <h3>Yapay zekâ ne dedi?</h3>
-<p class="kart-alt" id="yz-not"></p>
-<div id="yz-liste" class="yz-liste"></div>
+<p class="kart-alt">Her hafta farklı yapay zekâlara müşteri gibi soruyoruz. Birine tıklayınca sorduğumuz soruları ve aldığımız cevapları görebilirsiniz.</p>
+<div class="yz-motorlar" id="yz-motorlar">
+<details class="yz-motor" id="motor-gemini"><summary></summary><div class="yz-motor-ic"><p class="kart-alt" id="yz-not"></p><div id="yz-liste" class="yz-liste"></div></div></details>
+<details class="yz-motor" id="motor-gyz"><summary></summary><div class="yz-motor-ic"></div></details>
+<details class="yz-motor" id="motor-cg"><summary></summary><div class="yz-motor-ic"></div></details>
+</div>
 </section>
 <section class="kart genis">
 <div class="kart-bas"><h3>Önerilmek için ne yapmalı?</h3><a href="#isler">İşlerim →</a></div>
