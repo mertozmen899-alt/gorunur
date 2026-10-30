@@ -40,6 +40,22 @@ function alanAdi(url?: string | null): string {
     return "";
   }
 }
+// İş türünden aramalarda kullanılacak çekirdek kelime ("mobilya satıcısı" -> "mobilya")
+const EKLER = new Set(["satıcısı", "satıcı", "satış", "mağazası", "mağaza", "firması", "firma", "hizmeti", "hizmetleri", "merkezi", "noktası", "şirketi"]);
+function otomatikKelimeler(isK: string, yer: string): string[] {
+  const kelimeler = isK.split(/\s+/).filter(Boolean);
+  const cekir = kelimeler.filter((k) => !EKLER.has(k)).join(" ") || isK;
+  const adaylar = [`${yer} ${cekir}`, `${isK} ${yer}`, `en iyi ${cekir} ${yer}`, `${cekir} ${yer} tavsiye`];
+  return tekillestir(adaylar).slice(0, 3);
+}
+function tekillestir(liste: string[]): string[] {
+  const gorulen = new Set<string>(), sonuc: string[] = [];
+  for (const k of liste.map((x) => x.replace(/\s+/g, " ").trim()).filter(Boolean)) {
+    const imza = sade(k).split(" ").sort().join(" ");
+    if (!gorulen.has(imza)) { gorulen.add(imza); sonuc.push(k); }
+  }
+  return sonuc;
+}
 // Adres istenen semt/şehirde mi? (adres yoksa kabul)
 function yerdeMi(adres: unknown, semtKisa: string, sehir: string, turkiye: boolean): boolean {
   if (turkiye || !adres) return true;
@@ -127,30 +143,51 @@ Deno.serve(async (req) => {
   const sehir = ((isl.semt || "").split(",")[1] || "").trim();
   const turkiye = isl.semt === "Türkiye geneli";
   const isK = (isl.is_turu || "").toLocaleLowerCase("tr");
-  const sorgu = turkiye ? isK : `${isK} ${semtKisa}`;
+  const yerK = turkiye ? "" : semtKisa.toLocaleLowerCase("tr");
+  const elle = ((isl.anahtar_kelimeler || []) as string[]).map((k) => String(k).toLocaleLowerCase("tr").trim()).filter((k) => k.length >= 2).slice(0, 3);
+  // Kullanıcının yazdıkları önce; 3'e tamamlamak için otomatik olanlar eklenir
+  const kelimeler = tekillestir([...elle, ...otomatikKelimeler(isK, yerK)]).slice(0, 3);
   const siteAlan = alanAdi(isl.site);
 
   const { data: kayit } = await db.from("olcumler").insert({ isletme_id: isl.id, sahip: u.user.id, durum: "suruyor" }).select("id").single();
   const hatalar: string[] = eksik.map((e) => `${e} eksik`);
-  const s: Record<string, unknown> = { harita_sorgu: sorgu, arama_sorgu: sorgu };
+  const s: Record<string, unknown> = {};
+  type Satir = { sira: number; ad: unknown; puan: unknown; yorum: unknown; adres: unknown; site: unknown; tur: unknown; place_id: unknown; siz?: boolean };
+  const kelimeSonuc: Array<Record<string, unknown>> = kelimeler.map((k) => ({ kelime: k }));
+  const benMi = (r: Satir) => (adGeciyor(String(r.ad || ""), isl.ad) || (siteAlan && alanAdi(String(r.site || "")) === siteAlan)) && yerdeMi(r.adres, semtKisa, sehir, turkiye);
 
-  // 1) Google Haritalar
+  // 1) Google Haritalar: her arama kelimesi için
+  const haritaListeleri: Satir[][] = [];
   const harita = async () => {
     if (!SERP) return;
-    const j = await serp({ engine: "google_maps", type: "search", q: sorgu, hl: "tr" }, SERP);
-    const lr = (j.local_results || []) as Array<Record<string, unknown>>;
-    const liste = lr.slice(0, 20).map((r, i) => ({
-      sira: (r.position as number) || i + 1, ad: r.title, puan: r.rating ?? null, yorum: r.reviews ?? null,
-      adres: r.address ?? null, site: r.website ?? null, tur: r.type ?? null, place_id: r.place_id ?? null,
-    }));
-    const ben = liste.find((r) => (adGeciyor(String(r.ad || ""), isl.ad) || (siteAlan && alanAdi(String(r.site || "")) === siteAlan)) && yerdeMi(r.adres, semtKisa, sehir, turkiye));
+    const sonuc = await Promise.allSettled(kelimeler.map((q) => serp({ engine: "google_maps", type: "search", q, hl: "tr" }, SERP)));
+    sonuc.forEach((r, i) => {
+      if (r.status === "rejected") { kelimeSonuc[i].harita_hata = true; hatalar.push(`Haritalar (${kelimeler[i]}): ` + String(r.reason?.message || r.reason).slice(0, 120)); return; }
+      const lr = (r.value.local_results || []) as Array<Record<string, unknown>>;
+      const liste: Satir[] = lr.slice(0, 20).map((x, j) => ({
+        sira: (x.position as number) || j + 1, ad: x.title, puan: x.rating ?? null, yorum: x.reviews ?? null,
+        adres: x.address ?? null, site: x.website ?? null, tur: x.type ?? null, place_id: x.place_id ?? null,
+      }));
+      haritaListeleri[i] = liste;
+      const ben = liste.find(benMi);
+      kelimeSonuc[i].harita_sira = ben ? ben.sira : null;
+      kelimeSonuc[i].harita_bakilan = liste.length;
+      kelimeSonuc[i].harita_ilk3 = liste.filter((x) => x !== ben).slice(0, 3).map((x) => x.ad);
+    });
+    // Ana gösterim: en iyi sırada çıkılan arama (yoksa ilk ölçülebilen)
+    let ana = -1;
+    kelimeSonuc.forEach((k, i) => { if (k.harita_sira && (ana < 0 || (k.harita_sira as number) < (kelimeSonuc[ana].harita_sira as number))) ana = i; });
+    if (ana < 0) ana = haritaListeleri.findIndex((l) => l);
+    if (ana < 0) return;
+    const liste = haritaListeleri[ana], ben = liste.find(benMi);
+    s.harita_sorgu = kelimeler[ana];
     s.harita_sira = ben ? ben.sira : null;
     s.harita_sonuclar = liste.slice(0, 10).map((r) => ({ ...r, siz: r === ben }));
     s.rakipler = liste.filter((r) => r !== ben).slice(0, 5);
     if (ben) {
       s.isletme_bilgi = { ad: ben.ad, puan: ben.puan, yorum: ben.yorum, adres: ben.adres, tur: ben.tur, bulundu: true };
     } else {
-      // Aramada çıkmadıysa işletmeyi adıyla bulmayı dene (profil var mı?)
+      // Hiçbir aramada çıkmadıysa işletmeyi adıyla bulmayı dene (profil var mı?)
       const j2 = await serp({ engine: "google_maps", type: "search", q: `${isl.ad} ${turkiye ? "" : semtKisa}`.trim(), hl: "tr" }, SERP);
       const adaylar = [...(j2.local_results || []), ...(j2.place_results ? [j2.place_results] : [])] as Array<Record<string, unknown>>;
       const ayni = adaylar.filter((r) => adGeciyor(String(r.title || ""), isl.ad));
@@ -162,21 +199,35 @@ Deno.serve(async (req) => {
     }
   };
 
-  // 2) Google arama (normal sonuçlar + yerel kutu)
+  // 2) Google arama: ilk 2 kelime (SerpApi kotasını korumak için)
   const arama = async () => {
     if (!SERP) return;
-    const j = await serp({ engine: "google", q: sorgu, hl: "tr", gl: "tr", google_domain: "google.com.tr", num: "20" }, SERP);
-    const org = ((j.organic_results || []) as Array<Record<string, unknown>>).map((r, i) => ({
-      sira: (r.position as number) || i + 1, baslik: r.title,
-      link: /^https?:/.test(String(r.link || "")) ? r.link : (r.redirect_link && /^https?:/.test(String(r.redirect_link)) && !/google\./.test(String(r.redirect_link)) ? r.redirect_link : null),
-      gorunen: String(r.displayed_link || r.source || "").split(" ")[0],
-    }));
-    const alanOf = (r: { link: unknown; gorunen: string }) => alanAdi(r.link ? String(r.link) : r.gorunen);
-    const ben = org.find((r) => (siteAlan && alanOf(r) === siteAlan) || adGeciyor(String(r.baslik || ""), isl.ad));
-    const yerel = (((j.local_results || {}) as Record<string, unknown>).places || []) as Array<Record<string, unknown>>;
-    const yerelBen = yerel.findIndex((p) => adGeciyor(String(p.title || ""), isl.ad));
-    s.arama_sira = ben ? ben.sira : null;
-    s.arama_sonuclar = { organik: org.slice(0, 10).map((r) => ({ ...r, siz: r === ben })), yerel_kutu: yerel.slice(0, 3).map((p) => p.title), yerel_kutuda: yerelBen >= 0 ? yerelBen + 1 : null };
+    const aranacak = kelimeler.slice(0, 2);
+    const sonuc = await Promise.allSettled(aranacak.map((q) => serp({ engine: "google", q, hl: "tr", gl: "tr", google_domain: "google.com.tr", num: "20" }, SERP)));
+    let enIyi: Record<string, unknown> | null = null;
+    sonuc.forEach((r, i) => {
+      if (r.status === "rejected") { kelimeSonuc[i].arama_hata = true; hatalar.push(`Google arama (${aranacak[i]}): ` + String(r.reason?.message || r.reason).slice(0, 120)); return; }
+      const j = r.value;
+      const org = ((j.organic_results || []) as Array<Record<string, unknown>>).map((x, n) => ({
+        sira: (x.position as number) || n + 1, baslik: x.title,
+        link: /^https?:/.test(String(x.link || "")) ? x.link : (x.redirect_link && /^https?:/.test(String(x.redirect_link)) && !/google\./.test(String(x.redirect_link)) ? x.redirect_link : null),
+        gorunen: String(x.displayed_link || x.source || "").split(" ")[0],
+      }));
+      const alanOf = (x: { link: unknown; gorunen: string }) => alanAdi(x.link ? String(x.link) : x.gorunen);
+      const ben = org.find((x) => (siteAlan && alanOf(x) === siteAlan) || adGeciyor(String(x.baslik || ""), isl.ad));
+      const yerel = (((j.local_results || {}) as Record<string, unknown>).places || []) as Array<Record<string, unknown>>;
+      const yerelBen = yerel.findIndex((p) => adGeciyor(String(p.title || ""), isl.ad));
+      kelimeSonuc[i].arama_sira = ben ? ben.sira : null;
+      kelimeSonuc[i].yerel_kutuda = yerelBen >= 0 ? yerelBen + 1 : null;
+      kelimeSonuc[i].yerel_kutu = yerel.slice(0, 3).map((p) => p.title);
+      const ozet = { kelime: aranacak[i], sira: ben ? ben.sira : null, organik: org.slice(0, 10).map((x) => ({ ...x, siz: x === ben })), yerel_kutu: yerel.slice(0, 3).map((p) => p.title), yerel_kutuda: yerelBen >= 0 ? yerelBen + 1 : null };
+      if (!enIyi || (ozet.sira && (!enIyi.sira || ozet.sira < (enIyi.sira as number)))) enIyi = ozet;
+    });
+    if (enIyi) {
+      const e = enIyi as Record<string, unknown>;
+      s.arama_sorgu = e.kelime; s.arama_sira = e.sira;
+      s.arama_sonuclar = { organik: e.organik, yerel_kutu: e.yerel_kutu, yerel_kutuda: e.yerel_kutuda };
+    }
   };
 
   // 3) Yapay zekâ (Gemini + Google arama)
@@ -210,6 +261,7 @@ Deno.serve(async (req) => {
 
   const sonuclar = await Promise.allSettled([harita(), arama(), yz()]);
   sonuclar.forEach((r) => { if (r.status === "rejected") hatalar.push(String(r.reason?.message || r.reason).slice(0, 200)); });
+  s.kelimeler = kelimeSonuc;
 
   const hepsiHata = sonuclar.every((r) => r.status === "rejected");
   const guncel = { ...s, hatalar, durum: hepsiHata ? "hata" : "bitti", bitis: new Date().toISOString() };

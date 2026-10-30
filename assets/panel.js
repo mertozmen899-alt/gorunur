@@ -13,6 +13,27 @@
   function sayi(x) { return x == null ? '-' : Number(x).toLocaleString('tr-TR'); }
   function tarih(t) { return new Date(t).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }); }
 
+  var EKLER = ['satıcısı', 'satıcı', 'satış', 'mağazası', 'mağaza', 'firması', 'firma', 'hizmeti', 'hizmetleri', 'merkezi', 'noktası', 'şirketi'];
+  function sadeK(x) { return (x || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+  function tekil(liste) {
+    var gor = {}, out = [];
+    liste.map(function (x) { return (x || '').replace(/\s+/g, ' ').trim(); }).filter(Boolean).forEach(function (k) {
+      var im = sadeK(k).split(' ').sort().join(' '); if (!gor[im]) { gor[im] = 1; out.push(k); }
+    });
+    return out;
+  }
+  function otomatikKelimeler(i) {
+    var isK = (i.is_turu || '').toLocaleLowerCase('tr').trim();
+    var yer = i.semt === 'Türkiye geneli' ? '' : (i.semt || '').split(',')[0].trim().toLocaleLowerCase('tr');
+    var cek = isK.split(/\s+/).filter(function (k) { return k && EKLER.indexOf(k) < 0; }).join(' ') || isK;
+    return tekil([yer + ' ' + cek, isK + ' ' + yer, 'en iyi ' + cek + ' ' + yer, cek + ' ' + yer + ' tavsiye']).slice(0, 3);
+  }
+  function siraYaz(td, sira, hata, bakilmadi) {
+    if (bakilmadi) { td.textContent = 'bakılmadı'; td.className = 'sira-yok'; return; }
+    if (hata) { td.textContent = 'ölçülemedi'; td.className = 'sira-yok'; return; }
+    td.textContent = sira ? sira + '.' : 'yok'; td.className = sira ? (sira <= 3 ? 'sira-iyi' : '') : 'sira-yok';
+  }
+
   function isEkle(kutu, isler) {
     kutu.innerHTML = '';
     isler.forEach(function (x, k) {
@@ -72,11 +93,17 @@
       ? 'Yapay zekâya sorduğumuz ' + o.yz_soru_sayisi + ' sorunun ' + o.yz_gecen + ' tanesinde adınız geçti.' + (b.bulundu && b.yorum != null ? ' Google’da ' + sayi(b.yorum) + ' yorumunuz ve ' + String(b.puan || '-').replace('.', ',') + ' puanınız var.' : '')
       : (b.bulundu && b.yorum != null ? 'Google’da ' + sayi(b.yorum) + ' yorumunuz ve ' + String(b.puan || '-').replace('.', ',') + ' puanınız var.' : '');
 
+    var ks = o.kelimeler || [];
+    var hOlculen = ks.filter(function (k) { return !k.harita_hata && k.harita_bakilan != null; });
+    var hCikan = hOlculen.filter(function (k) { return k.harita_sira; });
     $('k-harita').textContent = o.harita_sira ? o.harita_sira + '.' : (o.harita_sonuclar ? 'Yok' : '-');
-    $('k-harita-not').textContent = o.harita_sira ? 'sıradasınız' : (o.harita_sonuclar ? 'ilk 20’de değilsiniz' : 'ölçülemedi');
+    $('k-harita-not').textContent = hOlculen.length > 1
+      ? (hCikan.length ? hOlculen.length + ' aramadan ' + hCikan.length + ' tanesinde çıktınız, en iyi sıranız' : hOlculen.length + ' aramada da ilk 20’de değilsiniz')
+      : (o.harita_sira ? 'sıradasınız' : (o.harita_sonuclar ? 'ilk 20’de değilsiniz' : 'ölçülemedi'));
     var as = o.arama_sonuclar || {};
     $('k-arama').textContent = o.arama_sira ? o.arama_sira + '.' : (o.arama_sonuclar ? 'Yok' : '-');
-    $('k-arama-not').textContent = o.arama_sira ? 'normal sonuçlarda' : (as.yerel_kutuda ? 'ama harita kutusunda ' + as.yerel_kutuda + '.' : (o.arama_sonuclar ? 'ilk sonuçlarda değilsiniz' : 'ölçülemedi'));
+    var aOlculen = ks.filter(function (k) { return 'arama_sira' in k; });
+    $('k-arama-not').textContent = aOlculen.length > 1 && !o.arama_sira && !as.yerel_kutuda ? aOlculen.length + ' aramada da ilk sonuçlarda değilsiniz' : o.arama_sira ? 'normal sonuçlarda' : (as.yerel_kutuda ? 'ama harita kutusunda ' + as.yerel_kutuda + '.' : (o.arama_sonuclar ? 'ilk sonuçlarda değilsiniz' : 'ölçülemedi'));
     $('k-yz').textContent = o.yz_soru_sayisi ? o.yz_gecen + ' / ' + o.yz_soru_sayisi : '-';
     $('k-yz-not').textContent = o.yz_soru_sayisi ? 'cevapta adınız geçti' : 'ölçülemedi';
     ['k-harita', 'k-arama', 'k-yz'].forEach(function (id) { $(id).className = ''; });
@@ -86,6 +113,20 @@
     var h = (o.hatalar || []).filter(Boolean);
     $('sonuc-hata').hidden = !h.length;
     if (h.length) $('sonuc-hata').textContent = 'Bazı ölçümler yapılamadı: ' + h.join(' · ');
+
+    // Aramalar tek tek
+    var kt = $('kelime-tablo'); kt.innerHTML = '';
+    ks.forEach(function (k) {
+      var tr = el('tr');
+      tr.appendChild(el('td', '"' + k.kelime + '"'));
+      var h = el('td'); siraYaz(h, k.harita_sira, k.harita_hata, k.harita_bakilan == null && !k.harita_hata); tr.appendChild(h);
+      var g = el('td'); siraYaz(g, k.arama_sira, k.arama_hata, !('arama_sira' in k) && !k.arama_hata);
+      if (!k.arama_sira && k.yerel_kutuda) { g.textContent = 'harita kutusunda ' + k.yerel_kutuda + '.'; g.className = 'sira-iyi'; }
+      tr.appendChild(g);
+      tr.appendChild(el('td', (k.harita_ilk3 && k.harita_ilk3[0]) || '-'));
+      kt.appendChild(tr);
+    });
+    $('kelime-tablo').closest('section').hidden = !ks.length;
 
     // Rakip tablosu
     var tb = $('rakip-tablo'); tb.innerHTML = '';
@@ -189,6 +230,25 @@
     }).then(function () { $('olc').disabled = false; $('olc').textContent = 'Tekrar dene'; });
   }
 
+  function kelimeFormuDoldur() {
+    var kayitli = isletme.anahtar_kelimeler || [], oto = otomatikKelimeler(isletme);
+    document.querySelectorAll('#kelime-form input').forEach(function (inp, n) {
+      inp.value = kayitli[n] || ''; inp.placeholder = 'Örn. ' + (oto[n] || 'başka bir arama');
+    });
+    var olculecek = tekil(kayitli.concat(oto)).slice(0, 3);
+    $('kelime-durum').textContent = 'Ölçülecek aramalar: ' + olculecek.map(function (k) { return '"' + k + '"'; }).join(', ') + (kayitli.length < 3 ? '. Boş kutuları biz tamamlıyoruz.' : '.');
+  }
+  $('kelime-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var liste = tekil([].map.call(document.querySelectorAll('#kelime-form input'), function (x) { return x.value.toLocaleLowerCase('tr'); })).filter(function (k) { return k.length >= 2; }).slice(0, 3);
+    var btn = this.querySelector('button'); btn.disabled = true; $('kelime-durum').textContent = 'Kaydediliyor…';
+    A.sb.from('isletmeler').update({ anahtar_kelimeler: liste.length ? liste : null }).eq('id', isletme.id).select().single().then(function (r) {
+      if (r.error) throw r.error;
+      isletme = r.data; kelimeFormuDoldur();
+      $('kelime-durum').textContent = 'Kaydedildi. ' + $('kelime-durum').textContent;
+    }).catch(function (err) { $('kelime-durum').textContent = A.hataMetni(err); }).then(function () { btn.disabled = false; });
+  });
+
   $('olc').addEventListener('click', olc);
   $('yeniden').addEventListener('click', olc);
   $('cikis').addEventListener('click', function () { A.cikis(); });
@@ -197,6 +257,7 @@
     if (!i || !i.kurulum_bitti) { location.replace(A.KOK + 'kurulum.html'); return; }
     isletme = i;
     genelCiz();
+    kelimeFormuDoldur();
     return A.sb.from('olcumler').select('*').eq('durum', 'bitti').order('baslangic', { ascending: false }).limit(1).maybeSingle().then(function (r) {
       if (r.data) sonucCiz(r.data);
       $('yukleniyor').hidden = true; $('panel').hidden = false;

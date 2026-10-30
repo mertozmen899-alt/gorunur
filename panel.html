@@ -10,10 +10,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=4">
+<link rel="stylesheet" href="assets/style.css?v=5">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/auth.js?v=4"></script>
-<script src="assets/panel.js?v=5" defer></script>
+<script src="assets/panel.js?v=6" defer></script>
 </head>
 <body>
 <header class="ust">
@@ -39,7 +39,7 @@
 <section class="hero-kart" id="ilk">
 <span class="durum"><i></i><span id="durum-yazi">İlk ölçümünüz sırada</span></span>
 <h2 id="hero-cumle"></h2>
-<p id="hero-alt">Google Haritalar'da ve Google aramasında kaçıncı çıktığınıza, ChatGPT benzeri yapay zekâ cevaplarında adınızın geçip geçmediğine bakacağız. Yaklaşık 1 dakika sürer.</p>
+<p id="hero-alt">Müşterilerin yazdığı 3 farklı aramada Google Haritalar'da ve Google aramasında kaçıncı çıktığınıza, yapay zekâ cevaplarında adınızın geçip geçmediğine bakacağız. Yaklaşık 1 dakika sürer.</p>
 <div class="adimlar" id="olcum-adimlar" hidden aria-live="polite">
 <div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Google Haritalar'da sıranıza bakıyoruz</div>
 <div><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>Google aramasına bakıyoruz</div>
@@ -75,6 +75,15 @@
 </section>
 
 <section class="kart genis">
+<h3>Aramalar tek tek</h3>
+<p class="kart-alt">Müşteriler aynı şeyi farklı kelimelerle arıyor. Her aramada nerede çıktığınız:</p>
+<div class="kaydir" style="margin-top:14px"><table class="tablo">
+<thead><tr><th>Arama</th><th>Haritalar</th><th>Google</th><th>Haritalarda 1. sıradaki</th></tr></thead>
+<tbody id="kelime-tablo"></tbody>
+</table></div>
+</section>
+
+<section class="kart genis">
 <h3>Haritalarda kim önde?</h3>
 <p class="kart-alt" id="rakip-not"></p>
 <div class="kaydir" style="margin-top:14px"><table class="tablo">
@@ -102,6 +111,17 @@
 <p class="kart-alt" id="iletisim"></p>
 <p class="kart-alt" style="margin-top:10px">Haftalık otomatik ölçüm ve WhatsApp özeti <span class="pil pil-a" style="font-size:11px">yakında</span></p>
 <a href="kurulum.html?adim=5" class="btn btn-cizgi kucuk-btn" style="margin-top:14px">Değiştir</a>
+</section>
+
+<section class="kart genis" id="kelime-kart">
+<div class="kart-bas"><h3>Hangi aramalarda ölçüyoruz?</h3><span class="pil pil-a">En fazla 3</span></div>
+<p class="kart-alt">Müşterilerinizin Google'a yazdığını düşündüğünüz aramaları girin. Boş bırakırsanız işinize ve semtinize göre biz seçeriz.</p>
+<form id="kelime-form" class="kelime-form" novalidate>
+<input class="girdi" type="text" maxlength="80" aria-label="1. arama" data-k="0">
+<input class="girdi" type="text" maxlength="80" aria-label="2. arama" data-k="1">
+<input class="girdi" type="text" maxlength="80" aria-label="3. arama" data-k="2">
+<div class="kelime-alt"><button type="submit" class="btn btn-amber kucuk-btn">Kaydet</button><span id="kelime-durum" class="kart-alt" role="status"></span></div>
+</form>
 </section>
 
 <section class="kart genis" id="genel-isler-kart">

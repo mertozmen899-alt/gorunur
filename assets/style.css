@@ -307,3 +307,12 @@ h1,h2,h3{margin:0}
 .yz-metin{margin:0 0 16px;color:var(--yazi2);font-size:14px;line-height:1.6;white-space:pre-line}
 @media (max-width:560px){.uc-kutu{grid-template-columns:1fr}.sayi-kutu b{font-size:28px}}
 @media (max-width:560px){.tablo th,.tablo td{padding:11px 10px}}
+
+/* Arama kelimeleri */
+.kelime-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.kelime-form .girdi{margin-top:0;font-size:15px;min-height:46px;padding:12px 14px}
+.kelime-alt{grid-column:1/-1;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.kelime-alt .kart-alt{margin:0}
+.sira-iyi{color:var(--amber);font-weight:800}
+.sira-yok{color:var(--soluk)}
+@media (max-width:760px){.kelime-form{grid-template-columns:minmax(0,1fr)}}
