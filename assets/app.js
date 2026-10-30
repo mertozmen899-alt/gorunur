@@ -131,12 +131,183 @@
     });
   }
 
+  // Ana sayfa canlılık katmanı: ekrana girince başlayan hareketler, dönen kelime,
+  // sırayla gelen WhatsApp mesajları, alt şerit ve tanıtım penceresi. Sadece index.html'de çalışır.
+  function canlilik() {
+    var hero = document.querySelector('.lp-hero');
+    if (!hero) return;
+    var hareket = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    var IO = 'IntersectionObserver' in window;
+    function gorunuyor(el) { var r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; }
+
+    // 1) Ekrana giren öğe .lp-gor alır, çıkınca kaybeder: sonsuz hareketler ekran dışında durur
+    var izlenen = document.querySelectorAll('.lp-izle');
+    if (IO) {
+      var io = new IntersectionObserver(function (g) {
+        g.forEach(function (x) { x.target.classList.toggle('lp-gor', x.isIntersecting); });
+      }, { rootMargin: '40px 0px' });
+      izlenen.forEach(function (e) { io.observe(e); });
+    } else {
+      izlenen.forEach(function (e) { e.classList.add('lp-gor'); });
+    }
+
+    // 2) Başlıkta dönen kelime (Google'da / Haritalar'da / yapay zekâda)
+    var don = hero.querySelector('.lp-don');
+    if (don) {
+      var ic = don.querySelector('.lp-don-ic'), kelime = ic.children, son = kelime.length - 1, s = 0;
+      var genislik = function () {
+        var k = kelime[s].firstElementChild, cs = getComputedStyle(don);
+        don.style.width = Math.ceil(k.getBoundingClientRect().width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)) + 'px';
+      };
+      genislik();
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(genislik);
+      window.addEventListener('resize', genislik);
+      if (hareket) {
+        setInterval(function () {
+          if (document.hidden || !gorunuyor(don)) return;
+          s++;
+          ic.style.transform = 'translateY(' + (-1.18 * s) + 'em)';
+          genislik();
+          if (s === son) {
+            // Son kelime ilkinin kopyası: geçiş bitince fark ettirmeden başa sar
+            setTimeout(function () {
+              ic.style.transition = 'none'; ic.style.transform = 'none'; s = 0;
+              void ic.offsetWidth; ic.style.transition = '';
+            }, 700);
+          }
+        }, 2400);
+      }
+    }
+
+    // 3) Hero kartındaki oran sıfırdan sayarak gelir
+    var oran = hero.querySelector('.motor .oran');
+    if (oran && hareket && /^%\d+$/.test(oran.textContent.trim())) {
+      var hedef = parseInt(oran.textContent.trim().slice(1), 10), t0 = null;
+      oran.textContent = '%0';
+      setTimeout(function () {
+        requestAnimationFrame(function adim(t) {
+          if (t0 === null) t0 = t;
+          var p = Math.min(1, (t - t0) / 1100);
+          oran.textContent = '%' + Math.round(hedef * (1 - Math.pow(1 - p, 3)));
+          if (p < 1) requestAnimationFrame(adim);
+        });
+      }, 700);
+    }
+
+    // 4) Kartlardaki ↗ düğmesi ilgili sekmeyi de açar
+    document.querySelectorAll('.lp-ac[data-sekme]').forEach(function (a) {
+      a.addEventListener('click', function () {
+        var t = document.getElementById(a.getAttribute('data-sekme'));
+        if (t) t.click();
+      });
+    });
+
+    // 5) WhatsApp mesajları ekrana girince sırayla, "yazıyor" noktalarıyla gelir
+    var mesajlar = document.querySelector('.lp-wa .mesajlar');
+    if (mesajlar && hareket && IO && !gorunuyor(mesajlar)) {
+      mesajlar.classList.add('lp-sira');
+      var wio = new IntersectionObserver(function (g) {
+        if (!g[0].isIntersecting) return;
+        wio.disconnect();
+        var ogeler = Array.prototype.slice.call(mesajlar.children), k = 0;
+        var nokta = document.createElement('span');
+        nokta.className = 'lp-wa-yaziyor'; nokta.setAttribute('aria-hidden', 'true');
+        nokta.innerHTML = '<i></i><i></i><i></i>';
+        var sonraki = function () {
+          if (k >= ogeler.length) { mesajlar.classList.remove('lp-sira'); return; }
+          var o = ogeler[k++];
+          if (o.classList.contains('gelen')) {
+            nokta.style.left = o.offsetLeft + 'px'; nokta.style.top = o.offsetTop + 'px';
+            mesajlar.appendChild(nokta);
+            setTimeout(function () {
+              if (nokta.parentNode) nokta.parentNode.removeChild(nokta);
+              o.classList.add('lp-cikti'); setTimeout(sonraki, 450);
+            }, 900);
+          } else {
+            o.classList.add('lp-cikti'); setTimeout(sonraki, o.classList.contains('giden') ? 700 : 300);
+          }
+        };
+        setTimeout(sonraki, 200);
+      }, { threshold: 0.35 });
+      wio.observe(mesajlar);
+    }
+
+    // 6) Alt şerit ve tanıtım penceresi
+    var promo = document.getElementById('lp-promo');
+    var serit = document.getElementById('lp-serit');
+    var liste = document.getElementById('liste');
+    var listeGoruldu = false, promoAcik = false, oncekiOdak = null, bekleyen = false;
+    var ANAHTAR = 'gorunur_tanitim', HAFTA = 7 * 24 * 3600 * 1000;
+
+    function seritGuncelle() {
+      bekleyen = false;
+      var lt = liste ? liste.getBoundingClientRect().top : Infinity;
+      if (lt < innerHeight) listeGoruldu = true;
+      if (!serit) return;
+      var goster = hero.getBoundingClientRect().bottom < 0 && lt > innerHeight && !promoAcik;
+      if (serit.hidden === goster) serit.hidden = !goster;
+    }
+    function istek() { if (!bekleyen) { bekleyen = true; requestAnimationFrame(seritGuncelle); } }
+    window.addEventListener('scroll', istek, { passive: true });
+    window.addEventListener('resize', istek);
+    var lform = document.getElementById('liste-form');
+    if (lform) lform.addEventListener('focusin', function () { listeGoruldu = true; });
+    seritGuncelle();
+
+    if (!promo) return;
+    var kart = promo.querySelector('.lp-promo-kart');
+    var arka = [document.querySelector('header.ust'), document.querySelector('main'), document.querySelector('footer'), serit];
+    function arkaKapali(v) { arka.forEach(function (e) { if (e) { if (v) e.setAttribute('inert', ''); else e.removeAttribute('inert'); } }); }
+    function tus(e) {
+      if (e.key === 'Escape') { e.preventDefault(); promoKapat(); return; }
+      if (e.key !== 'Tab') return;
+      var f = promo.querySelectorAll('a[href],button:not([disabled])'), ilk = f[0], sonu = f[f.length - 1];
+      if (e.shiftKey && (document.activeElement === ilk || document.activeElement === kart)) { e.preventDefault(); sonu.focus(); }
+      else if (!e.shiftKey && document.activeElement === sonu) { e.preventDefault(); ilk.focus(); }
+    }
+    function promoAc() {
+      if (promoAcik) return;
+      promoAcik = true; oncekiOdak = document.activeElement;
+      promo.hidden = false; seritGuncelle(); arkaKapali(true);
+      try { kart.focus({ preventScroll: true }); } catch (e) { kart.focus(); }
+      document.addEventListener('keydown', tus);
+      try { localStorage.setItem(ANAHTAR, String(Date.now())); } catch (e) { /* depolama kapalıysa sorun değil */ }
+    }
+    function promoKapat() {
+      if (!promoAcik) return;
+      promoAcik = false; promo.hidden = true; arkaKapali(false);
+      document.removeEventListener('keydown', tus);
+      if (oncekiOdak && oncekiOdak.focus && document.contains(oncekiOdak)) { try { oncekiOdak.focus({ preventScroll: true }); } catch (e) { /* yok */ } }
+      seritGuncelle();
+    }
+    promo.addEventListener('click', function (e) { if (e.target.closest('[data-kapat]')) promoKapat(); });
+    window.__gorunurPromo = promoAc; // test ve ekran görüntüsü için
+
+    var sonGosterim = 0;
+    try { sonGosterim = parseInt(localStorage.getItem(ANAHTAR) || '0', 10) || 0; } catch (e) { sonGosterim = 0; }
+    if (navigator.webdriver || Date.now() - sonGosterim < HAFTA) return;
+    setTimeout(function dene() {
+      if (listeGoruldu || promoAcik) return;
+      var a = document.activeElement;
+      if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+      if (document.hidden) {
+        document.addEventListener('visibilitychange', function v() {
+          if (document.hidden) return;
+          document.removeEventListener('visibilitychange', v); setTimeout(dene, 1500);
+        });
+        return;
+      }
+      promoAc();
+    }, 6000);
+  }
+
   window.Gorunur = { formBagla: formBagla, EPOSTA_RE: EPOSTA_RE };
 
   document.addEventListener('DOMContentLoaded', function () {
     balonlar();
     konular();
     isKarti();
+    canlilik();
     formBagla(document.getElementById('liste-form'));
     var yil = document.getElementById('yil'); if (yil) yil.textContent = new Date().getFullYear();
   });
