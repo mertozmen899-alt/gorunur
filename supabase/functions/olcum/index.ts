@@ -9,6 +9,9 @@
 // SerpApi harcaması (bir ölçümde): Haritalar 5 (+1 adla arama, bulunamazsa) + Google arama 10 (+1 marka araması, gerekirse)
 //   + Google Yapay Zekâ Modu 2 (GOOGLE_YZ_SORU; konumlu deneme reddedilirse o soru +1) = ~17-20 arama.
 //   Ayrıca 30 günde bir Google önerileri 2-3 arama. Konum ve hesap sorguları arama hakkı harcamaz.
+// Sistem geneli günlük SerpApi bütçesi: ölçüm başlamadan public.serp_harca(OLCUM_SERP_TAHMIN=20, SERP_GUNLUK_SINIR=150) düşülür;
+//   bütçe yoksa elle ölçüm kibar bir mesajla reddedilir, haftalık ölçüm o tur atlanır.
+// Yarış durumuna karşı ölçüm kaydı ("suruyor") her dış çağrıdan ÖNCE eklenir; günlük elle ölçüm hakkı bu kayıtlar dahil sayılır.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const CORS = {
@@ -380,7 +383,10 @@ Deno.serve(async (req) => {
     // @ts-ignore EdgeRuntime Supabase ortamında var
     EdgeRuntime.waitUntil((async () => {
       for (const isl of sirada) {
-        try { await olcumYap(db, isl, SERP, GEM, "haftalik"); } catch (e) { console.log("haftalik olcum hatasi", isl.id, String(e)); }
+        try {
+          const r = await olcumYap(db, isl, SERP, GEM, "haftalik");
+          if (r.butceYok) { console.log("haftalik olcum atlandi: gunluk SerpApi butcesi doldu", isl.id); break; }
+        } catch (e) { console.log("haftalik olcum hatasi", isl.id, String(e)); }
       }
     })());
     return json({ sirada: sirada.length }, 202);
@@ -395,21 +401,46 @@ Deno.serve(async (req) => {
   const { data: isl } = await db.from("isletmeler").select("*").eq("sahip", u.user.id).maybeSingle();
   if (!isl || !isl.kurulum_bitti) return json({ hata: "Önce kurulumu tamamlayın." }, 400);
 
-  // Günlük ölçüm hakkı (otomatik haftalık ölçümler sayılmaz). Yöneticiler (deneme için) sınırsız.
+  if (!SERP && !GEM) return json({ hata: "Ölçüm anahtarları henüz eklenmedi: SERPAPI_KEY, GEMINI_API_KEY" }, 503);
+
+  // Ölçüm kaydı önce eklenir, sonra sayılır: aynı anda gelen istekler birbirini görür (yarış durumu yok).
+  const { data: kayit, error: kayitHata } = await db.from("olcumler").insert({ isletme_id: isl.id, sahip: isl.sahip, durum: "suruyor", kaynak: "elle" }).select("id").single();
+  if (kayitHata || !kayit) return json({ hata: "Ölçüm başlatılamadı. Birazdan tekrar deneyin." }, 500);
+  const kayitSil = () => db.from("olcumler").delete().eq("id", kayit.id);
+
+  // Günlük ölçüm hakkı (otomatik haftalık ölçümler sayılmaz; süren ölçümler dahil). Yöneticiler (deneme için) sınırsız.
   const { data: ymt } = await db.from("yoneticiler").select("eposta").eq("eposta", String(u.user.email || "").toLowerCase()).maybeSingle();
   if (!ymt) {
     const hak = parseInt(Deno.env.get("GUNLUK_OLCUM_HAKKI") || "3", 10);
     const { count } = await db.from("olcumler").select("id", { count: "exact", head: true })
       .eq("sahip", u.user.id).eq("kaynak", "elle").gte("baslangic", new Date(Date.now() - 864e5).toISOString());
-    if ((count || 0) >= hak) return json({ hata: `Bugünkü ölçüm hakkınız (${hak}) doldu. Yarın tekrar deneyin.` }, 429);
+    if ((count || 0) > hak) { await kayitSil(); return json({ hata: `Bugünkü ölçüm hakkınız (${hak}) doldu. Yarın tekrar deneyin.` }, 429); }
   }
 
-  if (!SERP && !GEM) return json({ hata: "Ölçüm anahtarları henüz eklenmedi: SERPAPI_KEY, GEMINI_API_KEY" }, 503);
-  const { son, hepsiHata } = await olcumYap(db, isl, SERP, GEM, "elle");
-  return json({ olcum: son }, hepsiHata ? 502 : 200);
+  const sonuc = await olcumYap(db, isl, SERP, GEM, "elle", kayit.id);
+  if (sonuc.butceYok) { await kayitSil(); return json({ hata: "Bugün çok yoğunuz, günlük ölçüm kapasitemiz doldu. Yarın tekrar deneyin." }, 503); }
+  return json({ olcum: sonuc.son }, sonuc.hepsiHata ? 502 : 200);
 });
 
-async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "elle" | "haftalik") {
+async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "elle" | "haftalik", kayitId?: string): Promise<{ son?: unknown; hepsiHata?: boolean; butceYok?: boolean }> {
+  // Ölçüm kaydı her dış çağrıdan (Google önerileri, konum, yapay zekâ) önce
+  let kayit: { id: string } | null = kayitId ? { id: kayitId } : null;
+  if (!kayit) {
+    const { data } = await db.from("olcumler").insert({ isletme_id: isl.id, sahip: isl.sahip, durum: "suruyor", kaynak }).select("id").single();
+    kayit = data as { id: string } | null;
+    if (!kayit) throw new Error("olcum kaydi eklenemedi");
+  }
+  // Sistem geneli günlük SerpApi bütçesi (bir ölçüm yaklaşık 20 arama)
+  if (SERP) {
+    const tahmin = parseInt(Deno.env.get("OLCUM_SERP_TAHMIN") || "20", 10) || 20;
+    const sinir = parseInt(Deno.env.get("SERP_GUNLUK_SINIR") || "150", 10) || 150;
+    const { data: izin, error } = await db.rpc("serp_harca", { adet: tahmin, sinir });
+    if (error) console.log("serp_harca hata", error.message);
+    if (izin !== true) {
+      if (!kayitId) await db.from("olcumler").delete().eq("id", kayit.id);
+      return { butceYok: true };
+    }
+  }
   const eksik = [!SERP && "SERPAPI_KEY", !GEM && "GEMINI_API_KEY"].filter(Boolean) as string[];
   const parca = String(isl.semt || "").split(/[,/]/).map((x) => x.trim()).filter(Boolean);
   const semtKisa = parca[0] || "";
@@ -462,7 +493,6 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
   const adHaric = adGeciyor(isl.ad, isl.ad, haric) ? haric : undefined;
   if (!adHaric) denetim.push({ kod: "ad-eslesmiyor", mesaj: `"${isl.ad}" adı sadece yer/sektör kelimelerinden oluşuyor; eşleştirme site adresine göre yapılacak` });
 
-  const { data: kayit } = await db.from("olcumler").insert({ isletme_id: isl.id, sahip: isl.sahip, durum: "suruyor", kaynak }).select("id").single();
   const hatalar: string[] = eksik.map((e) => `${e} eksik`);
   const s: Record<string, unknown> = {};
   type Satir = { sira: number; ad: unknown; puan: unknown; yorum: unknown; adres: unknown; site: unknown; tur: unknown; place_id: unknown; siz?: boolean };

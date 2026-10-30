@@ -3,6 +3,9 @@
 // ve Google Yapay Zekâ Modu (gyz, SerpApi) önerdiği işletmeler. Yeni testte SerpApi: haritalar 1 + yapay zekâ modu 1 arama.
 // Aynı şehir + iş 7 gün önbellekte tutulur. Kötüye kullanım sınırı: IP başına günde 6, toplam günde 25 yeni arama.
 // Giriş gerektirmez (verify_jwt kapalı); ham IP saklanmaz, sadece günlük tuzlu özeti.
+// IP: sadece cf-connecting-ip; yoksa x-forwarded-for'un SON değeri (ilk değeri ziyaretçi kendisi yazabilir).
+// Yarış durumuna karşı istek kaydı dış API'lerden ÖNCE eklenir, sonra sayılır (aynı anda gelen istekler birbirini görür).
+// Sistem geneli günlük SerpApi bütçesi: public.serp_harca (SERP_GUNLUK_SINIR, varsayılan 150).
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const CORS = {
@@ -20,6 +23,13 @@ function yerde(ad: string) {
   if (ad === "Türkiye geneli") return "Türkiye'de";
   const k = ad.toLocaleLowerCase("tr"), u = k.match(/[aıoueiöü]/g) || ["e"];
   return ad + "'" + (/[çfhkpsşt]$/.test(k) ? "t" : "d") + ("aıou".includes(u[u.length - 1]) ? "a" : "e");
+}
+
+function istemciIp(req: Request): string {
+  const cf = (req.headers.get("cf-connecting-ip") || "").trim();
+  if (cf) return cf;
+  const xff = (req.headers.get("x-forwarded-for") || "").split(",").map((x) => x.trim()).filter(Boolean);
+  return xff.length ? xff[xff.length - 1] : "";
 }
 
 async function ozet(x: string) {
@@ -134,18 +144,34 @@ Deno.serve(async (req) => {
 
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const SERP0 = (Deno.env.get("SERPAPI_KEY") || "").trim();
+  const SERP_SINIR = parseInt(Deno.env.get("SERP_GUNLUK_SINIR") || "150", 10) || 150;
+  const serpHarca = async (adet: number) => {
+    if (adet <= 0) return true;
+    const { data, error } = await db.rpc("serp_harca", { adet, sinir: SERP_SINIR });
+    if (error) console.log("serp_harca hata", error.message);
+    return data === true;
+  };
+  // İsteği önce kaydet, sonra say (kendisi dahil). Sınır aşılırsa kendi kaydını siler.
+  const kaydetVeSay = async () => {
+    const ipOzet = await ozet(new Date().toISOString().slice(0, 10) + "|" + istemciIp(req) + "|" + (Deno.env.get("SUPABASE_URL") || ""));
+    const { data: k } = await db.from("hizli_test_istek").insert({ ip_ozet: ipOzet, yeni: true }).select("id").single();
+    const bas = new Date(Date.now() - 864e5).toISOString();
+    const [{ count: ipSay }, { count: topSay }] = await Promise.all([
+      db.from("hizli_test_istek").select("id", { count: "exact", head: true }).eq("ip_ozet", ipOzet).eq("yeni", true).gte("zaman", bas),
+      db.from("hizli_test_istek").select("id", { count: "exact", head: true }).eq("yeni", true).gte("zaman", bas),
+    ]);
+    const sil = async () => { if (k?.id) await db.from("hizli_test_istek").delete().eq("id", k.id); };
+    return { ipSay: ipSay || 0, topSay: topSay || 0, sil };
+  };
   if (g.islem === "bul") {
     const ad = temiz(g.ad);
     if (ad.length < 2) return json({ hata: "İşletme adı gerekli." }, 400);
-    const ipB = (req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "").split(",")[0].trim();
-    const ipOzetB = await ozet(new Date().toISOString().slice(0, 10) + "|" + ipB + "|" + (Deno.env.get("SUPABASE_URL") || ""));
-    const basB = new Date(Date.now() - 864e5).toISOString();
-    const [{ count: ipS }, { count: topS }] = await Promise.all([
-      db.from("hizli_test_istek").select("id", { count: "exact", head: true }).eq("ip_ozet", ipOzetB).eq("yeni", true).gte("zaman", basB),
-      db.from("hizli_test_istek").select("id", { count: "exact", head: true }).eq("yeni", true).gte("zaman", basB),
-    ]);
-    if ((ipS || 0) >= IP_GUNLUK + 4 || (topS || 0) >= TOPLAM_GUNLUK + 15 || !SERP0) return json({ hata: "sinir", mesaj: "Şu an arayamıyoruz. Yarın tekrar deneyin." }, 429);
-    await db.from("hizli_test_istek").insert({ ip_ozet: ipOzetB, yeni: true });
+    if (!SERP0) return json({ hata: "sinir", mesaj: "Şu an arayamıyoruz. Yarın tekrar deneyin." }, 429);
+    const { ipSay: ipS, topSay: topS, sil } = await kaydetVeSay();
+    if (ipS > IP_GUNLUK + 4 || topS > TOPLAM_GUNLUK + 15 || !(await serpHarca(1))) {
+      await sil();
+      return json({ hata: "sinir", mesaj: "Şu an arayamıyoruz. Yarın tekrar deneyin." }, 429);
+    }
     try {
       const l = await haritalar(`${ad} ${sehir === "Türkiye geneli" ? "" : sehir}`.trim(), SERP0);
       return json({ adaylar: l.slice(0, 4) });
@@ -155,26 +181,24 @@ Deno.serve(async (req) => {
   const { data: onb } = await db.from("hizli_testler").select("sonuc, olusturma").eq("anahtar", anahtar).maybeSingle();
   if (onb && Date.now() - new Date(onb.olusturma).getTime() < 7 * 864e5) return json({ ...onb.sonuc, onbellek: true });
 
-  // Kötüye kullanım sınırı (yalnızca yeni aramalar sayılır)
-  const gun = new Date().toISOString().slice(0, 10);
-  const ip = (req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "").split(",")[0].trim();
-  const ipOzet = await ozet(gun + "|" + ip + "|" + (Deno.env.get("SUPABASE_URL") || ""));
-  const bas = new Date(Date.now() - 864e5).toISOString();
-  const [{ count: ipSay }, { count: topSay }] = await Promise.all([
-    db.from("hizli_test_istek").select("id", { count: "exact", head: true }).eq("ip_ozet", ipOzet).eq("yeni", true).gte("zaman", bas),
-    db.from("hizli_test_istek").select("id", { count: "exact", head: true }).eq("yeni", true).gte("zaman", bas),
-  ]);
-  if ((ipSay || 0) >= IP_GUNLUK) return json({ hata: "sinir", mesaj: "Bugün çok deneme yaptınız. Yarın tekrar deneyin." }, 429);
-  const haritaAcik = (topSay || 0) < TOPLAM_GUNLUK && sehir !== "Türkiye geneli";
+  // Kötüye kullanım sınırı (yalnızca yeni aramalar sayılır). Kayıt dış API'lerden önce eklenir, sonra sayılır.
+  const { ipSay, topSay, sil } = await kaydetVeSay();
+  if (ipSay > IP_GUNLUK) { await sil(); return json({ hata: "sinir", mesaj: "Bugün çok deneme yaptınız. Yarın tekrar deneyin." }, 429); }
+  // Günlük toplam test sınırı dolduysa hiçbir ücretli/ücretsiz yapay zekâ ya da arama çağrılmaz
+  const kotaVar = topSay <= TOPLAM_GUNLUK;
+  if (!kotaVar) { await sil(); return json({ hata: "sinir", mesaj: "Bugün çok fazla test yapıldı. Yarın tekrar deneyin." }, 429); }
 
   const SERP = (Deno.env.get("SERPAPI_KEY") || "").trim(), GEM = (Deno.env.get("GEMINI_API_KEY") || "").trim(), OAI = (Deno.env.get("OPENAI_API_KEY") || "").trim();
   const soru = `${yerde(sehir)} iyi bir ${isK} önerir misin?`;
-  const kotaVar = (topSay || 0) < TOPLAM_GUNLUK;
+  const haritaIstek = sehir !== "Türkiye geneli";
+  // Sistem geneli SerpApi bütçesi: haritalar (varsa) + Google Yapay Zekâ Modu
+  const serpVar = !!SERP && await serpHarca((haritaIstek ? 1 : 0) + 1);
+  const haritaAcik = haritaIstek && serpVar;
   const [h, y, c, gy] = await Promise.allSettled([
-    haritaAcik && SERP ? haritalar(`${isK} ${sehir}`, SERP) : Promise.resolve(null),
-    GEM ? yapayZeka(soru, GEM) : Promise.resolve(null),
+    haritaAcik ? haritalar(`${isK} ${sehir}`, SERP) : Promise.resolve(null),
+    GEM && kotaVar ? yapayZeka(soru, GEM) : Promise.resolve(null),
     OAI && kotaVar ? chatgpt(soru, sehir, OAI) : Promise.resolve(null),
-    SERP && kotaVar ? googleYz(soru, SERP) : Promise.resolve(null), // 1 SerpApi araması, haritalarla aynı günlük sınır
+    serpVar ? googleYz(soru, SERP) : Promise.resolve(null), // 1 SerpApi araması
   ]);
   const sonuc = {
     sehir, is: isK, soru,
@@ -188,7 +212,6 @@ Deno.serve(async (req) => {
   if (y.status === "rejected") console.log("hizli-test yz", String(y.reason).slice(0, 200));
   if (c.status === "rejected") console.log("hizli-test cg", String(c.reason).slice(0, 300));
   if (gy.status === "rejected") console.log("hizli-test gyz", String(gy.reason).slice(0, 200));
-  await db.from("hizli_test_istek").insert({ ip_ozet: ipOzet, yeni: true });
   if (!sonuc.harita && !sonuc.yz) return json({ hata: "olcum", mesaj: "Şu an ölçemedik. Birkaç dakika sonra tekrar deneyin." }, 502);
   // Sadece iki parça da geldiyse önbelleğe al (yarım sonuç bir hafta takılı kalmasın)
   if (sonuc.yz && (sonuc.harita || sehir === "Türkiye geneli")) await db.from("hizli_testler").upsert({ anahtar, sonuc, olusturma: sonuc.tarih });
