@@ -616,7 +616,7 @@
     // ChatGPT: hiç ölçüm yoksa "yakında"; daha önce ölçüldüyse ama bu ölçümde yoksa "bu ölçümde yok"
     var olcCg = o.cg_soru_sayisi != null || o.cg_cevaplar != null;
     var hicCg = !olcCg && !gecmis.some(function (x) { return x.cg_soru_sayisi != null || x.cg_cevaplar != null; });
-    var gc = motorSatir('motor-cg', 'ChatGPT', hicCg ? 'ChatGPT ölçümünü hazırlıyoruz. Hazır olunca sonuçları burada göreceksiniz.' : 'Bu ölçümde ChatGPT’ye soru sorulmadı.', o.cg_soru_sayisi || 0, o.cg_gecen, o.cg_cevaplar, olcCg ? null : (hicCg ? 'yakında' : 'bu ölçümde yok'));
+    var gc = motorSatir('motor-cg', 'ChatGPT', hicCg ? 'ChatGPT artık ölçülüyor. Bir sonraki ölçümde sonuçları burada göreceksiniz.' : 'Bu ölçümde ChatGPT’ye soru sorulmadı.', o.cg_soru_sayisi || 0, o.cg_gecen, o.cg_cevaplar, olcCg ? null : (hicCg ? 'sıradaki ölçümde' : 'bu ölçümde yok'));
     var ic2 = $('motor-cg').querySelector('.yz-motor-ic'); ic2.innerHTML = '';
     if (olcCg) { var l2 = el('div', null, 'yz-liste'); gc.forEach(function (g) { l2.appendChild(yzSoruKutu(g)); }); ic2.appendChild(l2); }
   }

@@ -48,7 +48,7 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     kontrol(cihaz + ' panelde Google Yapay Zekâ Modu satırı var', /Google Yapay Zekâ Modu/.test(gyz) && /2 sorunun 1 tanesinde/.test(gyz), gyz);
     await p.click('#motor-gyz > summary').catch(() => {}); await p.click('#motor-gyz .yz-cevap summary').catch(() => {}); await p.waitForTimeout(100);
     kontrol(cihaz + ' Google Yapay Zekâ Modu cevabında işletmeler ve siz işareti görünüyor', await p.isVisible('#motor-gyz .yz-isletmeler li.siz'));
-    kontrol(cihaz + ' ChatGPT verisi yokken "yakında" görünüyor', /yakında/.test((await p.textContent('#motor-cg summary').catch(() => '')) || ''));
+    kontrol(cihaz + ' ChatGPT verisi yokken "sıradaki ölçümde" görünüyor', /sıradaki ölçümde/.test((await p.textContent('#motor-cg summary').catch(() => '')) || ''));
     await tasma('panel yapay zekâ motorları');
     // Aramalar ve tek arama sayfası
     await p.click('#yan-menu [data-git=google]');
