@@ -78,9 +78,12 @@ async function populerAramalar(cekir: string, yer: string, anahtar: string): Pro
 // Google sonuçlarında rehber / liste sayfası olanları ayırır
 const REHBER_ALAN = /(yandex\.|cybo\.com|foursquare\.com|tripadvisor\.|armut\.com|doktortakvimi\.com|bulurum\.com|rehber|infobel|kompass|cylex|hotfrog|mapcarta|wanderlog|yelp\.|sikayetvar\.com|firma|nerede|yakinimda|eniyi|listele|kurumsal|sarisayfa|yellowpages|ilan|zingat|hepsiemlak|sahibinden\.com|trendyol\.com|hepsiburada\.com|n11\.com|getir|yemeksepeti|booking\.com|etstur|obilet)/i;
 const REHBER_BASLIK = /(listesi|rehberi|firmaları|firmalari|mağazaları|magazalari|en iyi|yakınımda|yakinimda|adresleri|telefonları|telefonlari|nerede|tavsiye|önerileri|onerileri)/i;
-function rehberMi(baslik: string, alan: string): boolean {
-  if (!alan || /google\.|instagram\.com|facebook\.com|youtube\.com|tiktok\.com|wikipedia/i.test(alan)) return false;
-  return REHBER_ALAN.test(alan) || REHBER_BASLIK.test(baslik);
+// "rehber": liste/rehber sitesi (adınızı ekletin); "rakip": rakibin kendi sitesindeki liste başlıklı sayfa (siz de yapın)
+function rehberTuru(baslik: string, alan: string): "rehber" | "rakip" | null {
+  if (!alan || /google\.|instagram\.com|facebook\.com|youtube\.com|tiktok\.com|wikipedia/i.test(alan)) return null;
+  if (REHBER_ALAN.test(alan)) return "rehber";
+  if (REHBER_BASLIK.test(baslik)) return "rakip";
+  return null;
 }
 // Sektöre özel rehber ve platform siteleri: yapay zekâya sorulur, her alan adının gerçekten açıldığı denetlenir
 async function sektorRehberleri(isK: string, GEM: string, modeller: string[]) {
@@ -107,12 +110,13 @@ function yerdeMi(adres: unknown, semtKisa: string, sehir: string, turkiye: boole
   return [semtKisa, sehir].filter(Boolean).some((y) => a.includes(" " + sade(y)));
 }
 // İşletme adı bir başlıkla/metinle eşleşiyor mu?
-function adGeciyor(metin: string, ad: string): boolean {
+// haric: her cevapta zaten geçen kelimeler (şehir, semt, sektör); bunlar ad eşleşmesi sayılmaz
+function adGeciyor(metin: string, ad: string, haric?: Set<string>): boolean {
   const m = " " + sade(metin) + " ";
-  const c = cekirdek(ad);
+  const c = cekirdek(ad).filter((t) => !haric || !haric.has(t));
   if (c.length === 0) return m.includes(" " + sade(ad) + " ");
   const bulunan = c.filter((t) => m.includes(" " + t + " ") || m.includes(" " + t)).length;
-  return c.length === 1 ? bulunan === 1 && c[0].length >= 4 : bulunan >= Math.ceil(c.length * 0.6);
+  return c.length === 1 ? bulunan === 1 && c[0].length >= 4 : bulunan >= Math.ceil(c.length * 0.5);
 }
 
 async function serp(params: Record<string, string>, anahtar: string) {
@@ -132,7 +136,9 @@ async function gemini(soru: string, anahtar: string, modeller: string[], jsonMod
     // Önce Google arama destekli dene; arama ücretsiz kotada yoksa aramasız sor
     for (const aramali of aramaKotasiYok ? [false] : [true, false]) {
       const t0 = Date.now();
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      let r: Response;
+      try {
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": anahtar },
         body: JSON.stringify({
@@ -140,8 +146,9 @@ async function gemini(soru: string, anahtar: string, modeller: string[], jsonMod
           ...(aramali && !jsonMod ? { tools: [{ google_search: {} }] } : {}),
           generationConfig: { temperature: jsonMod ? 0.2 : 0.4, maxOutputTokens: 1500, ...(jsonMod ? { responseMimeType: "application/json" } : {}) },
         }),
-        signal: AbortSignal.timeout(35000),
+        signal: AbortSignal.timeout(jsonMod ? 25000 : 35000),
       });
+      } catch (e) { sonHata = `${model}: ${/timed out|abort/i.test(String(e)) ? "zaman aşımı" : "bağlantı hatası"}`; break; }
       const j = await r.json().catch(() => ({}));
       const mesaj = String(j?.error?.message || r.status);
       if (r.status === 404 || r.status === 400 && /not found|not supported/i.test(mesaj)) { sonHata = `${model}: bulunamadı`; break; }
@@ -240,13 +247,14 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
   // Sıra: kullanıcının yazdıkları, en çok arananlar, kendi ürettiklerimiz. En fazla 5 arama.
   const kelimeler = tekillestir([...elle, ...populer, ...otomatikKelimeler(isK, yerK)]).slice(0, 5);
   const siteAlan = alanAdi(isl.site);
+  const haric = new Set(sade([semtKisa, sehir, isK, ...kelimeler].join(" ")).split(" ").filter((t) => t.length >= 3));
 
   const { data: kayit } = await db.from("olcumler").insert({ isletme_id: isl.id, sahip: isl.sahip, durum: "suruyor", kaynak }).select("id").single();
   const hatalar: string[] = eksik.map((e) => `${e} eksik`);
   const s: Record<string, unknown> = {};
   type Satir = { sira: number; ad: unknown; puan: unknown; yorum: unknown; adres: unknown; site: unknown; tur: unknown; place_id: unknown; siz?: boolean };
   const kelimeSonuc: Array<Record<string, unknown>> = kelimeler.map((k) => ({ kelime: k }));
-  const benMi = (r: Satir) => (adGeciyor(String(r.ad || ""), isl.ad) || (siteAlan && alanAdi(String(r.site || "")) === siteAlan)) && yerdeMi(r.adres, semtKisa, sehir, turkiye);
+  const benMi = (r: Satir) => (adGeciyor(String(r.ad || ""), isl.ad, haric) || (siteAlan && alanAdi(String(r.site || "")) === siteAlan)) && yerdeMi(r.adres, semtKisa, sehir, turkiye);
 
   // 1) Google Haritalar: her arama kelimesi için
   const haritaListeleri: Satir[][] = [];
@@ -282,7 +290,7 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
       // Hiçbir aramada çıkmadıysa işletmeyi adıyla bulmayı dene (profil var mı?)
       const j2 = await serp({ engine: "google_maps", type: "search", q: `${isl.ad} ${turkiye ? "" : semtKisa}`.trim(), hl: "tr" }, SERP);
       const adaylar = [...(j2.local_results || []), ...(j2.place_results ? [j2.place_results] : [])] as Array<Record<string, unknown>>;
-      const ayni = adaylar.filter((r) => adGeciyor(String(r.title || ""), isl.ad));
+      const ayni = adaylar.filter((r) => adGeciyor(String(r.title || ""), isl.ad, haric));
       const b = ayni.find((r) => yerdeMi(r.address, semtKisa, sehir, turkiye));
       const baska = !b && ayni[0];
       s.isletme_bilgi = b
@@ -291,7 +299,7 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     }
   };
 
-  const rehberSayfalari: Array<{ baslik: string; alan: string; kelime: string; sira: number }> = [];
+  const rehberSayfalari: Array<{ baslik: string; alan: string; kelime: string; sira: number; tur: string }> = [];
   // 2) Google arama: ilk 2 kelime (SerpApi kotasını korumak için)
   const arama = async () => {
     if (!SERP) return;
@@ -307,13 +315,14 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
         gorunen: String(x.displayed_link || x.source || "").split(" ")[0],
       }));
       const alanOf = (x: { link: unknown; gorunen: string }) => alanAdi(x.link ? String(x.link) : x.gorunen);
-      const ben = org.find((x) => (siteAlan && alanOf(x) === siteAlan) || adGeciyor(String(x.baslik || ""), isl.ad));
+      const ben = org.find((x) => (siteAlan && alanOf(x) === siteAlan) || adGeciyor(String(x.baslik || ""), isl.ad, haric));
       const yerel = (((j.local_results || {}) as Record<string, unknown>).places || []) as Array<Record<string, unknown>>;
-      const yerelBen = yerel.findIndex((p) => adGeciyor(String(p.title || ""), isl.ad));
+      const yerelBen = yerel.findIndex((p) => adGeciyor(String(p.title || ""), isl.ad, haric));
       for (const x of org) {
         const alan = alanOf(x);
-        if (x !== ben && rehberMi(String(x.baslik || ""), alan) && !rehberSayfalari.some((y) => y.alan === alan))
-          rehberSayfalari.push({ baslik: String(x.baslik || ""), alan, kelime: aranacak[i], sira: x.sira as number });
+        const tur = x !== ben ? rehberTuru(String(x.baslik || ""), alan) : null;
+        if (tur && alan !== siteAlan && !rehberSayfalari.some((y) => y.alan === alan))
+          rehberSayfalari.push({ baslik: String(x.baslik || ""), alan, kelime: aranacak[i], sira: x.sira as number, tur });
       }
       kelimeSonuc[i].arama_sira = ben ? ben.sira : null;
       kelimeSonuc[i].yerel_kutuda = yerelBen >= 0 ? yerelBen + 1 : null;
@@ -353,7 +362,7 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
         const n = sira++, soru = sorular[n];
         try {
           const { model, metin, aramali } = await gemini(soru + KISA, GEM, modeller);
-          cevaplar[n] = { soru, model, aramali, geciyor: adGeciyor(metin, isl.ad), ozet: metin.slice(0, 1200) };
+          cevaplar[n] = { soru, model, aramali, geciyor: adGeciyor(metin, isl.ad, haric), ozet: metin.slice(0, 1200) };
         } catch (e) {
           cevaplar[n] = { soru, hata: /timed out|aborted/i.test(String((e as Error).message)) ? "Yapay zekâ zamanında cevap vermedi." : String((e as Error).message).slice(0, 200) };
         }
@@ -374,7 +383,7 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     if (!GEM) return;
     const eskiR = !isl.sektor_rehberleri_tarih || Date.now() - new Date(isl.sektor_rehberleri_tarih).getTime() > 30 * 864e5;
     if (!eskiR) return;
-    const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-2.5-flash-lite"].filter(Boolean) as string[];
+    const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-2.5-flash-lite", "gemini-2.5-flash"].filter(Boolean) as string[];
     try {
       const liste = await sektorRehberleri(isK, GEM, modeller);
       if (liste.length) await db.from("isletmeler").update({ sektor_rehberleri: liste, sektor_rehberleri_tarih: new Date().toISOString() }).eq("id", isl.id);
@@ -384,14 +393,14 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
   const sonuclar = await Promise.allSettled([harita(), arama(), yz(), rehber()]);
   sonuclar.forEach((r) => { if (r.status === "rejected") hatalar.push(String(r.reason?.message || r.reason).slice(0, 200)); });
   s.kelimeler = kelimeSonuc;
-  s.rehber_sayfalari = rehberSayfalari.slice(0, 6);
+  s.rehber_sayfalari = rehberSayfalari.slice(0, 8);
   if (yzMetinleri.length) {
     const adaylar = new Map<string, string>();
     for (const l of haritaListeleri) for (const r of (l || []).slice(0, 10)) {
       const ad = String(r.ad || ""); const k = sade(ad);
       if (ad && !adaylar.has(k) && !benMi(r)) adaylar.set(k, ad);
     }
-    const pay = [...adaylar.values()].slice(0, 25).map((ad) => ({ ad, sayi: yzMetinleri.filter((m) => adGeciyor(m, ad)).length }))
+    const pay = [...adaylar.values()].slice(0, 25).map((ad) => ({ ad, sayi: yzMetinleri.filter((m) => adGeciyor(m, ad, haric)).length }))
       .filter((x) => x.sayi > 0).sort((a, b) => b.sayi - a.sayi).slice(0, 6);
     s.yz_rakipler = pay;
   }

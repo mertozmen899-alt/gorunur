@@ -180,7 +180,21 @@
       ],
       sonuc: 'Yapay zekâ sizi ne kadar çok güvenilir sitede görürse o kadar çok öneriyor.'
     });
-    var sayfalar = o.rehber_sayfalari || [];
+    var tum = o.rehber_sayfalari || [];
+    var sayfalar = tum.filter(function (x) { return x.tur !== 'rakip'; });
+    var rakipSayfa = tum.filter(function (x) { return x.tur === 'rakip'; });
+    if (rakipSayfa.length) isler.push({
+      t: 'Rakiplerinizin Google’da öne çıkan sayfasının benzerini yapın', s: '1-2 saat (sitenizi yapan kişi için)',
+      n: 'Bu rakipler kendi sitelerine aramayla aynı başlıkta bir sayfa açmış ve Google’da üst sıralara çıkmış:',
+      siteler: rakipSayfa.map(function (x) { return { ad: x.baslik, alan: x.alan, url: 'https://' + x.alan, not: '"' + x.kelime + '" aramasında ' + x.sira + '. sırada.' }; }),
+      adimlar: [
+        'Bu sayfaları açıp bakın: başlıkta şehir ve iş adı geçiyor, içinde ürünler, adres ve telefon var.',
+        'Sitenizi yapan kişiye aşağıdaki mesajı gönderin.',
+        'Sayfa yayına girince 3-4 hafta bekleyin; Görünür haftalık ölçümde değişimi gösterecek.'
+      ],
+      metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemize "' + rakipSayfa[0].kelime.replace(/(^|\s)\S/g, function (h) { return h.toLocaleUpperCase('tr'); }) + '" başlıklı yeni bir sayfa ekleyebilir misiniz? Sayfada ' + yerAdi(i) + ' mağazamızın adresi, telefonu, çalışma saatleri, ürün gruplarımız (fotoğraflı), teslimat bölgelerimiz ve sık sorulan 5 soru ile cevapları olsun. Sayfa başlığı ve ana başlık aynı olsun. Teşekkürler.' },
+      sonuc: 'Rakiplerinizin çıktığı aramalarda siz de Google’ın ilk sayfasına çıkma şansı yakalarsınız.'
+    });
     if (sayfalar.length) isler.push({
       t: 'Google’da çıkan liste sayfalarına adınızı ekletin', s: 'Sayfa başına 10 dakika',
       n: 'Müşterileriniz Google’da arama yapınca bu liste ve rehber sayfalarını görüyor. Bu sayfalarda sizin adınızı göremedik:',
