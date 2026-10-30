@@ -1,8 +1,14 @@
 // Görünür ölçüm motoru
 // Giriş yapmış kullanıcının işletmesi için: Google Haritalar sırası, Google arama sırası
-// ve Gemini (Google arama destekli) cevaplarında adının geçip geçmediğini ölçer.
+// ve yapay zekâ cevaplarında (Gemini, Google Yapay Zekâ Modu, ChatGPT) adının geçip geçmediğini ölçer.
 // Gerekli gizli anahtarlar (Supabase > Edge Functions > Secrets): SERPAPI_KEY, GEMINI_API_KEY
-// İsteğe bağlı: GEMINI_MODEL, GUNLUK_OLCUM_HAKKI (varsayılan 3), HARITA_ARAMA (varsayılan 5), YZ_TEKRAR, YZ_SORU
+// İsteğe bağlı anahtar: OPENAI_API_KEY (yoksa ChatGPT ölçümü sessizce atlanır, cg_* alanları boş kalır)
+// İsteğe bağlı ayarlar: GEMINI_MODEL, GEMINI_ARAMALI, GUNLUK_OLCUM_HAKKI (varsayılan 3), HARITA_ARAMA (varsayılan 5), YZ_TEKRAR, YZ_SORU,
+//   GOOGLE_YZ_SORU (Google Yapay Zekâ Modu soru sayısı, varsayılan 2, en fazla 4),
+//   OPENAI_MODEL, CHATGPT_SORU (varsayılan 3, en fazla 6), CHATGPT_TEKRAR (varsayılan 1, en fazla 3)
+// SerpApi harcaması (bir ölçümde): Haritalar 5 (+1 adla arama, bulunamazsa) + Google arama 10 (+1 marka araması, gerekirse)
+//   + Google Yapay Zekâ Modu 2 (GOOGLE_YZ_SORU; konumlu deneme reddedilirse o soru +1) = ~17-20 arama.
+//   Ayrıca 30 günde bir Google önerileri 2-3 arama. Konum ve hesap sorguları arama hakkı harcamaz.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const CORS = {
@@ -265,7 +271,60 @@ type Isl = Record<string, any>;
 function anahtarlar() {
   const ortam = Deno.env.toObject();
   const bul = (ad: string) => (ortam[ad] || Object.entries(ortam).find(([k]) => k.trim().toUpperCase() === ad)?.[1] || "").trim();
-  return { SERP: bul("SERPAPI_KEY"), GEM: bul("GEMINI_API_KEY") };
+  return { SERP: bul("SERPAPI_KEY"), GEM: bul("GEMINI_API_KEY"), OAI: bul("OPENAI_API_KEY") };
+}
+
+// Google Yapay Zekâ Modu (SerpApi google_ai_mode): bir soru = bir SerpApi araması.
+// Konum (SerpApi konum adı) reddedilirse konumsuz tekrar denenir.
+async function googleYzSor(q: string, konum: string, anahtar: string) {
+  const p: Record<string, string> = { engine: "google_ai_mode", q, hl: "tr", gl: "tr" };
+  let j: Record<string, any> | null = null;
+  if (konum) { try { j = await serp({ ...p, location: konum }, anahtar); } catch (e) { console.log("konumlu yz modu olmadi", konum, String(e)); } }
+  if (!j) j = await serp(p, anahtar);
+  const parcalar: string[] = [], isletmeler: string[] = [];
+  const gez = (b: Record<string, any>) => {
+    if (!b || typeof b !== "object") return;
+    if (b.title) parcalar.push(String(b.title));
+    if (b.snippet) parcalar.push(String(b.snippet));
+    const lr = b.local_result;
+    if (lr?.title) { const t = String(lr.title).slice(0, 80); if (!isletmeler.includes(t)) isletmeler.push(t); parcalar.push(t + (lr.address ? " (" + lr.address + ")" : "")); }
+    if (Array.isArray(b.list)) b.list.forEach(gez);
+  };
+  (Array.isArray(j.text_blocks) ? j.text_blocks : []).forEach(gez);
+  const md = String(j.reconstructed_markdown || "").trim();
+  const metin = ((md || parcalar.join("\n")) + (isletmeler.length ? "\n" + isletmeler.join("\n") : "")).trim();
+  const kaynaklar = (Array.isArray(j.references) ? j.references : []).map((r: Record<string, unknown>) => alanAdi(String(r.link || ""))).filter(Boolean) as string[];
+  if (!metin) throw new Error("Google Yapay Zekâ Modu: boş cevap");
+  return { metin, isletmeler: isletmeler.slice(0, 10), kaynaklar };
+}
+
+// ChatGPT: OpenAI Responses API, internette arama açık. Düz metin cevap (adlar adGeciyor ile aranır).
+async function chatgptSor(soru: string, sehir: string, anahtar: string) {
+  const modeller = [Deno.env.get("OPENAI_MODEL"), "gpt-5-mini", "gpt-4.1-mini"].filter(Boolean) as string[];
+  let son = "";
+  for (const model of modeller) {
+    const govde: Record<string, unknown> = {
+      model, input: soru,
+      tools: [{ type: "web_search", user_location: { type: "approximate", country: "TR", ...(sehir ? { city: sehir } : {}) } }],
+    };
+    if (model.startsWith("gpt-5")) govde.reasoning = { effort: "low" };
+    let r: Response;
+    try {
+      r = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + anahtar },
+        body: JSON.stringify(govde), signal: AbortSignal.timeout(45000),
+      });
+    } catch (e) {
+      // Zaman aşımında başka modele geçilmez (toplam süre uzamasın)
+      throw new Error(`ChatGPT ${model}: ${/timed out|abort/i.test(String(e)) ? "zaman aşımı" : "bağlantı hatası"}`);
+    }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { son += ` ${model}: ${r.status} ${String(j?.error?.message || "").slice(0, 100)};`; continue; }
+    const metin = String(j.output_text || (j.output || []).flatMap((o: { content?: Array<{ text?: string }> }) => o.content || []).map((c: { text?: string }) => c.text || "").join("\n")).trim();
+    if (metin) return { model, metin };
+    son += ` ${model}: boş;`;
+  }
+  throw new Error("ChatGPT:" + son);
 }
 
 Deno.serve(async (req) => {
@@ -285,7 +344,7 @@ Deno.serve(async (req) => {
     // SerpApi harcamaz (Google önerileri kullanılmaz), sadece yapay zekâ profili ve kurallar denenir.
     const govde = await req.json().catch(() => ({}));
     if (Array.isArray(govde?.deneme)) {
-      const modellerP = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-2.5-flash-lite", "gemini-2.5-flash"].filter(Boolean) as string[];
+      const modellerP = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-flash-latest"].filter(Boolean) as string[];
       const sonuc = [];
       for (const d of govde.deneme.slice(0, 12)) {
         const parca = String(d.semt || "").split(/[,/]/).map((x: string) => x.trim()).filter(Boolean);
@@ -361,7 +420,7 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
   const yerK = turkiye ? "" : semtKisa.toLocaleLowerCase("tr");
   const sehirK = sehir.toLocaleLowerCase("tr");
   const elle = ((isl.anahtar_kelimeler || []) as string[]).map(temizArama).filter((k) => k.length >= 2).slice(0, 3);
-  const modellerP = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-2.5-flash-lite", "gemini-2.5-flash"].filter(Boolean) as string[];
+  const modellerP = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-flash-latest"].filter(Boolean) as string[];
   // Yer veya iş türü değiştiyse eski öneriler, profil ve konum çöpe
   const kaynakImza = sade(String(isl.semt || "") + "|" + String(isl.is_turu || ""));
   const degisti = isl.kelime_kaynak !== kaynakImza;
@@ -523,25 +582,30 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
 
   // 3) Yapay zekâ: 6 müşteri sorusu, her biri 3 kez (yapay zekâ her seferinde farklı cevap verebilir).
   //    Sonuç bir orandır: her 100 cevabın kaçında adınız geçiyor.
+  // Müşteri soruları (tüm yapay zekâ motorları aynı listeden sorar; az soran motorlar baştakileri alır)
+  const yzYer = turkiye ? "Türkiye'de" : `${semtKisa}${sehir ? ", " + sehir : ""} bölgesinde`;
+  const sablon = [
+    `${yzYer} iyi bir ${isK} önerir misin?`,
+    `${yzYer} en çok tavsiye edilen ${isK} hangileri?`,
+    `${yzYer} ${isK} arıyorum, güvenilir bir yer söyler misin?`,
+    `${yzYer} kaliteli ${temelIfade} için hangi işletmeyi önerirsin?`,
+  ];
+  const kelimeSorulari = kelimeler.map((k) => `"${k}" diye arıyorum. Hangi işletmeleri önerirsin?`);
+  // Şablon ve arama kelimelerini karıştır: 3 şablon + kelimeler, sonra kalan şablonlar
+  const tumSorular = tekillestir([...sablon.slice(0, 3), ...kelimeSorulari.slice(0, 3), ...sablon.slice(3), ...kelimeSorulari.slice(3)]);
+  const KISA = " Kısa cevap ver: 3-5 işletme adı ve her biri için tek cümle.";
+  // Site adresi kaynaklarda/metinde geçiyorsa da "geçiyor" sayılır (Google Yapay Zekâ Modu ve ChatGPT kaynak gösterir)
+  const siteGeciyor = (metin: string, kaynaklar: string[] = []) => !!siteAlan && (kaynaklar.includes(siteAlan) || metin.toLowerCase().includes(siteAlan));
+  let yzMetinleri: string[] = [];
+
   const yz = async () => {
     if (!GEM) return;
     // Ücretsiz planda Google arama aracı yok; GEMINI_ARAMALI=1 ise (ücretli plan) aramalı sorar
     aramaKotasiYok = (Deno.env.get("GEMINI_ARAMALI") || "") !== "1";
-    const yer = turkiye ? "Türkiye'de" : `${semtKisa}${sehir ? ", " + sehir : ""} bölgesinde`;
-    const cekir = temelIfade;
     const TEKRAR = Math.min(5, Math.max(1, Number(Deno.env.get("YZ_TEKRAR") || "3")));
     const SORU_SAYISI = Math.min(10, Math.max(3, Number(Deno.env.get("YZ_SORU") || "6")));
-    const sablon = [
-      `${yer} iyi bir ${isK} önerir misin?`,
-      `${yer} en çok tavsiye edilen ${isK} hangileri?`,
-      `${yer} ${isK} arıyorum, güvenilir bir yer söyler misin?`,
-      `${yer} kaliteli ${cekir} için hangi işletmeyi önerirsin?`,
-    ];
-    const kelimeSorulari = kelimeler.map((k) => `"${k}" diye arıyorum. Hangi işletmeleri önerirsin?`);
-    // Şablon ve arama kelimelerini karıştır: 3 şablon + kelimeler, sonra kalan şablonlar
-    const sorular = tekillestir([...sablon.slice(0, 3), ...kelimeSorulari.slice(0, 3), ...sablon.slice(3), ...kelimeSorulari.slice(3)]).slice(0, SORU_SAYISI);
-    const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.5-flash"].filter(Boolean) as string[];
-    const KISA = " Kısa cevap ver: 3-5 işletme adı ve her biri için tek cümle.";
+    const sorular = tumSorular.slice(0, SORU_SAYISI);
+    const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-flash-latest"].filter(Boolean) as string[];
     const isler: Array<{ soru: string; tekrar: number }> = [];
     for (let t = 1; t <= TEKRAR; t++) for (const soru of sorular) isler.push({ soru, tekrar: t });
     const cevaplar: Array<Record<string, unknown>> = new Array(isler.length);
@@ -573,23 +637,84 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     // Birkaç cevabın eksik olması ölçümü bozmaz; yarıdan fazlası eksikse uyar
     if (hataliYz.length && hataliYz.length * 2 >= cevaplar.length) hatalar.push(`Yapay zekâ: ${cevaplar.length} cevaptan ${hataliYz.length} tanesi alınamadı (${String(hataliYz[0].hata).slice(0, 140)})`);
     else if (hataliYz.length) console.log("yz eksik cevap", hataliYz.length, String(hataliYz[0].hata).slice(0, 140));
-    yzMetinleri = basarili.map((c) => String((c as { ozet: string }).ozet || ""));
+    yzMetinleri.push(...basarili.map((c) => String((c as { ozet: string }).ozet || "")));
   };
-  let yzMetinleri: string[] = [];
+
+  // 3b) Google Yapay Zekâ Modu (SerpApi): GOOGLE_YZ_SORU soru (varsayılan 2), tekrar yok. Her soru 1 SerpApi araması.
+  const googleYz = async () => {
+    if (!SERP) return;
+    const SAYI = Math.min(4, Math.max(1, Number(Deno.env.get("GOOGLE_YZ_SORU") || "2")));
+    const sorular = tumSorular.slice(0, SAYI);
+    const sonuc = await Promise.allSettled(sorular.map((soru) => googleYzSor(soru, konum, SERP)));
+    const cevaplar: Array<Record<string, unknown>> = sonuc.map((r, n) => {
+      const soru = sorular[n];
+      if (r.status === "rejected") return { soru, tekrar: 1, hata: String(r.reason?.message || r.reason).slice(0, 200) };
+      const { metin, isletmeler, kaynaklar } = r.value;
+      const geciyor = adGeciyor(metin, isl.ad, adHaric) || isletmeler.some((t) => adGeciyor(t, isl.ad, adHaric)) || siteGeciyor(metin, kaynaklar);
+      return { soru, tekrar: 1, model: "google-ai-mode", aramali: true, geciyor, ozet: metin.slice(0, 1000), isletmeler, _metin: metin };
+    });
+    const basarili = cevaplar.filter((c) => !("hata" in c));
+    s.gyz_soru_sayisi = basarili.length;
+    s.gyz_gecen = basarili.filter((c) => c.geciyor).length;
+    yzMetinleri.push(...basarili.map((c) => String(c._metin || "")));
+    s.gyz_cevaplar = cevaplar.map(({ _metin, ...c }) => c);
+    const hatali = cevaplar.filter((c) => "hata" in c);
+    if (hatali.length) hatalar.push(`Google Yapay Zekâ Modu: ${cevaplar.length} sorudan ${hatali.length} tanesi alınamadı (${String(hatali[0].hata).slice(0, 140)})`);
+  };
+
+  // 3c) ChatGPT (OpenAI, internette arama açık): CHATGPT_SORU soru (varsayılan 3) x CHATGPT_TEKRAR (varsayılan 1), aynı anda 2 istek.
+  //     OPENAI_API_KEY yoksa sessizce atlanır.
+  const chatgptYz = async () => {
+    const { OAI } = anahtarlar();
+    if (!OAI) return;
+    const SAYI = Math.min(6, Math.max(1, Number(Deno.env.get("CHATGPT_SORU") || "3")));
+    const TEKRAR = Math.min(3, Math.max(1, Number(Deno.env.get("CHATGPT_TEKRAR") || "1")));
+    const sorular = tumSorular.slice(0, SAYI);
+    const cgSehir = turkiye ? "" : (sehir || semtKisa);
+    const isler: Array<{ soru: string; tekrar: number }> = [];
+    for (let t = 1; t <= TEKRAR; t++) for (const soru of sorular) isler.push({ soru, tekrar: t });
+    const cevaplar: Array<Record<string, unknown>> = new Array(isler.length);
+    const metinler: string[] = [];
+    // Süre sınırı: 100 sn sonra yeni soru başlatılmaz (Edge Function süresi aşılmasın)
+    const bitis = Date.now() + 70000;
+    let sira = 0;
+    await Promise.all(Array.from({ length: 2 }, async () => {
+      while (sira < isler.length) {
+        const n = sira++, { soru, tekrar } = isler[n];
+        if (Date.now() > bitis) { cevaplar[n] = { soru, tekrar, hata: "Süre doldu, sorulmadı." }; continue; }
+        try {
+          const { model, metin } = await chatgptSor(soru + KISA, cgSehir, OAI);
+          cevaplar[n] = { soru, tekrar, model, aramali: true, geciyor: adGeciyor(metin, isl.ad, adHaric) || siteGeciyor(metin), ozet: metin.slice(0, 1000) };
+          metinler.push(metin);
+        } catch (e) {
+          cevaplar[n] = { soru, tekrar, hata: String((e as Error).message).slice(0, 200) };
+        }
+      }
+    }));
+    const basarili = cevaplar.filter((c) => c && !("hata" in c));
+    s.cg_soru_sayisi = basarili.length;
+    s.cg_gecen = basarili.filter((c) => c.geciyor).length;
+    s.cg_cevaplar = cevaplar;
+    yzMetinleri.push(...metinler);
+    const hatali = cevaplar.filter((c) => c && "hata" in c);
+    if (hatali.length && hatali.length * 2 >= cevaplar.length) hatalar.push(`ChatGPT: ${cevaplar.length} cevaptan ${hatali.length} tanesi alınamadı (${String(hatali[0].hata).slice(0, 140)})`);
+    else if (hatali.length) console.log("chatgpt eksik cevap", hatali.length, String(hatali[0].hata).slice(0, 140));
+  };
 
   // 4) Sektöre özel rehber siteleri (30 günde bir yenilenir)
   const rehber = async () => {
     if (!GEM) return;
     const eskiR = !isl.sektor_rehberleri_tarih || Date.now() - new Date(isl.sektor_rehberleri_tarih).getTime() > 30 * 864e5;
     if (!eskiR) return;
-    const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-2.5-flash-lite", "gemini-2.5-flash"].filter(Boolean) as string[];
+    const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-flash-latest"].filter(Boolean) as string[];
     try {
       const liste = await sektorRehberleri(isK, GEM, modeller);
       if (liste.length) await db.from("isletmeler").update({ sektor_rehberleri: liste, sektor_rehberleri_tarih: new Date().toISOString() }).eq("id", isl.id);
     } catch (e) { console.log("sektor rehberleri alinamadi", String(e)); }
   };
 
-  const sonuclar = await Promise.allSettled([harita(), arama(), yz(), rehber()]);
+  // Sıra önemli: hepsiHata ilk 3 adıma (harita, arama, yz) bakar; yeni yapay zekâ motorları ölçümü "hata" yapmaz
+  const sonuclar = await Promise.allSettled([harita(), arama(), yz(), rehber(), googleYz(), chatgptYz()]);
   sonuclar.forEach((r) => { if (r.status === "rejected") hatalar.push(String(r.reason?.message || r.reason).slice(0, 200)); });
   s.kelimeler = kelimeSonuc;
   s.rehber_sayfalari = rehberSayfalari.slice(0, 8);
