@@ -57,7 +57,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle kayit) {
         super.onCreate(kayit);
-        ekraniHazirla();
 
         FrameLayout kok = new FrameLayout(this);
         kok.setBackgroundColor(Color.WHITE);
@@ -81,6 +80,8 @@ public class MainActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT, dp(3), Gravity.TOP));
 
         setContentView(kok);
+        // Ekran ayarları setContentView'dan SONRA yapılmalı, yoksa Android 11+ açılışta çöker.
+        ekraniHazirla();
         bosluklariAyarla(kok);
 
         webAyarla();

@@ -53,6 +53,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           DEPO: ${{ github.repository }}
         run: |
-          gh release view android-test --repo "$DEPO" > /dev/null 2>&1 || gh release create android-test --prerelease --title "Android test sonuçları" --notes "Sanal telefon testi çıktıları" --repo "$DEPO"
+          gh release view android-test --repo "$DEPO" > /dev/null 2>&1 || gh release create android-test --prerelease --title "Android test sonuçları" --notes "Sanal telefon testi çıktıları" --repo "$DEPO" || true
           cd "sonuc-$API"
           for f in *; do cp "$f" "api$API-$f"; gh release upload android-test "api$API-$f" --clobber --repo "$DEPO"; done
