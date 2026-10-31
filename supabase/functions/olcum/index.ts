@@ -590,6 +590,7 @@ async function serpButce(db: Db, SERP: string): Promise<"gunluk" | "aylik" | nul
 }
 
 async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "elle" | "haftalik", kayitId?: string, butceAlindi = false): Promise<{ son?: unknown; hepsiHata?: boolean; butceYok?: "gunluk" | "aylik" }> {
+  const t0 = Date.now();
   // Ölçüm kaydı her dış çağrıdan (Google önerileri, konum, yapay zekâ) önce
   let kayit: { id: string } | null = kayitId ? { id: kayitId } : null;
   if (!kayit) {
@@ -597,6 +598,12 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     kayit = data as { id: string } | null;
     if (!kayit) throw new Error("olcum kaydi eklenemedi");
   }
+  // Sunucu işi yine de keserse panel dakikalarca "ölçülüyor"da kalmasın: kayıt hemen "hata" olur (hakka sayılmaz)
+  const kayitId2 = kayit.id;
+  addEventListener("beforeunload", () => {
+    db.from("olcumler").update({ durum: "hata", hatalar: ["Ölçüm sunucu tarafında yarıda kesildi"], bitis: new Date().toISOString() })
+      .eq("id", kayitId2).eq("durum", "suruyor").then(() => {}, () => {});
+  });
   if (!butceAlindi) {
     const butceYok = await serpButce(db, SERP);
     if (butceYok) {
@@ -818,7 +825,6 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     for (let t = 1; t <= TEKRAR; t++) for (const soru of sorular) isler.push({ soru, tekrar: t });
     const cevaplar: Array<Record<string, unknown>> = new Array(isler.length);
     const bekle = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    const yzBasla = Date.now();
     // Dakikalık sınıra takılmamak için aynı anda en fazla 3 istek; kota dolarsa 20 sn bekleyip bir kez daha dene
     let sira = 0;
     await Promise.all(Array.from({ length: 3 }, async () => {
@@ -838,22 +844,7 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
         }
       }
     }));
-    // İkinci tur: alınamayan cevaplar (kota, yoğunluk, zaman aşımı) dakikalık sınır sıfırlanınca bir kez daha sorulur.
-    // Toplam süre uzamasın (kullanıcı bekliyor, sunucu sınırı 150 sn): ilk tur 45 sn içinde bittiyse yapılır, 70. saniyeden sonra yeni soru sorulmaz.
-    const eksikler = cevaplar.map((c, n) => (!c || "hata" in c ? n : -1)).filter((n) => n >= 0);
-    if (eksikler.length && Date.now() - yzBasla < 45000) {
-      await bekle(Math.max(0, 61000 - (Date.now() - yzBasla)));
-      let sira2 = 0;
-      await Promise.all(Array.from({ length: 2 }, async () => {
-        while (sira2 < eksikler.length && Date.now() - yzBasla < 70000) {
-          const n = eksikler[sira2++], { soru, tekrar } = isler[n];
-          try {
-            const { model, metin, aramali } = await gemini(soru + KISA, GEM, modeller, false, 1);
-            cevaplar[n] = { soru, tekrar, model, aramali, geciyor: adGeciyor(metin, isl.ad, adHaric), ozet: metin.slice(0, 1000), ikinci_tur: true };
-          } catch (e) { console.log("yz ikinci tur", String((e as Error).message).slice(0, 120)); }
-        }
-      }));
-    }
+    // İkinci tur yok: dakikalık sınırın sıfırlanmasını beklemek (61 sn) ölçümü arka plan süre sınırının dışına taşıyordu
     const basarili = cevaplar.filter((c) => c && !("hata" in c));
     s.yz_soru_sayisi = basarili.length;
     s.yz_gecen = basarili.filter((c) => (c as { geciyor: boolean }).geciyor).length;
@@ -939,8 +930,14 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
   };
 
   // Sıra önemli: hepsiHata ilk 3 adıma (harita, arama, yz) bakar; yeni yapay zekâ motorları ölçümü "hata" yapmaz
-  const sonuclar = await Promise.allSettled([harita(), arama(), yz(), rehber(), googleYz(), chatgptYz()]);
-  sonuclar.forEach((r) => { if (r.status === "rejected") hatalar.push(String(r.reason?.message || r.reason).slice(0, 200)); });
+  // Supabase arka plan işini ~75 sn'de kesiyor (EarlyDrop): 60. saniyede bitmeyen adım beklenmez, eldeki sonuç kaydedilir
+  const sureDoldu = new Promise<never>((_, red) => setTimeout(() => red(new Error("Süre doldu, bu bölüm bu ölçümde tamamlanamadı")), Math.max(0, t0 + 60000 - Date.now())));
+  sureDoldu.catch(() => {});
+  const sonuclar = await Promise.allSettled([harita(), arama(), yz(), rehber(), googleYz(), chatgptYz()].map((p) => Promise.race([p, sureDoldu])));
+  sonuclar.forEach((r) => {
+    const m = r.status === "rejected" ? String(r.reason?.message || r.reason).slice(0, 200) : "";
+    if (m && !hatalar.includes(m)) hatalar.push(m);
+  });
   s.kelimeler = kelimeSonuc;
   s.rehber_sayfalari = rehberSayfalari.slice(0, 8);
   if (yzMetinleri.length) {

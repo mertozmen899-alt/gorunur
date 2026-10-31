@@ -1387,7 +1387,8 @@
     sayfaGoster(location.hash.slice(1), false);
     A.sb.rpc('yonetici_mi').then(function (r) { if (r && r.data === true) $('yonetim-link').hidden = $('yonetim-kart').hidden = false; }, function () {});
     return Promise.all([
-      A.sb.from('olcumler').select('*').eq('isletme_id', i.id).eq('durum', 'bitti').order('baslangic', { ascending: false }).limit(12),
+      // Ad, konum ya da iş türü değiştiyse eski ölçümler başka bir işletmeye aittir: gösterilmez
+      A.sb.from('olcumler').select('*').eq('isletme_id', i.id).eq('durum', 'bitti').gte('baslangic', (i.degisiklik && i.degisiklik.zaman) || '2000-01-01').order('baslangic', { ascending: false }).limit(12),
       A.sb.from('yapilan_isler').select('*').eq('isletme_id', i.id)
     ]).then(function (s) {
       ((s[1] && s[1].data) || []).forEach(function (y) { yapilanlar[y.is_kodu] = y; });
