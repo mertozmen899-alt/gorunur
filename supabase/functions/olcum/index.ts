@@ -873,7 +873,9 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     });
   }
 
-  const hepsiHata = sonuclar.slice(0, 3).every((r) => r.status === "rejected");
+  // SerpApi çökünce harita/arama fonksiyonları hata fırlatmaz, bayrak koyar; ölçüm yine de "hata" sayılmalı
+  const serpCoktu = kelimeSonuc.length > 0 && kelimeSonuc.every((k) => k.arama_hata && (k.harita_hata || k.harita_bakilan == null));
+  const hepsiHata = serpCoktu || sonuclar.slice(0, 3).every((r) => r.status === "rejected");
   if (denetim.length) console.log("denetim", isl.id, JSON.stringify(denetim));
   const guncel = { ...s, hatalar, denetim, durum: hepsiHata ? "hata" : "bitti", bitis: new Date().toISOString() };
   const { data: son } = await db.from("olcumler").update(guncel).eq("id", (kayit as { id: string }).id).select("*").single();
