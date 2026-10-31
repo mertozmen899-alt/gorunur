@@ -59,8 +59,8 @@ function beklemeMetni(r: Record<string, any>) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:1px solid #E2E5EB;border-radius:20px">
 <tr><td style="padding:28px 32px 8px">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-<td style="width:34px;height:34px;border-radius:10px;background:#FFBD14;text-align:center;font-size:18px;line-height:34px;font-weight:800;color:#111318">◎</td>
-<td style="padding-left:10px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:#161A22">Norevo</td></tr></table>
+<td style="width:34px;height:34px;border-radius:10px;background:#FD703C;text-align:center;font-size:22px;line-height:32px;font-weight:800;color:#111318">n</td>
+<td style="padding-left:10px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:#17253B">norevo</td></tr></table>
 </td></tr>
 <tr><td style="padding:16px 32px 0">
 <h1 style="margin:0;font-size:26px;line-height:1.2;font-weight:800;letter-spacing:-.02em;color:#161A22">Bekleme listesindesiniz</h1>
@@ -75,7 +75,7 @@ ${madde("Yükselmek için yapmanız gereken işleri sade dille, sıraya koyarak 
 </table>
 </td></tr>
 <tr><td style="padding:24px 32px 8px">
-<a href="${SITE}test.html?k=eposta" style="display:inline-block;background:#FFBD14;color:#111318;text-decoration:none;font-weight:800;font-size:15px;padding:13px 22px;border-radius:999px">Durumunuzu şimdi görün →</a>
+<a href="${SITE}test.html?k=eposta" style="display:inline-block;background:#FD703C;color:#111318;text-decoration:none;font-weight:800;font-size:15px;padding:13px 22px;border-radius:999px">Durumunuzu şimdi görün →</a>
 </td></tr>
 <tr><td style="padding:20px 32px 28px">
 <p style="margin:0;font-size:14px;line-height:1.6;color:#5B6375">Sorunuz olursa bu e-postayı yanıtlamanız yeterli.</p>
@@ -115,15 +115,15 @@ function onayMetni(r: Record<string, any>) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:1px solid #E2E5EB;border-radius:20px">
 <tr><td style="padding:28px 32px 8px">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-<td style="width:34px;height:34px;border-radius:10px;background:#FFBD14;text-align:center;font-size:18px;line-height:34px;font-weight:800;color:#111318">◎</td>
-<td style="padding-left:10px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:#161A22">Norevo</td></tr></table>
+<td style="width:34px;height:34px;border-radius:10px;background:#FD703C;text-align:center;font-size:22px;line-height:32px;font-weight:800;color:#111318">n</td>
+<td style="padding-left:10px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:#17253B">norevo</td></tr></table>
 </td></tr>
 <tr><td style="padding:16px 32px 0">
 <h1 style="margin:0;font-size:26px;line-height:1.2;font-weight:800;letter-spacing:-.02em;color:#161A22">Kaydınızı onaylayın</h1>
 <p style="margin:14px 0 0;font-size:16px;line-height:1.6;color:#343B48"><b>${kacis(r.eposta)}</b> adresiyle Norevo bekleme listesine katılmak istendi. Kaydınızı tamamlamak için aşağıdaki düğmeye tıklayın.</p>
 </td></tr>
 <tr><td style="padding:24px 32px 8px">
-<a href="${onay}" style="display:inline-block;background:#FFBD14;color:#111318;text-decoration:none;font-weight:800;font-size:15px;padding:13px 22px;border-radius:999px">Kaydımı onayla</a>
+<a href="${onay}" style="display:inline-block;background:#FD703C;color:#111318;text-decoration:none;font-weight:800;font-size:15px;padding:13px 22px;border-radius:999px">Kaydımı onayla</a>
 </td></tr>
 <tr><td style="padding:16px 32px 28px">
 <p style="margin:0;font-size:14px;line-height:1.6;color:#5B6375">Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz. Onaylanmayan adreslere başka e-posta göndermeyiz.</p>

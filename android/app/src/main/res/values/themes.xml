@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="zemin">#FFFFFF</color>
-    <color name="ikon_zemin">#FFC145</color>
-    <color name="ikon_cizgi">#141414</color>
+    <color name="ikon_zemin">#F6F4F0</color>
+    <color name="ikon_cizgi">#FD703C</color>
 
     <style name="Tema" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
         <item name="android:windowBackground">@color/zemin</item>
         <item name="android:statusBarColor">@color/zemin</item>
         <item name="android:navigationBarColor">@color/zemin</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:colorAccent">#F5B301</item>
+        <item name="android:colorAccent">#E85A26</item>
     </style>
 </resources>
