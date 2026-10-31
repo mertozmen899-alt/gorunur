@@ -992,6 +992,11 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
   const hepsiHata = serpCoktu || sonuclar.slice(0, 3).every((r) => r.status === "rejected");
   if (denetim.length) console.log("denetim", isl.id, JSON.stringify(denetim));
   const guncel = { ...s, hatalar, denetim, durum: hepsiHata ? "hata" : "bitti", bitis: new Date().toISOString() };
-  const { data: son } = await db.from("olcumler").update(guncel).eq("id", (kayit as { id: string }).id).select("*").single();
+  const { data: son, error: yazHata } = await db.from("olcumler").update(guncel).eq("id", (kayit as { id: string }).id).select("*").single();
+  // Sonuç yazılamazsa kayıt "sürüyor"da kalmasın
+  if (yazHata) {
+    console.log("olcum sonucu yazilamadi", yazHata.message);
+    await db.from("olcumler").update({ durum: "hata", hatalar: ["Sonuç kaydedilemedi: " + yazHata.message.slice(0, 160)], bitis: new Date().toISOString() }).eq("id", (kayit as { id: string }).id);
+  }
   return { son, hepsiHata };
 }
