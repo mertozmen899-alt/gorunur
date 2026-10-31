@@ -500,13 +500,15 @@ Deno.serve(async (req) => {
       } catch (e) { console.log("serpapi hesap bilgisi alinamadi", String(e)); }
     }
     if (!SERP && !GEM) return json({ hata: "Anahtar yok" }, 503);
+    await takiliTemizle(db);
     const sinir = new Date(Date.now() - 6.5 * 864e5).toISOString();
     const { data: isletmeler } = await db.from("isletmeler").select("*").eq("kurulum_bitti", true).eq("haftalik_olcum", true);
     const sirada: Isl[] = [];
     for (const isl of isletmeler || []) {
-      const { data: son } = await db.from("olcumler").select("baslangic").eq("isletme_id", isl.id).order("baslangic", { ascending: false }).limit(1).maybeSingle();
+      // Hatalı ölçüm sırayı bekletmez; süren ölçüm (takılı olanlar yukarıda temizlendi) ikinci kez başlatılmaz
+      const { data: son } = await db.from("olcumler").select("baslangic").eq("isletme_id", isl.id).in("durum", ["bitti", "suruyor"]).order("baslangic", { ascending: false }).limit(1).maybeSingle();
       if (!son || son.baslangic < sinir) sirada.push(isl);
-      if (sirada.length >= 2) break; // bir çağrıda en fazla 2 işletme (süre sınırı)
+      if (sirada.length >= 1) break; // bir çağrıda tek işletme (süre sınırı); zamanlanmış iş saatte bir çalışır
     }
     // Arka planda sırayla ölç, isteğe hemen cevap ver
     // @ts-ignore EdgeRuntime Supabase ortamında var
@@ -532,6 +534,7 @@ Deno.serve(async (req) => {
 
   if (!SERP && !GEM) return json({ hata: "Ölçüm anahtarları henüz eklenmedi: SERPAPI_KEY, GEMINI_API_KEY" }, 503);
 
+  await takiliTemizle(db, u.user.id);
   // Ölçüm kaydı önce eklenir, sonra sayılır: aynı anda gelen istekler birbirini görür (yarış durumu yok).
   const { data: kayit, error: kayitHata } = await db.from("olcumler").insert({ isletme_id: isl.id, sahip: isl.sahip, durum: "suruyor", kaynak: "elle" }).select("id").single();
   if (kayitHata || !kayit) return json({ hata: "Ölçüm başlatılamadı. Birazdan tekrar deneyin." }, 500);
@@ -541,18 +544,52 @@ Deno.serve(async (req) => {
   const { data: ymt } = await db.from("yoneticiler").select("eposta").eq("eposta", String(u.user.email || "").toLowerCase()).maybeSingle();
   if (!ymt) {
     const hak = parseInt(Deno.env.get("GUNLUK_OLCUM_HAKKI") || "3", 10);
+    // Hatalı biten ölçümler hakka sayılmaz
     const { count } = await db.from("olcumler").select("id", { count: "exact", head: true })
-      .eq("sahip", u.user.id).eq("kaynak", "elle").gte("baslangic", new Date(Date.now() - 864e5).toISOString());
+      .eq("sahip", u.user.id).eq("kaynak", "elle").neq("durum", "hata").gte("baslangic", new Date(Date.now() - 864e5).toISOString());
     if ((count || 0) > hak) { await kayitSil(); return json({ hata: `Bugünkü ölçüm hakkınız (${hak}) doldu. Yarın tekrar deneyin.` }, 429); }
   }
 
-  const sonuc = await olcumYap(db, isl, SERP, GEM, "elle", kayit.id);
-  if (sonuc.butceYok === "aylik") { await kayitSil(); return json({ hata: "Bu ayki ölçüm kapasitemiz doldu, ölçümler ay başında devam edecek." }, 503); }
-  if (sonuc.butceYok) { await kayitSil(); return json({ hata: "Bugün çok yoğunuz, günlük ölçüm kapasitemiz doldu. Yarın tekrar deneyin." }, 503); }
-  return json({ olcum: sonuc.son }, sonuc.hepsiHata ? 502 : 200);
+  // Bütçe hemen kontrol edilir ki kullanıcı "kapasite doldu" cevabını beklemeden alsın
+  const butce = await serpButce(db, SERP);
+  if (butce === "aylik") { await kayitSil(); return json({ hata: "Bu ayki ölçüm kapasitemiz doldu, ölçümler ay başında devam edecek." }, 503); }
+  if (butce) { await kayitSil(); return json({ hata: "Bugün çok yoğunuz, günlük ölçüm kapasitemiz doldu. Yarın tekrar deneyin." }, 503); }
+
+  // Ölçüm 1-3 dakika sürer (istek süre sınırı 150 sn): arka planda ölç, panel kaydın durumunu sorgular
+  // @ts-ignore EdgeRuntime Supabase ortamında var
+  EdgeRuntime.waitUntil((async () => {
+    try { await olcumYap(db, isl, SERP, GEM, "elle", kayit.id, true); }
+    catch (e) {
+      console.log("elle olcum hatasi", isl.id, String(e));
+      await db.from("olcumler").update({ durum: "hata", hatalar: [String(e).slice(0, 200)], bitis: new Date().toISOString() }).eq("id", kayit.id);
+    }
+  })());
+  return json({ kayit: kayit.id }, 202);
 });
 
-async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "elle" | "haftalik", kayitId?: string): Promise<{ son?: unknown; hepsiHata?: boolean; butceYok?: "gunluk" | "aylik" }> {
+// 10 dakikada bitmeyen ölçüm takılmıştır (süre sınırında kesilmiş): "hata" yap ki hakka ve sıraya sayılmasın
+async function takiliTemizle(db: Db, sahip?: string) {
+  let q = db.from("olcumler").update({ durum: "hata", hatalar: ["Ölçüm 10 dakikada bitmedi"] })
+    .eq("durum", "suruyor").lt("baslangic", new Date(Date.now() - 10 * 6e4).toISOString());
+  if (sahip) q = q.eq("sahip", sahip);
+  const { error } = await q;
+  if (error) console.log("takili olcum temizlenemedi", error.message);
+}
+
+// Sistem geneli SerpApi bütçesi: günlük ve aylık (bir ölçüm yaklaşık 20 arama). Yer ayırır; doluysa hangisinin dolduğunu döner.
+async function serpButce(db: Db, SERP: string): Promise<"gunluk" | "aylik" | null> {
+  if (!SERP) return null;
+  const tahmin = parseInt(Deno.env.get("OLCUM_SERP_TAHMIN") || "20", 10) || 20;
+  const sinir = parseInt(Deno.env.get("SERP_GUNLUK_SINIR") || "25", 10) || 25;
+  const aylik = parseInt(Deno.env.get("SERPAPI_AYLIK_SINIR") || "230", 10) || 230;
+  const { data: izin, error } = await db.rpc("serp_harca", { adet: tahmin, sinir, p_aylik: aylik });
+  if (error) console.log("serp_harca hata", error.message);
+  if (izin === true) return null;
+  const { data: ayN } = await db.rpc("serp_aylik_kullanim");
+  return (Number(ayN) || 0) + tahmin > aylik ? "aylik" : "gunluk";
+}
+
+async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "elle" | "haftalik", kayitId?: string, butceAlindi = false): Promise<{ son?: unknown; hepsiHata?: boolean; butceYok?: "gunluk" | "aylik" }> {
   // Ölçüm kaydı her dış çağrıdan (Google önerileri, konum, yapay zekâ) önce
   let kayit: { id: string } | null = kayitId ? { id: kayitId } : null;
   if (!kayit) {
@@ -560,17 +597,11 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     kayit = data as { id: string } | null;
     if (!kayit) throw new Error("olcum kaydi eklenemedi");
   }
-  // Sistem geneli SerpApi bütçesi: günlük ve aylık (bir ölçüm yaklaşık 20 arama)
-  if (SERP) {
-    const tahmin = parseInt(Deno.env.get("OLCUM_SERP_TAHMIN") || "20", 10) || 20;
-    const sinir = parseInt(Deno.env.get("SERP_GUNLUK_SINIR") || "25", 10) || 25;
-    const aylik = parseInt(Deno.env.get("SERPAPI_AYLIK_SINIR") || "230", 10) || 230;
-    const { data: izin, error } = await db.rpc("serp_harca", { adet: tahmin, sinir, p_aylik: aylik });
-    if (error) console.log("serp_harca hata", error.message);
-    if (izin !== true) {
+  if (!butceAlindi) {
+    const butceYok = await serpButce(db, SERP);
+    if (butceYok) {
       if (!kayitId) await db.from("olcumler").delete().eq("id", kayit.id);
-      const { data: ayN } = await db.rpc("serp_aylik_kullanim");
-      return { butceYok: (Number(ayN) || 0) + tahmin > aylik ? "aylik" : "gunluk" };
+      return { butceYok };
     }
   }
   const eksik = [!SERP && "SERPAPI_KEY", !GEM && "GEMINI_API_KEY"].filter(Boolean) as string[];

@@ -420,8 +420,9 @@
     if (b.bulundu === false) isler.push(IS.googleProfil(i, b));
     if (b.bulundu && ortYorum != null && (b.yorum || 0) < ortYorum) isler.push(IS.yorum(i, b.yorum || 0, ortYorum));
     if (b.bulundu && b.puan != null && ortPuan != null && b.puan + 0.1 < ortPuan) isler.push(IS.puan(i, b.puan, ortPuan));
-    if (o.arama_sira == null && !i.site) isler.push(IS.siteYok(i));
-    else if (o.arama_sira == null && i.site) isler.push(IS.siteBaslik(i, o.arama_sorgu || ''));
+    // Arama ölçülemediyse (arama_sonuclar yok) "sitenizi göremedik" denmez
+    if (o.arama_sonuclar && o.arama_sira == null && !i.site) isler.push(IS.siteYok(i));
+    else if (o.arama_sonuclar && o.arama_sira == null && i.site) isler.push(IS.siteBaslik(i, o.arama_sorgu || ''));
     if (o.yz_soru_sayisi && o.yz_gecen === 0) isler.push(IS.bing(i));
     if (o.harita_sira && o.harita_sira <= 3 && o.yz_gecen > 0) {
       isler.push({ k: 'koru', t: 'İyi durumdasınız, yerinizi koruyun', s: 'Her hafta', n: 'Haritalarda ilk 3’tesiniz ve yapay zekâ sizi öneriyor. Bunu korumak için:', adimlar: ['Her hafta birkaç yeni Google yorumu toplamaya devam edin.', 'Ayda 2-3 yeni fotoğraf ekleyin.', 'Kampanya veya yeni ürün olunca Google profilinizde "Güncelleme" paylaşın.'] });
@@ -475,22 +476,35 @@
     });
     kutu.innerHTML = ''; kutu.appendChild(svg);
   }
+  // Bir ölçümde verilen aramanın harita sırası (yoksa null); o aramada harita ölçülmediyse undefined
+  function aramaHaritaSira(o, kelime) {
+    if (!kelime) return undefined;
+    if (o.harita_sorgu === kelime && o.harita_sonuclar) return o.harita_sira || null;
+    var k = (o.kelimeler || []).find(function (x) { return x.kelime === kelime && x.harita_bakilan != null && !x.harita_hata; });
+    return k ? k.harita_sira || null : undefined;
+  }
   function gelisimCiz() {
     var liste = gecmis.slice(0, 12).reverse();
     var son = gecmis[0];
     var sonraki = son ? new Date(new Date(son.baslangic).getTime() + 7 * 864e5) : null;
-    var ilkHarita = liste.find(function (o) { return o.harita_sonuclar; }), sonHarita = gecmis.find(function (o) { return o.harita_sonuclar; });
+    // Her ölçümde "en iyi arama" değişebilir; karşılaştırma hep son ölçümün aramasıyla yapılır
+    var sonHarita = gecmis.find(function (o) { return o.harita_sonuclar; }), kelime = sonHarita && sonHarita.harita_sorgu;
+    var haritali = liste.filter(function (o) { return aramaHaritaSira(o, kelime) !== undefined; });
     var not;
     if (liste.length < 2) not = 'Bu ilk ölçümünüz. Her hafta otomatik olarak yeniden ölçüyoruz' + (sonraki ? ' (sıradaki: ' + kisaTarih(sonraki) + ')' : '') + '. Yaptığınız işlerin etkisini burada hafta hafta göreceksiniz.';
     else {
-      var a = ilkHarita && ilkHarita.harita_sira, b = sonHarita && sonHarita.harita_sira;
-      var fark = a && b ? (a > b ? 'Haritalarda ' + (a - b) + ' sıra yükseldiniz.' : a < b ? 'Haritalarda ' + (b - a) + ' sıra geriye düştünüz.' : 'Haritalardaki sıranız değişmedi.') : (!a && b ? 'Haritalarda ilk 20’ye girdiniz, şu an ' + b + '. sıradasınız.' : (a && !b ? 'Haritalarda ilk 20’nin dışına düştünüz.' : 'Haritalarda henüz ilk 20’de değilsiniz.'));
+      var fark = '';
+      if (haritali.length >= 2) {
+        var a = aramaHaritaSira(haritali[0], kelime), b = aramaHaritaSira(haritali[haritali.length - 1], kelime), H = 'Haritalarda "' + kelime + '" aramasında';
+        fark = a && b ? (a > b ? H + ' ' + (a - b) + ' sıra yükseldiniz.' : a < b ? H + ' ' + (b - a) + ' sıra geriye düştünüz.' : H + ' sıranız değişmedi.') : (!a && b ? H + ' ilk 20’ye girdiniz, şu an ' + b + '. sıradasınız.' : (a && !b ? H + ' ilk 20’nin dışına düştünüz.' : H + ' henüz ilk 20’de değilsiniz.'));
+      }
       not = kisaTarih(liste[0].baslangic) + ' tarihinden bu yana ' + liste.length + ' ölçüm. ' + fark + (sonraki ? ' Sıradaki otomatik ölçüm: ' + kisaTarih(sonraki) + '.' : '');
     }
     $('gelisim-not').textContent = not;
-    cizgiGrafik($('grafik-harita'), liste.filter(function (o) { return o.harita_sonuclar; }).map(function (o) {
-      return { v: o.harita_sira || 21, bos: !o.harita_sira, yazi: o.harita_sira ? o.harita_sira + '.' : 'yok', t: kisaTarih(o.baslangic) };
-    }), { min: 1, max: 21, ters: true, cizgiler: [1, 5, 10, 20], etiketle: function (v) { return v === 1 ? '1.' : v + '.'; }, etiket: 'Haritalardaki sıra' });
+    cizgiGrafik($('grafik-harita'), haritali.map(function (o) {
+      var s = aramaHaritaSira(o, kelime);
+      return { v: s || 21, bos: !s, yazi: s ? s + '.' : 'yok', t: kisaTarih(o.baslangic) };
+    }), { min: 1, max: 21, ters: true, cizgiler: [1, 5, 10, 20], etiketle: function (v) { return v === 1 ? '1.' : v + '.'; }, etiket: 'Haritalardaki sıra' + (kelime ? ' ("' + kelime + '")' : '') });
     cizgiGrafik($('grafik-yz'), liste.filter(function (o) { return o.yz_soru_sayisi; }).map(function (o) {
       var y = Math.round(100 * o.yz_gecen / o.yz_soru_sayisi); return { v: y, bos: !y, yazi: '%' + y, t: kisaTarih(o.baslangic) };
     }), { min: 0, max: 100, cizgiler: [0, 50, 100], etiketle: function (v) { return '%' + v; }, etiket: 'Yapay zekâ önerme oranı' });
@@ -752,9 +766,12 @@
     if (onceki) {
       var sirayaz = function (x) { return x.harita_sira ? x.harita_sira + '.' : 'ilk 20’de yok'; };
       var oran = function (x) { return x.yz_soru_sayisi ? '%' + yzYuzde(x) : '-'; };
-      var hD = !onceki.harita_sonuclar || !o.harita_sonuclar ? 'ölçülemedi' : (onceki.harita_sira || 0) === (o.harita_sira || 0) ? 'değişmedi (' + sirayaz(o) + ')' : sirayaz(onceki) + ' → ' + sirayaz(o);
+      // Aynı aramayla karşılaştır: önceki ölçümde bu aramanın sırası (ölçülmediyse undefined)
+      var hOnce = aramaHaritaSira(onceki, o.harita_sorgu);
+      var hD = hOnce === undefined || !o.harita_sonuclar ? 'ölçülemedi' : (hOnce || 0) === (o.harita_sira || 0) ? 'değişmedi (' + sirayaz(o) + ')' : sirayaz({ harita_sira: hOnce }) + ' → ' + sirayaz(o);
+      if (hD !== 'ölçülemedi') hD = '("' + o.harita_sorgu + '") ' + hD;
       var yD = oran(onceki) === oran(o) ? 'değişmedi (' + oran(o) + ')' : oran(onceki) + ' → ' + oran(o);
-      var ayni = hD.indexOf('değişmedi') === 0 && yD.indexOf('değişmedi') === 0;
+      var ayni = / değişmedi/.test(hD) && yD.indexOf('değişmedi') === 0;
       dg.textContent = 'Önceki ölçüme göre (' + tarih(onceki.baslangic) + '): Haritalar ' + hD + ', yapay zekâ ' + yD + '.' +
         (ayni ? ' Sonuçlar aynı çünkü Google’daki durumunuz değişmedi. Aşağıdaki işleri yaptıkça burada değişim göreceksiniz; Google’ın bunu yansıtması genelde 1-4 hafta sürer.' : '');
       dg.hidden = false;
@@ -781,7 +798,10 @@
 
     var h = (o.hatalar || []).filter(Boolean);
     $('sonuc-hata').hidden = !h.length;
-    if (h.length) $('sonuc-hata').textContent = 'Bazı ölçümler yapılamadı: ' + h.join(' · ');
+    // Ham (çoğu İngilizce) hata metni gösterilmez; sadece hangi bölümün ölçülemediği
+    var bolum = h.map(function (x) { var m = /^(Haritalar|Google arama|Yapay zekâ|Google Yapay Zekâ Modu|ChatGPT)\b/.exec(String(x)); return m ? m[1] : 'diğer'; })
+      .filter(function (x, n, l) { return l.indexOf(x) === n; });
+    if (h.length) $('sonuc-hata').textContent = 'Bazı ölçümler bu sefer yapılamadı (' + bolum.join(', ') + '). Sonraki ölçümde tekrar denenecek.';
 
     // Aramalar tek tek: her arama bir satır, rozete tıklayınca o aramanın sayfası açılır
     aramaListeCiz(o);
@@ -1138,6 +1158,24 @@
     satir[0].className = 'aktif';
   }
 
+  // Ölçüm arka planda sürer; kaydın durumuna 5 saniyede bir bakılır (en çok 8 dakika)
+  function olcumBekle(id) {
+    var son = Date.now() + 8 * 6e4;
+    return new Promise(function (coz, red) {
+      (function bak() {
+        A.sb.from('olcumler').select('*').eq('id', id).maybeSingle().then(function (r) {
+          var o = r.data;
+          if (o && o.durum === 'bitti') return coz(o);
+          if (o && o.durum === 'hata') return red(new Error('Ölçüm şu an yapılamadı. Bu deneme günlük hakkınızdan sayılmadı; biraz sonra tekrar deneyin.'));
+          if (Date.now() > son) return red(new Error('Ölçüm beklenenden uzun sürdü. Birkaç dakika sonra sayfayı yenileyin.'));
+          setTimeout(bak, 5000);
+        }, function () {
+          if (Date.now() > son) red(new Error('İnternet bağlantısında sorun var. Sayfayı yenileyin.')); else setTimeout(bak, 5000);
+        });
+      })();
+    });
+  }
+
   function olc() {
     sayfaGoster('ozet');
     $('ilk').hidden = false; $('sonuc').hidden = true;
@@ -1149,7 +1187,7 @@
         var ctx = r.error.context;
         return (ctx && ctx.json ? ctx.json() : Promise.resolve({})).then(function (j) { if (j && j.olcum) return j.olcum; throw new Error((j && j.hata) || 'Ölçüm şu an yapılamadı. Biraz sonra tekrar deneyin.'); }, function () { throw new Error('Ölçüm şu an yapılamadı. Biraz sonra tekrar deneyin.'); });
       }
-      return r.data.olcum;
+      return r.data.kayit ? olcumBekle(r.data.kayit) : r.data.olcum;
     }).then(function (o) {
       adimlariOynat(false);
       yzDuzelt(o);

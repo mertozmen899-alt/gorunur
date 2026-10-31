@@ -14,7 +14,8 @@
     'Invalid login credentials': 'E-posta veya şifre yanlış.',
     'Email not confirmed': 'E-posta adresiniz henüz onaylanmamış. Gelen kutunuzdaki onay bağlantısına tıklayın.',
     'User already registered': 'Bu e-postayla zaten bir hesap var. "Giriş yap" sekmesinden girin.',
-    'Password should be at least 6 characters': 'Şifre en az 8 karakter olmalı.',
+    // Sitede en az 8 karakter isteniyor; Supabase'in kendi sınırı (6 veya 8) ne olursa olsun aynı uyarı
+    'Password should be at least': 'Şifre en az 8 karakter olmalı.',
     'Unable to validate email address: invalid format': 'Lütfen geçerli bir e-posta adresi yazın.',
     'Email rate limit exceeded': 'Çok fazla deneme yapıldı. Biraz sonra tekrar deneyin.',
     'New password should be different from the old password': 'Yeni şifreniz eskisiyle aynı. Farklı bir şifre yazın ya da eski şifrenizle giriş yapın.',
