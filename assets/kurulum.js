@@ -124,11 +124,21 @@
   $('turkiye').addEventListener('click', function () { $('semt').value = 'Türkiye geneli'; d.semt = 'Türkiye geneli'; $('semt-oneri').hidden = true; goster(); });
 
   // 3. adım
+  // İngilizce yazılan iş türleri (Google'dan kopyalanan kategori adları): Türkçesini önerir
+  var INGILIZCE = { 'dentist': 'Diş hekimi', 'dental clinic': 'Diş kliniği', 'orthodontist': 'Ortodontist', 'hairdresser': 'Kuaför', 'hair salon': 'Kuaför', 'barber': 'Berber', 'barber shop': 'Berber',
+    'veterinarian': 'Veteriner kliniği', 'vet': 'Veteriner kliniği', 'veterinary clinic': 'Veteriner kliniği', 'restaurant': 'Restoran', 'cafe': 'Kafe', 'coffee shop': 'Kafe', 'furniture store': 'Mobilya mağazası',
+    'lawyer': 'Avukatlık bürosu', 'law firm': 'Avukatlık bürosu', 'real estate agency': 'Emlak ofisi', 'real estate agent': 'Emlak ofisi', 'bakery': 'Pastane', 'pastry shop': 'Pastane', 'plumber': 'Tesisatçı',
+    'electrician': 'Elektrikçi', 'car repair': 'Oto tamir', 'auto repair shop': 'Oto tamir', 'beauty salon': 'Güzellik salonu', 'physiotherapist': 'Fizyoterapi', 'physical therapist': 'Fizyoterapi',
+    'pet store': 'Pet shop', 'pharmacy': 'Eczane', 'gym': 'Spor salonu', 'hotel': 'Otel', 'florist': 'Çiçekçi', 'optician': 'Optik', 'wedding venue': 'Düğün salonu', 'moving company': 'Nakliyat',
+    'tutor': 'Özel ders', 'appliance repair service': 'Küçük ev aletleri tamiri', 'doctor': 'Doktor', 'clinic': 'Klinik', 'accountant': 'Muhasebeci', 'photographer': 'Fotoğrafçı', 'tailor': 'Terzi' };
   $('ad').addEventListener('input', function () { d.ad = this.value; goster(); });
   function isSec(ad) { d.is = ad; d.isSecili = true; $('is').value = ad; $('is-oneri').hidden = true; $('is-secili').hidden = false; $('is-secili').textContent = '✓ ' + ad; goster(); }
   $('is').addEventListener('input', function () {
     var deger = this.value; d.is = deger; d.isSecili = false; $('is-secili').hidden = true;
-    oneriler($('is-oneri'), V.isAra(deger), isSec, function (kutu) {
+    var tr = INGILIZCE[deger.trim().toLowerCase().replace(/\s+/g, ' ')];
+    var liste = V.isAra(deger);
+    if (tr) liste = [{ ad: tr, ipucu: 'Bunu mu demek istediniz? Müşterileriniz Türkçe arıyor.' }].concat(liste.filter(function (o) { return (o.ad || o) !== tr; }));
+    oneriler($('is-oneri'), liste, isSec, function (kutu) {
       if (deger.trim().length < 2) return;
       var k = document.createElement('button'); k.type = 'button'; k.className = 'kendim';
       var b = document.createElement('b'); b.textContent = 'Listede yok, kendim yazayım';

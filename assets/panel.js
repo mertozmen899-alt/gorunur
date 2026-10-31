@@ -7,6 +7,8 @@
   var SIKLIK = { haftalik: 'tercihiniz haftalık kısa özet', onemli: 'tercihiniz sadece önemli bir şey olunca', yok: 'mesaj göndermeyeceğiz' };
   var oturum, isletme;
 
+  // Cümlelerde kullanılan iş adı: ölçüm motorunun bulduğu Türkçe ad ("dentist" yazıldıysa "diş hekimi"), yoksa yazılan iş türü
+  function isAdi(i, yedek) { var p = i && i.sektor_profili; return ((p && p.ad) || (i && i.is_turu) || yedek || '').toLocaleLowerCase('tr').trim(); }
   function el(tag, metin, sinif) { var e = document.createElement(tag); if (metin != null) e.textContent = metin; if (sinif) e.className = sinif; return e; }
   // Türkçe bulunma eki: son ünlüye göre -da/-de, sert ünsüzden sonra -ta/-te (Çorum’da, Kadıköy’de, Bağcılar’da, Ahmet’te)
   function yerde(semt) {
@@ -30,7 +32,7 @@
     return out;
   }
   function otomatikKelimeler(i) {
-    var isK = (i.is_turu || '').toLocaleLowerCase('tr').trim();
+    var isK = isAdi(i, '').trim();
     var yer = i.semt === 'Türkiye geneli' ? '' : (i.semt || '').split(',')[0].trim().toLocaleLowerCase('tr');
     var cek = isK.split(/\s+/).filter(function (k) { return k && EKLER.indexOf(k) < 0; }).join(' ') || isK;
     return tekil([yer + ' ' + cek, isK + ' ' + yer, 'en iyi ' + cek + ' ' + yer, cek + ' ' + yer + ' tavsiye']).slice(0, 3);
@@ -53,7 +55,7 @@
       var kod = isKodu(x), yap = !x.bilgi && yapilanlar[kod];
       var kapali = !yap && !x.bilgi && acikVar;
       if (!yap && !x.bilgi) acikVar = true;
-      var d = el('div', null, 'is-satir' + (yap ? ' yapildi' : '') + (kapali ? ' kapali' : ''));
+      var d = el('div', null, 'is-satir' + (yap ? ' yapildi' : '') + (kapali ? ' kapali' : '')); d.dataset.kod = kod;
       d.appendChild(el('span', yap ? '✓' : String(k + 1), 'is-no'));
       var g = el('div', null, 'is-govde');
       g.appendChild(el('b', x.t)); if (x.s) g.appendChild(el('small', x.s));
@@ -92,14 +94,14 @@
       if (!x.bilgi) {
         var alt = el('div', null, 'is-alt');
         if (yap) {
-          alt.appendChild(el('span', 'Yaptınız · ' + kisaTarih(yap.yapildi), 'pil pil-y'));
+          alt.appendChild(el('span', 'Yaptınız · ' + kisaTarihG(yap.yapildi), 'pil pil-y'));
           var ac = el('button', 'Adımları göster', 'link-btn'); ac.type = 'button';
           ac.addEventListener('click', function () { var a = d.classList.toggle('acik'); ac.textContent = a ? 'Adımları gizle' : 'Adımları göster'; });
           var geri = el('button', 'Geri al', 'link-btn'); geri.type = 'button';
           geri.addEventListener('click', function () { geriAl(kod, geri); });
           alt.appendChild(ac); alt.appendChild(geri);
         } else {
-          var yb = el('button', 'Yaptım', 'btn btn-amber kucuk-btn'); yb.type = 'button';
+          var yb = el('button', 'Bitirdim, işaretle', 'btn btn-amber kucuk-btn'); yb.type = 'button';
           yb.addEventListener('click', function () { yaptim(kod, x, yb); });
           if (kapali) {
             var nb = el('button', 'Nasıl yapılır?', 'btn btn-cizgi kucuk-btn'); nb.type = 'button';
@@ -107,7 +109,6 @@
             alt.appendChild(nb);
           }
           alt.appendChild(yb);
-          if (!kapali) alt.appendChild(el('small', 'Bitirince işaretleyin, etkisini takip edelim.', 'is-ipucu'));
         }
         anaG.appendChild(alt);
       }
@@ -123,13 +124,90 @@
     kutular.forEach(function (k) { if (k._isler) isEkle(k, k._isler); });
     yapilanCiz(); siradakiCiz(); isSayaci();
   }
+  // ---- Bu haftanın işleri: hedefe göre sıralı, haftada 3 iş ----
+  var HEDEFLER = {
+    telefon: { ad: 'Daha çok telefon', isler: ['google-profil', 'nap', 'yorum', 'yorum-cevap-', 'puan', 'profil-', 'aciklama', 'urun-listesi', 'fotograf'] },
+    dukkan: { ad: 'Dükkânıma daha çok müşteri', isler: ['google-profil', 'fotograf', 'yorum', 'yorum-cevap-', 'puan', 'apple-yandex', 'bing', 'gonderi-', 'nap'] },
+    internet: { ad: 'İnternetten daha çok müşteri', isler: ['site-sayfa', 'site-baslik', 'site-saglik-', 'site-yok', 'sayfa-', 'rakip-sayfa', 'rehber-', 'sektor-siteleri', 'liste-sayfalari', 'platform-', 'guclendir-'] }
+  };
+  var ekstraIs = 0, tumIsler = false;
+  function hedefeUygun(kod) {
+    var h = HEDEFLER[isletme && isletme.hedef]; if (!h) return false;
+    return h.isler.some(function (p) { return p.slice(-1) === '-' ? kod.indexOf(p) === 0 : kod === p; });
+  }
+  // Önerilen işler, hedefe göre: Google profili her zaman önce, sonra hedefe uyanlar, sonra diğerleri (kendi sıralarıyla)
+  function hedefSirali() {
+    var l = onerilenler(), puan = function (z, n) { return (z.kod === 'google-profil' ? 0 : hedefeUygun(z.kod) ? 1 : 2) * 1000 + n; };
+    return l.map(function (z, n) { return { z: z, p: puan(z, n) }; }).sort(function (a, b) { return a.p - b.p; }).map(function (a) { return a.z; });
+  }
+  function haftaBasi() { var d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; }
+  function hedefCiz() {
+    var kutu = $('hedef-kutu'); if (!kutu) return; kutu.innerHTML = '';
+    var h = HEDEFLER[isletme && isletme.hedef];
+    if (h) {
+      var p = el('p', 'Hedefiniz: ' + h.ad + '. İşleri buna göre sıraladık. ', 'hedef-satir');
+      var deg = el('button', 'Değiştir', 'link-btn'); deg.type = 'button';
+      deg.addEventListener('click', function () { hedefSoru(kutu); });
+      p.appendChild(deg); kutu.appendChild(p);
+    } else hedefSoru(kutu);
+  }
+  function hedefSoru(kutu) {
+    kutu.innerHTML = '';
+    var d = el('div', null, 'hedef-soru');
+    d.appendChild(el('b', 'Bu ay en çok ne istiyorsunuz?'));
+    var s = el('div', null, 'hedef-secenekler');
+    Object.keys(HEDEFLER).forEach(function (k) {
+      var b = el('button', HEDEFLER[k].ad, 'btn btn-cizgi'); b.type = 'button';
+      if (isletme.hedef === k) b.setAttribute('aria-pressed', 'true');
+      b.addEventListener('click', function () {
+        s.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
+        A.sb.from('isletmeler').update({ hedef: k }).eq('id', isletme.id).then(function (r) {
+          if (r.error) throw r.error;
+          isletme.hedef = k; haftaCiz();
+        }).catch(function (e) { s.querySelectorAll('button').forEach(function (x) { x.disabled = false; }); alert(A.hataMetni(e)); });
+      });
+      s.appendChild(b);
+    });
+    d.appendChild(s); kutu.appendChild(d);
+  }
+  function haftaCiz() {
+    var kutu = $('hafta-isler'); if (!kutu || !isletme) return;
+    hedefCiz();
+    var sirali = hedefSirali(), bas = haftaBasi();
+    var acik = sirali.filter(function (z) { return !yapilanlar[z.kod]; });
+    var buHafta = sirali.filter(function (z) { var y = yapilanlar[z.kod]; return y && new Date(y.yapildi) >= bas; });
+    var kota = Math.max(0, 3 - buHafta.length) + ekstraIs;
+    var gosterilen = acik.slice(0, kota);
+    var eski = kutular.indexOf(kutu); if (eski >= 0) kutular.splice(eski, 1);
+    isEkle(kutu, buHafta.map(function (z) { return z.x; }).concat(gosterilen.map(function (z) { return z.x; })));
+    kutular.splice(kutular.indexOf(kutu), 1); kutu._isler = null;
+    var bitenSayi = buHafta.length;
+    $('hafta-pil').textContent = bitenSayi + ' / ' + Math.max(3, bitenSayi + gosterilen.length) + ' bitti';
+    $('hafta-not').textContent = acik.length
+      ? 'Her hafta sadece 3 işe odaklanın. Bitirdiğiniz işi "Bitirdim, işaretle" düğmesiyle işaretleyin, etkisini takip edelim.'
+      : 'Size özel bütün işleri bitirdiniz, harika. Haftalık ölçümlerde etkisini izleyin.';
+    var alt = $('hafta-alt'); alt.innerHTML = '';
+    if (acik.length && !gosterilen.length) {
+      var b = el('div', null, 'hafta-bitti');
+      b.appendChild(el('p', 'Bu haftanın 3 işini bitirdiniz, harika! Google’ın fark etmesi birkaç hafta sürer. Acele etmeyin; isterseniz şimdiden devam edin.'));
+      var ac = el('button', 'Gelecek haftanın işlerini şimdi aç', 'btn btn-amber'); ac.type = 'button';
+      ac.addEventListener('click', function () { ekstraIs += 3; haftaCiz(); });
+      b.appendChild(ac); alt.appendChild(b);
+    }
+    var tb = $('tum-isler-btn'), toplam = sirali.length;
+    tb.hidden = !toplam;
+    tb.textContent = tumIsler ? 'Sadece bu haftanın işlerini göster' : 'Tüm işleri göster (' + toplam + ' iş)';
+    tb.setAttribute('aria-expanded', tumIsler ? 'true' : 'false');
+    $('isler-sayfa').classList.toggle('odak', !tumIsler);
+  }
+  $('tum-isler-btn').addEventListener('click', function () { tumIsler = !tumIsler; haftaCiz(); });
   function yaptim(kod, x, btn) {
     btn.disabled = true; btn.textContent = 'Kaydediliyor…';
     A.sb.from('yapilan_isler').insert({ isletme_id: isletme.id, is_kodu: kod, baslik: String(x.t).slice(0, 200), onceki: anlik() }).select().single().then(function (r) {
       if (r.error && r.error.code !== '23505') throw r.error;
       if (r.data) yapilanlar[kod] = r.data; else yapilanlar[kod] = { is_kodu: kod, baslik: x.t, yapildi: new Date().toISOString(), onceki: anlik() };
       isleriYenile();
-    }).catch(function (e) { btn.disabled = false; btn.textContent = 'Yaptım'; alert(A.hataMetni(e)); });
+    }).catch(function (e) { btn.disabled = false; btn.textContent = 'Bitirdim, işaretle'; alert(A.hataMetni(e)); });
   }
   function geriAl(kod, btn) {
     var y = yapilanlar[kod]; if (!y) return;
@@ -183,12 +261,13 @@
   function isSayaci() {
     var l = onerilenler(), kalan = l.filter(function (z) { return !yapilanlar[z.kod]; }).length;
     $('isler-sayi').textContent = kalan; $('isler-sayi').hidden = !kalan;
-    $('isler-ozet').textContent = l.length ? 'Size özel ' + l.length + ' işten ' + (l.length - kalan) + ' tanesini yaptınız.' + (kalan ? ' Sırayla gidin; en önemlisi en üstte.' : ' Hepsi tamam, harika. Haftalık ölçümlerde etkisini izleyin.') : '';
+    $('isler-ozet').textContent = l.length ? 'Size özel ' + l.length + ' işten ' + (l.length - kalan) + ' tanesini yaptınız.' + (kalan ? ' Her seferinde sadece sıradaki işe odaklanın.' : ' Hepsi tamam, harika. Haftalık ölçümlerde etkisini izleyin.') : '';
+    haftaCiz();
   }
   // Özet sayfasında: yapılmamış en önemli iş
   function siradakiCiz() {
     var kutu = $('siradaki-is'); if (!kutu) return;
-    var ilk = onerilenler().filter(function (z) { return !yapilanlar[z.kod]; })[0];
+    var ilk = hedefSirali().filter(function (z) { return !yapilanlar[z.kod]; })[0];
     $('siradaki-kart').hidden = !ilk;
     if (!ilk) return;
     $('siradaki-not').textContent = 'Ölçüme göre şu an en çok işinize yarayacak adım:';
@@ -212,7 +291,7 @@
           'Google sizden doğrulama isteyecek. Genelde dükkânınızı, tabelanızı ve içeriyi gösteren kısa bir video çekmenizi ister. Telefonla çekip gönderin.',
           'Onay gelince en az 10 fotoğraf ekleyin: tabela, vitrin, içerisi, ürünler, siz ve çalışanlarınız.'
         ],
-        sonuc: 'Haritada "' + yer + ' ' + (i.is_turu || '').toLocaleLowerCase('tr') + '" arayanlar sizi görmeye başlar. Diğer bütün adımlar bu profilin üstüne kurulur.',
+        sonuc: 'Haritada "' + yer + ' ' + isAdi(i, '') + '" arayanlar sizi görmeye başlar. Diğer bütün adımlar bu profilin üstüne kurulur.',
         l: 'https://business.google.com', lm: 'Google İşletme Profili' };
     },
     yorum: function (i, benim, ort) {
@@ -269,7 +348,7 @@
           'Profiliniz yoksa işletmenizi elle ekleyin. Adı, adresi ve telefonu Google’daki ile harfi harfine aynı yazın.',
           'Bing sizden doğrulama ister (telefon, e-posta ya da kod). İstenen kodu girin.'
         ],
-        sonuc: 'ChatGPT’ye "' + yerAdi(i) + ' ' + (i.is_turu || '').toLocaleLowerCase('tr') + '" sorulduğunda listeye girme şansınız doğar.',
+        sonuc: 'ChatGPT’ye "' + yerAdi(i) + ' ' + isAdi(i, '') + '" sorulduğunda listeye girme şansınız doğar.',
         l: 'https://www.bingplaces.com', lm: 'Bing Places' };
     },
     digerHaritalar: function () {
@@ -353,7 +432,7 @@
   function yzYolu(o, i) {
     var t = sadeK(i.is_turu || '');
     var yer = yerAdi(i);
-    var isK = (i.is_turu || 'işletme').toLocaleLowerCase('tr');
+    var isK = isAdi(i, 'işletme');
     var cek = isK.split(/\s+/).filter(function (k) { return k && EKLER.indexOf(k) < 0; }).join(' ') || isK;
     var adimlar = [IS.bing(i), IS.digerHaritalar(i)];
     var arastirilmis = rehberIsleri(i, o);
@@ -475,7 +554,7 @@
         'Google İşletme Profilinize girin, "Profili düzenle" deyin.',
         'Ana kategori işinizi tam anlatsın. "' + k.kelime + '" aramasına uyan ek kategoriler varsa ekleyin.',
         '"Ürünler" veya "Hizmetler" bölümüne "' + K.replace(new RegExp('^' + yerAdi(i) + '\\s*', 'i'), '') + '" adıyla bir kalem ekleyin, fotoğraf ve kısa açıklama yazın.',
-        'İşletme açıklamanızda bu ifade doğal bir cümlede geçsin. Örnek: "' + yerde(i.semt) + ' ' + (i.is_turu || '').toLocaleLowerCase('tr') + ' olarak…"',
+        'İşletme açıklamanızda bu ifade doğal bir cümlede geçsin. Örnek: "' + yerde(i.semt) + ' ' + isAdi(i, '') + ' olarak…"',
         'Haftada bir "Güncelleme" paylaşın, metinde bu aramayı kullanın.'
       ],
       sonuc: 'Bu aramada harita kutusuna girme şansınız artar. Harita kutusu sayfanın en üstünde, en çok tıklanan yer.' });
@@ -653,7 +732,7 @@
 
   function sonucCiz(o) {
     var i = isletme, b = o.isletme_bilgi || {};
-    var isK = (i.is_turu || '').toLocaleLowerCase('tr');
+    var isK = isAdi(i, '');
     $('olcum-tarih').textContent = 'Son ölçüm: ' + tarih(o.bitis || o.baslangic) + (o.kaynak === 'haftalik' ? ' · otomatik' : '');
     var c;
     if (o.harita_sira) c = yerde(i.semt) + ' "' + o.harita_sorgu + '" aramasında Google Haritalar’da ' + o.harita_sira + '. sıradasınız.';
@@ -1017,7 +1096,7 @@
     $('kim').textContent = oturum.user.email; $('kim2').textContent = oturum.user.email;
     $('selam').textContent = (saat < 12 ? 'Günaydın' : saat < 18 ? 'İyi günler' : 'İyi akşamlar');
     $('baslik').textContent = i.ad || 'Hoş geldiniz';
-    $('hero-cumle').textContent = yerde(i.semt) + ' ' + (i.is_turu || 'işletme').toLocaleLowerCase('tr') + ' arayanlar sizi buluyor mu? Hemen ölçelim.';
+    $('hero-cumle').textContent = yerde(i.semt) + ' ' + isAdi(i, 'işletme') + ' arayanlar sizi buluyor mu? Hemen ölçelim.';
 
     var satirlar = [
       ['İşletme', i.ad], ['İş', i.is_turu], ['Yer', i.semt],

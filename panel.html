@@ -108,40 +108,48 @@
 </div>
 
 <!-- İŞLERİM -->
-<div class="sayfa" data-sayfa="isler" hidden>
+<div class="sayfa odak" data-sayfa="isler" id="isler-sayfa" hidden>
 <div class="panel-bas"><p class="selam">Adım adım</p><h1>İşlerim</h1><p class="kart-alt" id="isler-ozet" style="font-size:15px"></p></div>
 <div class="panel-izgara">
+<section class="kart genis" id="hafta-kart">
+<div class="kart-bas"><h3>Bu haftanın işleri</h3><span class="pil pil-a" id="hafta-pil"></span></div>
+<div id="hedef-kutu"></div>
+<p class="kart-alt" id="hafta-not"></p>
+<div class="isler" id="hafta-isler"></div>
+<div id="hafta-alt"></div>
+<button type="button" class="btn btn-cizgi tum-isler-btn" id="tum-isler-btn" aria-expanded="false" hidden></button>
+</section>
 <section class="kart genis" id="yapilan-kart" hidden>
 <div class="kart-bas"><h3>Yaptığınız işler ve etkisi</h3><span class="pil pil-y" id="yapilan-sayi"></span></div>
 <p class="kart-alt">Google’ın bir değişikliği fark etmesi 1-4 hafta sürer. Bu yüzden 7 gün sonra ilk bakışı, 4 hafta sonra net sonucu gösteriyoruz.</p>
 <div class="yapilan-liste" id="yapilan-liste"></div>
 </section>
-<section class="kart genis olcumlu">
-<div class="kart-bas"><h3>Bu haftanın işleri</h3><span class="pil pil-a">Ölçüme göre</span></div>
-<p class="kart-alt">Ölçümde gördüklerimize göre önem sırasıyla. Bitirdiğiniz işi "Yaptım" ile işaretleyin, etkisini takip edelim.</p>
+<section class="kart genis olcumlu is-bolum">
+<div class="kart-bas"><h3>Ölçüme göre işler</h3><span class="pil pil-a">Önem sırasıyla</span></div>
+<p class="kart-alt">Ölçümde gördüklerimize göre önem sırasıyla.</p>
 <div class="isler" id="olcum-isler"></div>
 </section>
-<section class="kart genis olcumlu" id="yz-yol-kart">
+<section class="kart genis olcumlu is-bolum" id="yz-yol-kart">
 <div class="kart-bas"><h3>Yapay zekâda önerilmek için</h3><span class="pil pil-a">Adım adım</span></div>
 <p class="kart-alt">ChatGPT ve Gemini bir işletmeyi önermeden önce internette o işletme hakkında ne yazıldığına bakıyor: haritalar, rehber siteler, web siteniz ve yorumlar. Ne kadar çok yerde aynı ve doğru bilgiyle geçerseniz o kadar çok öneriliyorsunuz.</p>
 <div class="isler" id="yz-isler"></div>
 </section>
-<section class="kart genis" id="site-isler-kart" hidden>
+<section class="kart genis is-bolum" id="site-isler-kart" hidden>
 <div class="kart-bas"><h3>Sitenizde düzeltilecekler</h3><a href="#google">Site taraması →</a></div>
 <p class="kart-alt">Sitenizi taradık; eksikleri tek mesajda topladık.</p>
 <div class="isler" id="site-isler"></div>
 </section>
-<section class="kart genis" id="yp-isler-kart" hidden>
+<section class="kart genis is-bolum" id="yp-isler-kart" hidden>
 <div class="kart-bas"><h3>Yorumlar ve platformlar</h3><a href="#google">Ayrıntılar →</a></div>
 <p class="kart-alt">Google yorumlarınıza ve platform kontrolüne göre.</p>
 <div class="isler" id="yp-isler"></div>
 </section>
-<section class="kart genis" id="metin-isler-kart">
+<section class="kart genis is-bolum" id="metin-isler-kart">
 <div class="kart-bas"><h3>Hazır metinleriniz</h3><span class="pil pil-a">Yapay zekâ yazar, siz yapıştırırsınız</span></div>
 <p class="kart-alt">Google profiliniz için gereken metinleri sizin işletmenize göre yazıyoruz.</p>
 <div class="isler" id="metin-isler"></div>
 </section>
-<section class="kart genis" id="genel-isler-kart">
+<section class="kart genis is-bolum" id="genel-isler-kart">
 <div class="kart-bas"><h3>Her işletme için geçerli</h3><span class="pil pil-a">Ölçüm beklemeden</span></div>
 <p class="kart-alt">Bunlar ölçümden bağımsız, her zaman işe yarayan adımlar.</p>
 <div class="isler" id="isler"></div>

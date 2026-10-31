@@ -122,10 +122,22 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     // Yaptım düğmesi
     await p.goto(ADRES + '/panel.html#isler'); await p.waitForSelector('#panel:not([hidden])').catch(() => {});
     const once = (await p.textContent('#isler-ozet')) || '';
-    const dugme = await p.$('#olcum-isler .is-alt .btn-amber');
+    // Bu haftanın işleri: hedef sorusu, en fazla 3 iş, diğer bölümler kapalı
+    kontrol(cihaz + ' İşlerim’de hedef sorusu var', (await p.$$('#hedef-kutu .hedef-secenekler button')).length === 3);
+    const haftaSayi = (await p.$$('#hafta-isler .is-satir')).length;
+    kontrol(cihaz + ' bu hafta en fazla 3 iş gösteriliyor', haftaSayi >= 1 && haftaSayi <= 3, String(haftaSayi));
+    kontrol(cihaz + ' diğer iş bölümleri başta kapalı', !(await p.isVisible('#genel-isler-kart')));
+    const hb = await p.$('#hedef-kutu .hedef-secenekler button');
+    if (hb) { await hb.click(); await p.waitForTimeout(300); }
+    kontrol(cihaz + ' hedef seçilince kaydediliyor', /Hedefiniz:/.test((await p.textContent('#hedef-kutu')) || ''));
+    const dugme = await p.$('#hafta-isler .is-alt .btn-amber');
     if (dugme) { await dugme.click(); await p.waitForTimeout(400); }
     const sonra = (await p.textContent('#isler-ozet')) || '';
     kontrol(cihaz + ' Yaptım düğmesi sayacı değiştiriyor', !!dugme && once !== sonra, once + ' -> ' + sonra);
+    kontrol(cihaz + ' yapılan iş tam tarihle görünüyor', /Yaptınız · \d+ [A-ZÇĞİÖŞÜ][a-zçğıöşü]{3,}/.test((await p.textContent('#hafta-isler')) || ''));
+    // Tüm işleri göster: diğer bölümler açılır
+    await p.click('#tum-isler-btn').catch(() => {}); await p.waitForTimeout(150);
+    kontrol(cihaz + ' "Tüm işleri göster" diğer bölümleri açıyor', await p.isVisible('#genel-isler-kart'));
     // Hazır metin: açıklamayı yazdır
     const yazB = await p.$('#metin-isler .yaz-alt .btn-amber');
     if (yazB) { await yazB.click(); await p.waitForSelector('#metin-isler .yazilan', { timeout: 3000 }).catch(() => {}); }
