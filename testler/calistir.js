@@ -112,6 +112,17 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
       kontrol(cihaz + ' tek arama sayfasında iş var', (await p.$$('#ar-isler .is-satir')).length > 0);
       await tasma('tek arama sayfası');
     }
+    // Yeniden ölç: ölçüm arka planda sürer, panel kaydı sorgulayıp sonucu gösterir; hatalı biterse Türkçe uyarı
+    await p.goto(ADRES + '/panel.html#ozet'); await p.waitForSelector('#panel:not([hidden])').catch(() => {});
+    await p.click('#yeniden').catch(() => {});
+    await p.waitForSelector('#sonuc:not([hidden])', { timeout: 10000 }).catch(() => {});
+    await p.waitForFunction(() => !document.getElementById('olc').disabled, null, { timeout: 10000 }).catch(() => {});
+    kontrol(cihaz + ' yeniden ölçüm arka planda bitip sonucu gösteriyor', await p.isVisible('#sonuc') && !((await p.textContent('#olcum-uyari')) || '').trim(), (await p.textContent('#olcum-uyari').catch(() => '')) || '');
+    await p.evaluate(() => { const st = JSON.parse(localStorage.getItem('fake') || '{}'); st.olcumHata = true; localStorage.setItem('fake', JSON.stringify(st)); });
+    await p.click('#yeniden').catch(() => {});
+    await p.waitForFunction(() => /sayılmadı/.test(document.getElementById('olcum-uyari').textContent), null, { timeout: 10000 }).catch(() => {});
+    kontrol(cihaz + ' hatalı biten ölçümde Türkçe uyarı ve hak sayılmadı notu', /sayılmadı/.test((await p.textContent('#olcum-uyari')) || ''), (await p.textContent('#olcum-uyari').catch(() => '')) || '');
+    await p.evaluate(() => { const st = JSON.parse(localStorage.getItem('fake') || '{}'); delete st.olcumHata; localStorage.setItem('fake', JSON.stringify(st)); });
     // Hesabımı sil: form açılıyor, yanlış e-postayla silmiyor
     await p.goto(ADRES + '/panel.html#hesap'); await p.waitForSelector('#panel:not([hidden])').catch(() => {});
     await p.click('#sil-ac').catch(() => {});
