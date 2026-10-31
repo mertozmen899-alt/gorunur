@@ -50,6 +50,12 @@
 </section>
 
 <section class="ymt-bolum kart">
+<div class="kart-bas"><h3>"Bu sonuç yanlış" bildirimleri</h3><span class="pil pil-a" id="yanlis-sayi"></span></div>
+<p class="kart-alt">Müşterilerin panelde yanlış bulduğu sonuçlar. En yeni en üstte, son 50.</p>
+<div class="kaydir"><table class="tablo"><thead><tr><th>Tarih</th><th>İşletme</th><th>Bölüm</th><th>Not</th><th>Ayrıntı</th></tr></thead><tbody id="yanlis-tablo"></tbody></table></div>
+</section>
+
+<section class="ymt-bolum kart">
 <div class="kart-bas"><h3>Ziyaretler (son 7 gün)</h3><span class="pil pil-a" id="ziyaret-toplam"></span></div>
 <p class="kart-alt">Çerezsiz sayaç: sayfa açılış sayıları ve ziyaretçilerin nereden geldiği. Kişi bilgisi tutulmaz.</p>
 <div class="kaydir"><table class="tablo"><thead><tr><th>Sayfa</th><th>Toplam</th><th>Nereden geldi</th></tr></thead><tbody id="ziyaret-tablo"></tbody></table></div>
@@ -83,8 +89,23 @@
       A.sb.from('isletmeler').select('id,ad,semt,is_turu,kurulum_bitti,kurulum_adim,olusturma').order('olusturma', { ascending: false }),
       A.sb.from('olcumler').select('isletme_id,baslangic,durum,harita_sira,yz_gecen,yz_soru_sayisi,kaynak').order('baslangic', { ascending: false }).limit(500),
       A.sb.from('ajan_raporlari').select('*').order('olusturma', { ascending: false }).limit(30),
-      A.sb.from('ziyaretler').select('*').gte('gun', new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10))
+      A.sb.from('ziyaretler').select('*').gte('gun', new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10)),
+      A.sb.from('yanlis_bildirimleri').select('*').order('olusturma', { ascending: false }).limit(50)
     ]).then(function (s) {
+      var BOLUM = { ozet: 'Özet', aramalar: 'Aramalar', arama: 'Tek arama', harita: 'Haritalar', yz_kim: 'Yapay zekâ kimi öneriyor', yapay_zeka: 'Yapay zekâ cevapları', site: 'Site sağlığı', yorumlar: 'Yorumlar', platformlar: 'Platformlar' };
+      var ad = {}; ((s[1] && s[1].data) || []).forEach(function (i) { ad[i.id] = i.ad; });
+      var yb = (s[5] && s[5].data) || [];
+      $('yanlis-sayi').textContent = yb.length + ' bildirim';
+      if (!yb.length) $('yanlis-tablo').appendChild(el('tr')).appendChild(el('td', s[5] && s[5].error ? 'Okunamadı: ' + s[5].error.message : 'Henüz bildirim yok.'));
+      yb.forEach(function (b) {
+        var tr = el('tr'), g = b.baglam || {};
+        tr.appendChild(el('td', tarih(b.olusturma)));
+        tr.appendChild(el('td', ad[b.isletme_id] || '-'));
+        tr.appendChild(el('td', BOLUM[b.bolum] || b.bolum));
+        tr.appendChild(el('td', b.notu || '-'));
+        tr.appendChild(el('td', Object.keys(g).filter(function (k) { return g[k] != null; }).map(function (k) { return k + ': ' + g[k]; }).join(' · ')));
+        $('yanlis-tablo').appendChild(tr);
+      });
       var zy = (s[4] && s[4].data) || [], top = {}, genel = 0;
       zy.forEach(function (z) { var t = top[z.sayfa] || (top[z.sayfa] = { sayi: 0, kaynak: {} }); t.sayi += z.sayi; t.kaynak[z.kaynak] = (t.kaynak[z.kaynak] || 0) + z.sayi; genel += z.sayi; });
       $('ziyaret-toplam').textContent = genel + ' açılış';

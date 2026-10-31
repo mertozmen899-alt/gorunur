@@ -505,6 +505,13 @@ span.yakinda{display:inline-block;vertical-align:middle;margin-left:8px;backgrou
 .sayi-kutu b.iyi{color:var(--vurgu)}
 .sayi-kutu small{display:block;font-size:13px;color:var(--soluk);margin-top:2px}
 .hata-not{margin:16px 0 0;font-size:13px;color:var(--soluk);background:var(--zemin2);border-radius:12px;padding:10px 12px}
+.yanlis-btn{display:inline-flex;align-items:center;min-height:40px;margin-top:12px;padding:0;background:none;border:0;font:inherit;font-size:13px;font-weight:600;color:var(--soluk);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left}
+.yanlis-btn:hover:not(:disabled){color:var(--yazi)}
+.yanlis-btn:disabled{text-decoration:none;cursor:default;color:var(--yesil)}
+.yanlis-form{display:grid;gap:8px;margin-top:6px;max-width:560px}
+.yanlis-form label{font-size:14px;font-weight:700}
+.yanlis-form textarea{resize:vertical;min-height:80px;font:inherit;font-size:15px}
+.yanlis-alt{display:flex;gap:10px;flex-wrap:wrap}
 .siz-satir td{background:var(--amberkoyu);color:var(--yazi)}
 .yz-liste{display:flex;flex-direction:column;gap:10px;margin-top:14px}
 .yz-cevap{background:var(--kart2);border:1px solid var(--cizgi2);border-radius:16px;padding:0 16px}

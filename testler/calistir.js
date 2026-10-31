@@ -148,6 +148,16 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     kontrol(cihaz + ' platform listesinde Var, Bulunamadı ve Kendiniz kontrol edin görünüyor', /Var/.test(pl) && /Bulunamadı/.test(pl) && /Kendiniz kontrol edin/.test(pl), pl.slice(0, 120));
     kontrol(cihaz + ' Apple Haritalar için adımlar var', (await p.$$('#platform-icerik .p-kendiniz .adim-liste li')).length >= 3);
     await tasma('yorumlar ve platformlar');
+    // "Bu sonuç yanlış": site kartında form açılıyor, not gönderiliyor, bildirim kaydediliyor
+    kontrol(cihaz + ' Google sayfasında "Bu sonuç yanlış" düğmeleri var', (await p.$$('[data-sayfa=google] .yanlis-btn')).length === 5);
+    await p.click('#site-kart .yanlis-btn').catch(() => {});
+    kontrol(cihaz + ' "Bu sonuç yanlış" formu açılıyor', await p.isVisible('#site-kart .yanlis-form textarea'));
+    await p.fill('#site-kart .yanlis-form textarea', 'Sitem https ile açılıyor').catch(() => {});
+    await p.click('#site-kart .yanlis-form .btn-amber').catch(() => {}); await p.waitForTimeout(200);
+    const yb = await p.evaluate(() => (JSON.parse(localStorage.getItem('fake') || '{}').yanlis || []).slice(-1)[0] || null);
+    kontrol(cihaz + ' bildirim bölüm, not ve site puanıyla kaydediliyor', !!yb && yb.bolum === 'site' && yb.notu === 'Sitem https ile açılıyor' && yb.baglam && yb.baglam.puan === 62, JSON.stringify(yb));
+    kontrol(cihaz + ' gönderince teşekkür yazıyor', /teşekkürler/.test((await p.textContent('#site-kart .yanlis-btn').catch(() => '')) || '') && !(await p.$('#site-kart .yanlis-form')));
+    await tasma('bu sonuç yanlış');
     // İşlerim: yorum ve platform işleri
     await p.click('#yan-menu [data-git=isler]').catch(() => {}); await p.waitForTimeout(150);
     const ypi = (await p.textContent('#yp-isler').catch(() => '')) || '';

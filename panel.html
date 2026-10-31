@@ -14,12 +14,12 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&display=swap"></noscript>
 <script>(function(){var t;try{t=localStorage.getItem('gorunur_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t;if(t==='koyu'){var m=document.querySelector('meta[name="theme-color"]');if(m)m.content='#0F1217'}})()</script>
-<link rel="stylesheet" href="assets/style.css?v=33">
+<link rel="stylesheet" href="assets/style.css?v=34">
 <script src="assets/tema.js?v=1" defer></script>
 <script src="assets/iletisim.js?v=3" defer></script>
 <script src="assets/vendor/supabase-js-2.45.4.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script src="assets/auth.js?v=9"></script>
-<script src="assets/panel.js?v=27" defer></script>
+<script src="assets/panel.js?v=28" defer></script>
 <script src="assets/sayac.js?v=1" defer></script>
 </head>
 <body class="olcum-yok">
@@ -85,6 +85,7 @@
 <a class="sayi-kutu" href="#yz"><span>Yapay zekâ önerme oranı</span><b id="k-yz"></b><small id="k-yz-not"></small></a>
 </div>
 <p class="hata-not" id="sonuc-hata" hidden></p>
+<button type="button" class="yanlis-btn" data-bolum="ozet">Bu sonuç yanlış</button>
 </div>
 </section>
 
@@ -157,6 +158,7 @@
 <h3>Yapay zekâ kimi öneriyor?</h3>
 <p class="kart-alt" id="yz-pay-not"></p>
 <div class="pay-liste" id="yz-pay"></div>
+<button type="button" class="yanlis-btn" data-bolum="yz_kim">Bu sonuç yanlış</button>
 </section>
 <section class="kart genis">
 <h3>Yapay zekâ ne dedi?</h3>
@@ -166,6 +168,7 @@
 <details class="yz-motor" id="motor-gyz"><summary></summary><div class="yz-motor-ic"></div></details>
 <details class="yz-motor" id="motor-cg"><summary></summary><div class="yz-motor-ic"></div></details>
 </div>
+<button type="button" class="yanlis-btn" data-bolum="yapay_zeka">Bu sonuç yanlış</button>
 </section>
 <section class="kart genis">
 <div class="kart-bas"><h3>Önerilmek için ne yapmalı?</h3><a href="#isler">İşlerim →</a></div>
@@ -184,6 +187,7 @@
 <p class="kart-alt" id="arama-ozet"></p>
 <p class="kart-alt" id="kelime-konum"></p>
 <div class="arama-liste" id="arama-liste"></div>
+<button type="button" class="yanlis-btn" data-bolum="aramalar">Bu sonuç yanlış</button>
 </section>
 <section class="kart genis olcumlu">
 <h3>Haritalarda kim önde?</h3>
@@ -192,24 +196,28 @@
 <thead><tr><th>Sıra</th><th>İşletme</th><th>Puan</th><th>Yorum</th></tr></thead>
 <tbody id="rakip-tablo"></tbody>
 </table></div>
+<button type="button" class="yanlis-btn" data-bolum="harita">Bu sonuç yanlış</button>
 </section>
 <section class="kart genis" id="site-kart">
 <div class="kart-bas"><h3>Sitenizin sağlığı</h3><button type="button" class="btn btn-cizgi kucuk-btn" id="site-tara">Siteyi tara</button></div>
 <p class="kart-alt">Google’ın ve yapay zekânın sitenizi rahat okuyup okuyamadığına bakıyoruz: başlık, açıklama, telefonda görünüm, hız, adres ve telefon bilgisi.</p>
 <p class="uyari" id="site-durum" role="status"></p>
 <div id="site-saglik" style="margin-top:12px"></div>
+<button type="button" class="yanlis-btn" data-bolum="site">Bu sonuç yanlış</button>
 </section>
 <section class="kart genis" id="yorum-kart">
 <div class="kart-bas"><h3>Google yorumlarınız</h3><button type="button" class="btn btn-cizgi kucuk-btn" id="yorum-yenile">Yorumları yenile</button></div>
 <p class="kart-alt">Google Haritalar’daki son yorumlarınızı getiriyoruz. Cevap vermediğiniz yorumlar için sizin adınıza bir cevap taslağı yazıyoruz; taslağı kopyalayıp kendiniz yayınlarsınız, biz hiçbir şeyi sizin yerinize paylaşmayız.</p>
 <p class="uyari" id="yorum-durum" role="status"></p>
 <div id="yorum-icerik" style="margin-top:12px"></div>
+<button type="button" class="yanlis-btn" data-bolum="yorumlar">Bu sonuç yanlış</button>
 </section>
 <section class="kart genis" id="platform-kart">
 <div class="kart-bas"><h3>Hangi platformlarda varsınız?</h3><button type="button" class="btn btn-cizgi kucuk-btn" id="platform-yenile">Yeniden kontrol et</button></div>
 <p class="kart-alt">Google’da işletmenizin adıyla arama yapıp hangi sitelerde sayfanız çıktığına bakıyoruz. Yapay zekâ bir işletmeyi önermeden önce bu sitelere bakıyor.</p>
 <p class="uyari" id="platform-durum" role="status"></p>
 <div id="platform-icerik" style="margin-top:12px"></div>
+<button type="button" class="yanlis-btn" data-bolum="platformlar">Bu sonuç yanlış</button>
 </section>
 <section class="kart genis" id="kelime-kart">
 <div class="kart-bas"><h3>Hangi aramalarda ölçüyoruz?</h3><span class="pil pil-a">10 arama</span></div>
@@ -239,6 +247,7 @@
 <section class="kart genis">
 <h3>Bu aramada kimler önde?</h3>
 <div id="ar-onde" class="ar-onde"></div>
+<button type="button" class="yanlis-btn" data-bolum="arama">Bu sonuç yanlış</button>
 </section>
 </div>
 <div class="ar-gezinti"><a id="ar-onceki" class="btn btn-cizgi kucuk-btn" href="#">← Önceki arama</a><a id="ar-sonraki" class="btn btn-cizgi kucuk-btn" href="#">Sonraki arama →</a></div>

@@ -1136,6 +1136,41 @@
     }).catch(function (err) { $('sil-durum').textContent = err.message; btn.disabled = false; btn.textContent = 'Hesabımı ve verilerimi sil'; });
   });
 
+  // "Bu sonuç yanlış": kart altında kısa not formu açılır, bildirim yanlis_bildirimleri tablosuna gider (sadece yönetici okur)
+  function bildirimBaglam(bolum) {
+    var o = gecmis[0] || {}, b = { sayfa: location.hash.slice(1) || 'ozet', olcum_id: o.id || null, olcum_tarih: o.baslangic || null };
+    if (bolum === 'site' && isletme.site_saglik) { b.adres = isletme.site_saglik.adres; b.puan = isletme.site_saglik.puan; b.tarih = isletme.site_saglik.tarih; }
+    if (bolum === 'yorumlar' && isletme.yorumlar) { b.tarih = isletme.yorumlar.tarih; b.yorum_sayisi = isletme.yorumlar.yorum_sayisi; }
+    if (bolum === 'platformlar' && isletme.platformlar) b.tarih = isletme.platformlar.tarih;
+    var m = /^arama-(\d+)$/.exec(b.sayfa), k = m && (o.kelimeler || [])[+m[1]];
+    if (bolum === 'arama' && k) { b.kelime = k.kelime; b.arama_sira = k.arama_sira || null; b.harita_sira = k.harita_sira || null; }
+    return b;
+  }
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('.yanlis-btn');
+    if (!btn) return;
+    var acik = btn.nextElementSibling && btn.nextElementSibling.classList.contains('yanlis-form') ? btn.nextElementSibling : null;
+    if (acik) { acik.remove(); btn.setAttribute('aria-expanded', 'false'); return; }
+    var f = el('form', null, 'yanlis-form'), id = 'yanlis-not-' + btn.getAttribute('data-bolum');
+    var lb = el('label', 'Ne yanlış? Doğrusu ne olmalı? (isteğe bağlı)'); lb.htmlFor = id;
+    var ta = el('textarea', null, 'girdi'); ta.id = id; ta.rows = 3; ta.maxLength = 1000;
+    var alt = el('div', null, 'yanlis-alt'), gon = el('button', 'Gönder', 'btn btn-amber kucuk-btn'), vaz = el('button', 'Vazgeç', 'btn btn-cizgi kucuk-btn'), dr = el('p', null, 'kart-alt');
+    gon.type = 'submit'; vaz.type = 'button'; dr.setAttribute('role', 'status');
+    alt.appendChild(gon); alt.appendChild(vaz); f.appendChild(lb); f.appendChild(ta); f.appendChild(alt); f.appendChild(dr);
+    vaz.addEventListener('click', function () { f.remove(); btn.setAttribute('aria-expanded', 'false'); btn.focus(); });
+    f.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var bolum = btn.getAttribute('data-bolum');
+      gon.disabled = true; gon.textContent = 'Gönderiliyor…'; dr.textContent = '';
+      // insert sonrası select yok: kullanıcı kendi bildirimini okuyamaz (sadece yönetici okur)
+      A.sb.from('yanlis_bildirimleri').insert({ isletme_id: isletme.id, bolum: bolum, baglam: bildirimBaglam(bolum), notu: ta.value.trim().slice(0, 1000) || null }).then(function (r) {
+        if (r && r.error) throw r.error;
+        f.remove(); btn.textContent = 'Bildirdiniz, teşekkürler. Kontrol edip düzelteceğiz.'; btn.disabled = true; btn.removeAttribute('aria-expanded');
+      }).catch(function (err) { gon.disabled = false; gon.textContent = 'Gönder'; dr.textContent = A.hataMetni(err); });
+    });
+    btn.after(f); btn.setAttribute('aria-expanded', 'true'); ta.focus();
+  });
+
   $('site-tara').addEventListener('click', function () { siteTara(false); });
   $('yorum-yenile').addEventListener('click', function () { yorumYenile(false); });
   $('platform-yenile').addEventListener('click', function () { platformYenile(false); });
