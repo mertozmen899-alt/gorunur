@@ -93,11 +93,16 @@ function temizArama(x: unknown): string {
   return String(x || "").toLocaleLowerCase("tr").replace(/[^a-zçğıöşü0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
 }
 // Sektör profili: müşterilerin bu işi nasıl aradığı (Gemini, 30 günde bir)
-type Profil = { temel: string; esler: string[]; urunler: string[]; aramalar: string[] };
-async function sektorProfili(isK: string, yerAd: string, GEM: string, modeller: string[]): Promise<Profil | null> {
-  const soru = `Bir yerel işletme Google'da müşterilerin aramalarında görünmek istiyor. İşletmenin türü: "${isK}". Bölge: "${yerAd || "Türkiye geneli"}".
+// ad: soru cümlelerinde kullanılan Türkçe iş adı ("dentist" -> "diş hekimi"); uzmanlik: işletme adındaki uzmanlık ("çorum ortodonti" -> "ortodonti")
+// isim: profilin hangi işletme adıyla çıkarıldığı; ozel_adlar: Google önerilerinden ayıklanan kişi/işletme adı içeren aramalar
+type Profil = { temel: string; esler: string[]; urunler: string[]; aramalar: string[]; ad?: string; uzmanlik?: string | null; isim?: string; ozel_adlar?: string[]; ozel_imza?: string };
+async function sektorProfili(isK: string, yerAd: string, GEM: string, modeller: string[], isletmeAdi = ""): Promise<Profil | null> {
+  const soru = `Bir yerel işletme Google'da müşterilerin aramalarında görünmek istiyor. İşletmenin türü: "${isK}". İşletmenin adı: "${isletmeAdi}". Bölge: "${yerAd || "Türkiye geneli"}".
+İşletme türü İngilizce ya da eksik yazılmış olabilir; Türkçe karşılığını kullan. İşletmenin adında bir uzmanlık geçiyorsa (örnek: ortodonti, implant, kombi, gelinlik) aramalarda onu da düşün.
 Türkiye'deki müşterilerin bu tür bir işletmeyi bulmak için Google'a yazdığı aramaları düşün. Sadece JSON döndür:
-{"temel":"müşterilerin bu işi aramak için en çok yazdığı kısa ifade, 1-2 kelime, küçük harf (örnek: mobilya, veteriner, diş hekimi, kuaför, düğün salonu, kombi servisi)",
+{"ad":"bu işletme türünün Türkçe adı, bir müşterinin 'iyi bir ... önerir misin?' cümlesinde kullanacağı biçimde, tekil, küçük harf (örnek: diş hekimi, mobilyacı, veteriner kliniği, küçük ev aletleri tamircisi)",
+"uzmanlik":"işletme adında geçen uzmanlık ya da ana ürün, 1-2 kelime, küçük harf; adında yoksa null (örnek: 'Çorum Ortodonti' için ortodonti)",
+"temel":"müşterilerin bu işi aramak için en çok yazdığı kısa ifade, 1-2 kelime, küçük harf (örnek: mobilya, veteriner, diş hekimi, kuaför, düğün salonu, kombi servisi)",
 "esler":["aynı işi anlatan başka yaygın ifadeler, en fazla 4, küçük harf (örnek: mobilyacı, mobilya mağazası)"],
 "urunler":["bu işletmede müşterilerin en çok aradığı ürün veya hizmetler, en fazla 5, 1-3 kelime, küçük harf, marka adı olmadan (örnek: koltuk takımı, yatak odası takımı)"],
 "aramalar":["müşterilerin hizmet almak ya da satın almak için Google'a yazdığı 12 arama, küçük harf, ${yerAd ? `her birinde '${yerAd.toLocaleLowerCase("tr")}' geçsin` : "yer adı olmadan"}, fiyat, iş ilanı, nasıl yapılır ve marka adı olmasın, en sık yazılanlar önce"]}`;
@@ -107,7 +112,12 @@ Türkiye'deki müşterilerin bu tür bir işletmeyi bulmak için Google'a yazdı
     const liste = (x: unknown, n: number) => (Array.isArray(x) ? x : []).map(temizArama).filter((k) => k && k.split(" ").length <= 6).slice(0, n);
     const temel = temizArama(j.temel);
     if (!temel || temel.split(" ").length > 3) return null;
-    return { temel, esler: liste(j.esler, 4), urunler: liste(j.urunler, 5), aramalar: liste(j.aramalar, 12) };
+    const ad = temizArama(j.ad);
+    const uzm = temizArama(j.uzmanlik);
+    return { temel, esler: liste(j.esler, 4), urunler: liste(j.urunler, 5), aramalar: liste(j.aramalar, 12),
+      ad: ad && ad.split(" ").length <= 5 ? ad : temel,
+      uzmanlik: uzm && uzm !== "null" && uzm.split(" ").length <= 2 && sade(uzm) !== sade(temel) ? uzm : null,
+      isim: isletmeAdi };
   } catch (e) { console.log("sektor profili alinamadi", String(e)); return null; }
 }
 // Google otomatik tamamlama: insanların gerçekten yazdığı aramalar (Google'ın kendi sırasıyla)
@@ -117,6 +127,23 @@ async function googleOnerileri(tohumlar: string[], anahtar: string): Promise<str
   const karisik: string[] = [];
   for (let i = 0; i < 10; i++) for (const l of listeler) if (l[i]) karisik.push(l[i]);
   return karisik;
+}
+// Google önerilerinde başka kişilerin ya da işletmelerin adı geçen aramalar ("gözde koçak diş hekimi çorum") müşterinin aramasıdır
+// ama bu işletmenin hedefi değildir: yapay zekâya bir kez sorup ayıklarız (sonuç profile kaydedilir, 30 günde bir).
+const UNVAN = /(^| )(dr|dt|uzm|doç|doc|prof|op|av|ecz|vet|hekim) /;
+async function ozelAdlariBul(oneriler: string[], GEM: string, modeller: string[]): Promise<string[] | null> {
+  const liste = oneriler.slice(0, 30);
+  if (!liste.length) return [];
+  const soru = `Aşağıdaki Google aramalarından hangileri belirli bir kişinin adını (doktor, avukat, usta adı gibi) ya da belirli bir işletmenin/markanın adını içeriyor? Yer adları (şehir, ilçe, semt) ve genel iş ya da ürün kelimeleri sayılmaz.
+Sadece JSON döndür: {"ozel":["...aramanın aynısı..."]}
+Aramalar:
+${liste.map((x) => "- " + x).join("\n")}`;
+  try {
+    const { metin } = await gemini(soru, GEM, modeller, true);
+    const j = JSON.parse(metin.replace(/^```(json)?|```$/g, "").trim());
+    const kume = new Set(liste.map(temizArama));
+    return (Array.isArray(j.ozel) ? j.ozel : []).map(temizArama).filter((x: string) => kume.has(x));
+  } catch (e) { console.log("ozel ad ayiklanamadi", String(e)); return null; }
 }
 type Aday = { kelime: string; kaynak: string; populer?: boolean };
 type Secim = { liste: Aday[]; temel: string; denetim: Array<{ kod: string; mesaj: string }> };
@@ -138,20 +165,45 @@ function aramalariSec(o: { yer: string; sehir: string; turkiye: boolean; isK: st
   const S4 = o.isK !== isTemiz ? ile(o.turkiye ? "" : o.yer, o.isK) : "";
   const yakin = !o.turkiye && o.konumVar ? `${temel} yakınımda` : "";
   const elle = o.elle.map((k) => (o.turkiye || yerGeciyor(k, yerler)) ? k : ile(o.yer, k));
-  const oneriler = o.oneriler.filter(uygun);
+  // Başka kişi/işletme adı geçen öneriler ("gözde koçak diş hekimi çorum", "dr ahmet ...") listeye girmez
+  const ozel = new Set((o.profil?.ozel_adlar || []).map(imza));
+  const kisiAdiYok = (k: string) => !ozel.has(imza(k)) && !UNVAN.test(" " + sade(k) + " ");
+  const oneriler = o.oneriler.filter((k) => uygun(k) && kisiAdiYok(k));
+  const uzm = o.profil?.uzmanlik ? ile(o.turkiye ? "" : o.yer, o.profil.uzmanlik) : "";   // "çorum ortodonti" (işletme adındaki uzmanlık)
   const populerImza = new Set(oneriler.map(imza));
-  const esler = (o.profil?.esler || []).map((x) => ile(o.turkiye ? "" : o.yer, x));
+  const esler = (o.profil?.esler || []).slice(0, 2).map((x) => ile(o.turkiye ? "" : o.yer, x));
   const urunler = (o.profil?.urunler || []).map((x) => ile(o.turkiye ? "" : o.yer, x));
-  const yzAramalar = (o.profil?.aramalar || []).filter(uygun);
+  const yzAramalar = (o.profil?.aramalar || []).filter((k) => uygun(k) && kisiAdiYok(k));
   const sira: Aday[] = [];
   const ekle = (k: string, kaynak: string) => { if (k) sira.push({ kelime: k, kaynak }); };
-  ekle(S1, "temel"); ekle(S2, "sehir");
+  ekle(S1, "temel"); ekle(uzm, "temel"); ekle(S2, "sehir");
   elle.slice(0, 3).forEach((k) => ekle(k, "elle"));
   const sec = [oneriler[0], oneriler[1], esler[0], urunler[0], oneriler[2], urunler[1], oneriler[3], esler[1], urunler[2], oneriler[4], oneriler[5], ...yzAramalar, ...oneriler.slice(6), ...urunler.slice(3), ...esler.slice(2)];
   sec.forEach((k) => ekle(k, "oneri"));
   ekle(S3, "temel"); ekle(S4, "temel"); // iş türünün yazıldığı hâli ("çorum mobilya satıcısı"): yer kalırsa
-  const goruldu = new Set<string>(); let liste: Aday[] = [];
-  for (const a of sira) { const im = imza(a.kelime); if (!goruldu.has(im)) { goruldu.add(im); liste.push(a); } }
+  // Neredeyse aynı aramalar: biri ötekinin aynısı + tek bir yan kelime ("bornova gelin başı" = "bornova gelin başı kuaförü",
+  // "antalya arsa" = "antalya yatırımlık arsa"). Aynı işin eş anlamlıları (diş kliniği, diş hekimi, diş hastanesi...) en fazla 3 kez.
+  const yerTok = new Set(sade(yerler.join(" ")).split(" ").filter(Boolean));
+  const tok = (k: string) => imza(k).split(" ").filter((t) => t && !yerTok.has(t));
+  const sektorTok = new Set([temel, isTemiz, o.isK].flatMap(tok));   // eş anlamlıların kelimeleri sayılmaz ("kadın kuaförü" ayrı bir aramadır)
+  const YAN = new Set(["salon", "kuafor", "klinig", "merkez", "hizmet", "ofis", "buro", "magaza", "danismanlig", "danismanl", "yatirimlik", "yatirim", "firma", "sirket", "servis", "atolye", "modeller", "cesit", "secenek", "ozel", "profesyonel", "kalite", "kaliteli", "satilik"].map((x) => imza(x)));
+  const yakinKopya = (a: string[], b: string[]) => {
+    const [kisa, uzun] = a.length <= b.length ? [a, b] : [b, a];
+    if (uzun.length - kisa.length !== 1 || !kisa.every((t) => uzun.includes(t))) return false;
+    const fazla = uzun.find((t) => !kisa.includes(t)) as string;
+    return YAN.has(fazla) || sektorTok.has(fazla);
+  };
+  const esCekirdek = new Set([temel, isTemiz, o.isK, ...(o.profil?.esler || [])].map((x) => tok(x).sort().join(" ")));
+  const goruldu = new Set<string>(); let liste: Aday[] = []; const secilenTok: string[][] = []; let esSayisi = 0;
+  for (const a of sira) {
+    const im = imza(a.kelime), t = tok(a.kelime);
+    if (goruldu.has(im)) continue;
+    if (a.kaynak !== "elle" && secilenTok.some((x) => yakinKopya(x, t))) continue;
+    const es = esCekirdek.has(t.slice().sort().join(" "));
+    if (es && a.kaynak !== "elle" && esSayisi >= 3) continue;
+    if (es) esSayisi++;
+    goruldu.add(im); secilenTok.push(t); liste.push(a);
+  }
   liste = liste.slice(0, yakin ? 9 : 10);
   if (yakin && !goruldu.has(imza(yakin))) liste.push({ kelime: yakin, kaynak: "yakin" });
   liste.forEach((a) => { a.populer = populerImza.has(imza(a.kelime)); if (oneriler.some((x) => imza(x) === imza(a.kelime)) && a.kaynak === "oneri") a.kaynak = "google"; });
@@ -334,6 +386,8 @@ async function gemini(soru: string, anahtar: string, modeller: string[], jsonMod
       const mesaj = String(j?.error?.message || r.status);
       if (r.status === 404 || r.status === 400 && /not found|not supported/i.test(mesaj)) { sonHata = `${model}: bulunamadı`; break; }
       if (r.status === 429 || r.status === 403) { sonHata = `${model}${aramali ? " (aramalı)" : ""}: kota`; if (aramali) aramaKotasiYok = true; continue; }
+      // Model geçici olarak yoğunsa (500/503) sıradaki modeli dene
+      if (r.status >= 500) { sonHata = `${model}: yoğun`; break; }
       if (!r.ok) throw new Error("Gemini: " + mesaj);
       const metin = (j?.candidates?.[0]?.content?.parts || []).filter((p: { thought?: boolean }) => !p.thought).map((p: { text?: string }) => p.text || "").join("").trim();
       console.log("gemini", model, aramali ? "aramali" : "aramasiz", Date.now() - t0, "ms");
@@ -537,8 +591,9 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
   if (degisti) { guncelle.kelime_kaynak = kaynakImza; if (isl.kelime_kaynak) { isl.serp_konum = null; } }
   // Sektör profili (yapay zekâ): 30 günde bir
   let profil = (degisti ? null : isl.sektor_profili) as Profil | null;
-  if (GEM && (!profil || !isl.sektor_profili_tarih || Date.now() - new Date(isl.sektor_profili_tarih).getTime() > 30 * 864e5)) {
-    const p = await sektorProfili(isK, turkiye ? "" : semtKisa, GEM, modellerP);
+  // Eski profillerde Türkçe iş adı (ad) yok ya da işletme adı değişmiş olabilir: o zaman da yenilenir
+  if (GEM && (!profil || !profil.ad || profil.isim !== isl.ad || !isl.sektor_profili_tarih || Date.now() - new Date(isl.sektor_profili_tarih).getTime() > 30 * 864e5)) {
+    const p = await sektorProfili(isK, turkiye ? "" : semtKisa, GEM, modellerP, String(isl.ad || ""));
     if (p) { profil = p; guncelle.sektor_profili = p; guncelle.sektor_profili_tarih = new Date().toISOString(); }
   }
   const temelIfade = profil?.temel || cekirdekIs(isK);
@@ -551,6 +606,12 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
       const yeni = await googleOnerileri(tohum, SERP);
       if (yeni.length) { oneriler = yeni.slice(0, 30); guncelle.oto_kelimeler = oneriler; guncelle.oto_kelimeler_tarih = new Date().toISOString(); }
     } catch (e) { console.log("google onerileri alinamadi", String(e)); }
+  }
+  // Önerilerdeki kişi/işletme adlarını ayıkla (öneri listesi değişince bir kez; sonuç profile yazılır)
+  const ozelImza = sade(oneriler.join("|")).slice(0, 2000);
+  if (GEM && profil && oneriler.length && profil.ozel_imza !== ozelImza) {
+    const ozel = await ozelAdlariBul(oneriler, GEM, modellerP);
+    if (ozel) { profil = { ...profil, ozel_adlar: ozel, ozel_imza: ozelImza }; guncelle.sektor_profili = profil; }
   }
   // Aramanın yapılacağı konum (bir kez bulunur, işletmeye kaydedilir)
   let konum = turkiye ? "" : (isl.serp_konum || "");
@@ -648,7 +709,13 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
         link: /^https?:/.test(String(x.link || "")) ? x.link : (x.redirect_link && /^https?:/.test(String(x.redirect_link)) && !/google\./.test(String(x.redirect_link)) ? x.redirect_link : null),
         gorunen: String(x.displayed_link || x.source || "").split(" ")[0],
       }));
-      const alanOf = (x: { link: unknown; gorunen: string }) => alanAdi(x.link ? String(x.link) : x.gorunen);
+      // Bağlantı yoksa ekranda görünen adresin sadece ilk parçası alınır; içinde gerçek bir alan adı yoksa boş kalır ("1,2" ya da "com.com.tr" gibi)
+      const alanOf = (x: { link: unknown; gorunen: string }) => {
+        if (x.link) return alanAdi(String(x.link));
+        const ilk = String(x.gorunen || "").trim().split(/[\s›>]+/)[0] || "";
+        const a = alanAdi(ilk);
+        return /^[a-z0-9-]{2,}(\.[a-z0-9-]{2,})+$/i.test(a) && !/^(com|net|org|gov|edu)\./i.test(a) ? a : "";
+      };
       // Önce site adresiyle; ad eşleşmesi rehber sitelerinde sayılmaz
       const ben = org.find((x) => siteAlan && alanOf(x) === siteAlan) || org.find((x) => !rehberTuru(String(x.baslik || ""), alanOf(x)) && adGeciyor(String(x.baslik || ""), isl.ad, adHaric));
       const yerel = (((j.local_results || {}) as Record<string, unknown>).places || []) as Array<Record<string, unknown>>;
@@ -692,10 +759,12 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
   //    Sonuç bir orandır: her 100 cevabın kaçında adınız geçiyor.
   // Müşteri soruları (tüm yapay zekâ motorları aynı listeden sorar; az soran motorlar baştakileri alır)
   const yzYer = turkiye ? "Türkiye'de" : `${semtKisa}${sehir ? ", " + sehir : ""} bölgesinde`;
+  // Sorularda işletmenin yazdığı tür değil, müşterinin kullanacağı Türkçe ad ("dentist" -> "diş hekimi")
+  const soruAdi = profil?.ad || isK;
   const sablon = [
-    `${yzYer} iyi bir ${isK} önerir misin?`,
-    `${yzYer} en çok tavsiye edilen ${isK} hangileri?`,
-    `${yzYer} ${isK} arıyorum, güvenilir bir yer söyler misin?`,
+    `${yzYer} iyi bir ${soruAdi} önerir misin?`,
+    `${yzYer} en çok tavsiye edilen ${soruAdi} hangileri?`,
+    `${yzYer} ${soruAdi} arıyorum, güvenilir bir yer söyler misin?`,
     `${yzYer} kaliteli ${temelIfade} için hangi işletmeyi önerirsin?`,
   ];
   const kelimeSorulari = kelimeler.map((k) => `"${k}" diye arıyorum. Hangi işletmeleri önerirsin?`);
@@ -718,6 +787,7 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     for (let t = 1; t <= TEKRAR; t++) for (const soru of sorular) isler.push({ soru, tekrar: t });
     const cevaplar: Array<Record<string, unknown>> = new Array(isler.length);
     const bekle = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const yzBasla = Date.now();
     // Dakikalık sınıra takılmamak için aynı anda en fazla 3 istek; kota dolarsa 20 sn bekleyip bir kez daha dene
     let sira = 0;
     await Promise.all(Array.from({ length: 3 }, async () => {
@@ -737,6 +807,22 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
         }
       }
     }));
+    // İkinci tur: alınamayan cevaplar (kota, yoğunluk, zaman aşımı) dakikalık sınır sıfırlanınca bir kez daha sorulur.
+    // Toplam süre uzamasın (kullanıcı bekliyor, sunucu sınırı 150 sn): ilk tur 45 sn içinde bittiyse yapılır, 70. saniyeden sonra yeni soru sorulmaz.
+    const eksikler = cevaplar.map((c, n) => (!c || "hata" in c ? n : -1)).filter((n) => n >= 0);
+    if (eksikler.length && Date.now() - yzBasla < 45000) {
+      await bekle(Math.max(0, 61000 - (Date.now() - yzBasla)));
+      let sira2 = 0;
+      await Promise.all(Array.from({ length: 2 }, async () => {
+        while (sira2 < eksikler.length && Date.now() - yzBasla < 70000) {
+          const n = eksikler[sira2++], { soru, tekrar } = isler[n];
+          try {
+            const { model, metin, aramali } = await gemini(soru + KISA, GEM, modeller, false, 1);
+            cevaplar[n] = { soru, tekrar, model, aramali, geciyor: adGeciyor(metin, isl.ad, adHaric), ozet: metin.slice(0, 1000), ikinci_tur: true };
+          } catch (e) { console.log("yz ikinci tur", String((e as Error).message).slice(0, 120)); }
+        }
+      }));
+    }
     const basarili = cevaplar.filter((c) => c && !("hata" in c));
     s.yz_soru_sayisi = basarili.length;
     s.yz_gecen = basarili.filter((c) => (c as { geciyor: boolean }).geciyor).length;

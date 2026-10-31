@@ -1277,3 +1277,19 @@ body:has(.lp-promo:not([hidden])) .wa-dugme{opacity:0;pointer-events:none}
 /* Dokunma hedefleri: üst menü bağlantıları ve panel kart bağlantıları ("Tüm işler →", "Google İşletme Profili →") en az 24px */
 @media (min-width:721px){.menu a{display:inline-flex;align-items:center;min-height:24px}}
 .menu a.erken,.kart-bas a,.is-govde>a{display:inline-flex;align-items:center;min-height:24px}
+/* İşlerim: önce bu haftanın işleri; diğer bölümler "Tüm işleri göster" ile açılır */
+#isler-sayfa.odak .is-bolum{display:none!important}
+.tum-isler-btn{width:100%;margin-top:14px}
+#hafta-kart{border:2px solid var(--amberkenar)}
+.hedef-soru{background:var(--kart2);border:1px solid var(--cizgi2);border-radius:16px;padding:16px;margin:4px 0 14px}
+.hedef-soru b{display:block;font-size:16px;margin-bottom:10px}
+.hedef-secenekler{display:grid;gap:8px}
+.hedef-secenekler button{min-height:48px;text-align:left;justify-content:flex-start}
+.hedef-satir{font-size:14px;color:var(--yazi3);margin:0 0 10px}
+.hafta-bitti{background:var(--zemin2);border-radius:16px;padding:16px;margin-top:4px}
+.hafta-bitti p{margin:0 0 12px}
+/* Diğer bölümlerde iş numarası yerine nokta: sıra "Bu haftanın işleri"nde */
+.is-bolum .is-satir:not(.yapildi) .is-no{font-size:0}
+.is-bolum .is-satir:not(.yapildi) .is-no::after{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+/* Ok işaretli bağlantılar parmakla rahat basılsın (en az 44px dokunma alanı) */
+.kart-bas a,.is-govde>a,.is-detay>a,.geri-link,a.geri{min-height:44px;display:inline-flex;align-items:center}
