@@ -229,11 +229,12 @@
     var hs = function (v) { return v ? v + '.' : 'ilk 20’de yok'; };
     if (once) {
       var a = once.harita_sira, b = sonra.harita_sira;
-      parca.push('Haritalar: ' + (a === (b || null) ? 'değişmedi (' + hs(b) + ')' : hs(a) + ' → ' + hs(b)));
+      if (once.harita_sonuclar && sonra.harita_sonuclar) parca.push('Haritalar: ' + (a === (b || null) ? 'değişmedi (' + hs(b) + ')' : hs(a) + ' → ' + hs(b)));
+      else parca.push('Haritalar bu ölçümlerde alınamadı');
       var yz2 = sonra.yz_soru_sayisi ? Math.round(100 * (sonra.yz_gecen || 0) / sonra.yz_soru_sayisi) : null;
       if (once.yz_yuzde != null && yz2 != null) parca.push('yapay zekâ: ' + (once.yz_yuzde === yz2 ? 'değişmedi (%' + yz2 + ')' : '%' + once.yz_yuzde + ' → %' + yz2));
-    } else parca.push('İşaretlediğinizde ölçüm yoktu; şu an haritalarda ' + hs(sonra.harita_sira));
-    var iyi = once && ((sonra.harita_sira && (!once.harita_sira || sonra.harita_sira < once.harita_sira)) || (sonra.yz_soru_sayisi && once.yz_yuzde != null && Math.round(100 * (sonra.yz_gecen || 0) / sonra.yz_soru_sayisi) > once.yz_yuzde));
+    } else parca.push('İşaretlediğinizde ölçüm yoktu; şu an haritalarda ' + (sonra.harita_sonuclar ? hs(sonra.harita_sira) : 'ölçülemedi'));
+    var iyi = once && ((once.harita_sonuclar && sonra.harita_sira && (!once.harita_sira || sonra.harita_sira < once.harita_sira)) || (sonra.yz_soru_sayisi && once.yz_yuzde != null && Math.round(100 * (sonra.yz_gecen || 0) / sonra.yz_soru_sayisi) > once.yz_yuzde));
     return { pil: net ? 'Net sonuç' : 'İlk bakış', sinif: iyi ? 'pil-y' : 'pil-a', yazi: parca.join(', ') + '.' + (!net ? ' Net sonuç 4 hafta dolunca (' + kisaTarihG(new Date(new Date(y.yapildi).getTime() + 28 * 864e5)) + ').' : (iyi ? '' : ' Bazı işlerin etkisi daha geç görünür; diğer işlerle birlikte devam edin.')) };
   }
   function yapilanCiz() {
@@ -549,7 +550,7 @@
     if (b.bulundu === false) isler.push(IS.googleProfil(i, b));
     else if (!k.yerel_kutuda && !(k.harita_sira && k.harita_sira <= 3)) isler.push({
       k: 'profil-' + kod, t: 'Google profilinizde "' + k.kelime + '" geçsin', s: '20 dakika · ücretsiz',
-      n: 'Google, harita kutusuna bu aramayla en çok eşleşen profilleri koyuyor. ' + (k.harita_sira ? 'Haritalar’da ' + k.harita_sira + '. sıradasınız.' : 'Haritalar’da ilk 20’de değilsiniz.'),
+      n: 'Google, harita kutusuna bu aramayla en çok eşleşen profilleri koyuyor. ' + (k.harita_sira ? 'Haritalar’da ' + k.harita_sira + '. sıradasınız.' : k.harita_bakilan != null ? 'Haritalar’da ilk 20’de değilsiniz.' : 'Haritalar bu aramada ölçülemedi.'),
       adimlar: [
         'Google İşletme Profilinize girin, "Profili düzenle" deyin.',
         'Ana kategori işinizi tam anlatsın. "' + k.kelime + '" aramasına uyan ek kategoriler varsa ekleyin.',
@@ -751,7 +752,7 @@
     if (onceki) {
       var sirayaz = function (x) { return x.harita_sira ? x.harita_sira + '.' : 'ilk 20’de yok'; };
       var oran = function (x) { return x.yz_soru_sayisi ? '%' + yzYuzde(x) : '-'; };
-      var hD = (onceki.harita_sira || 0) === (o.harita_sira || 0) ? 'değişmedi (' + sirayaz(o) + ')' : sirayaz(onceki) + ' → ' + sirayaz(o);
+      var hD = !onceki.harita_sonuclar || !o.harita_sonuclar ? 'ölçülemedi' : (onceki.harita_sira || 0) === (o.harita_sira || 0) ? 'değişmedi (' + sirayaz(o) + ')' : sirayaz(onceki) + ' → ' + sirayaz(o);
       var yD = oran(onceki) === oran(o) ? 'değişmedi (' + oran(o) + ')' : oran(onceki) + ' → ' + oran(o);
       var ayni = hD.indexOf('değişmedi') === 0 && yD.indexOf('değişmedi') === 0;
       dg.textContent = 'Önceki ölçüme göre (' + tarih(onceki.baslangic) + '): Haritalar ' + hD + ', yapay zekâ ' + yD + '.' +
