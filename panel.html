@@ -198,6 +198,21 @@
 </table></div>
 <button type="button" class="yanlis-btn" data-bolum="harita">Bu sonuç yanlış</button>
 </section>
+<section class="kart genis olcumlu" id="izlenen-kart">
+<div class="kart-bas"><h3>İzlediğiniz rakipler</h3><button type="button" class="btn btn-cizgi kucuk-btn" id="rakip-sec-ac">Rakipleri seç</button></div>
+<p class="kart-alt" id="izlenen-not"></p>
+<p class="kart-alt">Her ölçümde bu rakiplere, sizin için zaten yaptığımız harita aramalarında ve yapay zekâ cevaplarında bakıyoruz: haritadaki sıraları, Google puanları, yorum sayıları ve yapay zekânın onları kaç kez önerdiği. Rakiplerin sitelerini, Google gönderilerini, yorumlarının içeriğini ve Instagram hesaplarını incelemiyoruz.</p>
+<div class="kaydir" style="margin-top:14px"><table class="tablo">
+<thead><tr><th>İşletme</th><th>Puan</th><th>Yorum</th><th>Haritada</th><th>Yapay zekâda</th></tr></thead>
+<tbody id="izlenen-tablo"></tbody>
+</table></div>
+<form id="rakip-sec-form" hidden style="margin-top:16px">
+<p class="kart-alt">En çok 5 rakip seçin. Liste, son ölçümde haritalarda karşınıza çıkan işletmelerden oluşur. Hiç seçmezseniz haritalarda en sık önde çıkan 3 işletmeyi biz seçeriz. Seçiminiz bir sonraki ölçümde görünür.</p>
+<div id="rakip-adaylar" class="rakip-adaylar"></div>
+<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button type="submit" class="btn btn-amber kucuk-btn">Kaydet</button><button type="button" class="btn btn-cizgi kucuk-btn" id="rakip-sec-kapat">Vazgeç</button></div>
+<p class="uyari" id="rakip-sec-durum" role="status"></p>
+</form>
+</section>
 <section class="kart genis" id="site-kart">
 <div class="kart-bas"><h3>Sitenizin sağlığı</h3><button type="button" class="btn btn-cizgi kucuk-btn" id="site-tara">Siteyi tara</button></div>
 <p class="kart-alt">Google’ın ve yapay zekânın sitenizi rahat okuyup okuyamadığına bakıyoruz: başlık, açıklama, telefonda görünüm, hız, adres ve telefon bilgisi.</p>

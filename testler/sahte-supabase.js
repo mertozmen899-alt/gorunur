@@ -30,6 +30,7 @@
   ORNEK.yz_cevaplar=[]; ['Çorum’da iyi bir mobilya satıcısı önerir misin?','Çorum’da en çok tavsiye edilen mobilya satıcısı hangileri?','"çorum mobilya" diye arıyorum. Hangi işletmeleri önerirsin?'].forEach(function(q,qi){ for(var t=1;t<=3;t++) ORNEK.yz_cevaplar.push({soru:q,tekrar:t,geciyor:qi===0&&t<3||qi===2&&t===1,ozet:'Cevap '+qi+'-'+t+': Modalife, Loca Mobilya...'}); });
   for(var t=1;t<=3;t++) ['Soru 4','Soru 5','Soru 6'].forEach(function(q){ORNEK.yz_cevaplar.push({soru:q,tekrar:t,geciyor:false,ozet:'x'});}); ORNEK.harita_sira=6; ORNEK.kaynak='elle'; ORNEK.rehber_sayfalari=[{baslik:'Çorum Mobilya ve Ev Mağazaları Listesi | COM',alan:'ornekrehber.com',kelime:'çorum mobilya',sira:4}];
   ORNEK.yz_rakipler=[{ad:'Modalife Çorum',sayi:7},{ad:'Loca Mobilya',sayi:4},{ad:'Doğu Mobilya',sayi:1}];
+  ORNEK.izlenen_rakipler=[{ad:'Modalife Çorum',place_id:'p1',secili:false,puan:4.7,yorum:812,yz_sayi:7,yz_toplam:18,aramalar:[{kelime:'çorum mobilya',sira:1,siz:6},{kelime:'çorum koltuk takımı',sira:null,siz:2}]},{ad:'Loca Mobilya',place_id:null,secili:false,puan:null,yorum:null,yz_sayi:0,yz_toplam:18,aramalar:[{kelime:'çorum mobilya',sira:null,siz:6}]}];
   // Google Yapay Zekâ Modu (gyz_*): 2 soru, biri adı geçiyor; ChatGPT (cg_*) henüz yok (null) -> panelde "yakında"
   ORNEK.gyz_soru_sayisi=2; ORNEK.gyz_gecen=1;
   ORNEK.gyz_cevaplar=[

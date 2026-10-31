@@ -721,6 +721,8 @@
       tb.appendChild(tr);
     });
 
+    izlenenCiz(o);
+
     // Yapay zekâ cevapları: motor motor (Gemini, Google Yapay Zekâ Modu, ChatGPT)
     var yl = $('yz-liste'); yl.innerHTML = '';
     var aramasiz = (o.yz_cevaplar || []).some(function (c) { return c.aramali === false; });
@@ -1081,6 +1083,87 @@
       $('durum-yazi').textContent = 'Ölçüm yapılamadı';
     }).then(function () { $('olc').disabled = false; $('olc').textContent = 'Tekrar dene'; });
   }
+
+  // İzlenen rakipler: sadece ölçümde gerçekten görülen değerler; listede yoksa "listede yok" yazılır, tahmin yok
+  var RAKIP_EN_COK = 5;
+  function izlenenCiz(o) {
+    var tb = $('izlenen-tablo'); tb.innerHTML = '';
+    var liste = (o && o.izlenen_rakipler) || [];
+    var seciliSayi = (isletme.secili_rakipler || []).length;
+    // Rakip bilgisi olmayan (eski) ölçümlerde kart hiç gösterilmez; olmayan bir takibi vaat etmeyelim
+    $('izlenen-kart').hidden = !(o && o.izlenen_rakipler);
+    if (!o || !o.izlenen_rakipler) return;
+    var secili = liste.some(function (r) { return r.secili; });
+    $('izlenen-not').textContent = liste.length
+      ? liste.length + ' rakip izleniyor' + (secili ? ' (sizin seçtikleriniz).' : ' (haritalarda en sık önünüze çıkanlar; isterseniz kendiniz seçebilirsiniz).')
+        + (seciliSayi && !secili ? ' Yeni seçiminiz bir sonraki ölçümde görünecek.' : '')
+      : 'Bu ölçümde harita sonucu alınamadığı için rakip bilgisi yok.';
+    liste.forEach(function (r) {
+      var tr = el('tr');
+      var ad = el('td'); ad.appendChild(el('b', String(r.ad || '-'))); tr.appendChild(ad);
+      tr.appendChild(el('td', r.puan != null ? String(r.puan).replace('.', ',') + ' ★' : '-'));
+      tr.appendChild(el('td', sayi(r.yorum)));
+      var h = el('td');
+      var ar = r.aramalar || [];
+      if (!ar.length) h.textContent = '-';
+      ar.forEach(function (a) {
+        var satir = el('div', '"' + a.kelime + '": ' + (a.sira ? a.sira + '. sırada' : 'ilk 20’de yok') + ' (siz: ' + (a.siz ? a.siz + '.' : 'ilk 20’de yok') + ')');
+        satir.style.fontSize = '13px';
+        h.appendChild(satir);
+      });
+      tr.appendChild(h);
+      tr.appendChild(el('td', r.yz_sayi == null ? 'ölçülmedi' : r.yz_toplam + ' cevabın ' + r.yz_sayi + ' tanesinde'));
+      tb.appendChild(tr);
+    });
+  }
+  function rakipAdaylari() {
+    var o = gecmis[0] || {}, gorulen = {}, liste = [];
+    var ekle = function (ad, pid) {
+      ad = String(ad || '').trim(); if (!ad) return;
+      var k = ad.toLocaleLowerCase('tr'); if (gorulen[k]) return; gorulen[k] = 1;
+      liste.push({ ad: ad, place_id: pid || null });
+    };
+    (isletme.secili_rakipler || []).forEach(function (r) { ekle(r.ad, r.place_id); });
+    (o.izlenen_rakipler || []).forEach(function (r) { ekle(r.ad, r.place_id); });
+    (o.harita_sonuclar || []).forEach(function (r) { if (!r.siz) ekle(r.ad, r.place_id); });
+    (o.kelimeler || []).forEach(function (k) { (k.harita_ilk3 || []).forEach(function (ad) { ekle(ad, null); }); });
+    return liste.slice(0, 20);
+  }
+  function rakipFormuDoldur() {
+    var kutu = $('rakip-adaylar'); kutu.innerHTML = '';
+    var secili = {}; (isletme.secili_rakipler || []).forEach(function (r) { secili[String(r.ad).toLocaleLowerCase('tr')] = 1; });
+    var adaylar = rakipAdaylari();
+    if (!adaylar.length) { kutu.appendChild(el('p', 'Önce bir ölçüm yapın; haritalarda karşınıza çıkan işletmeler burada listelenecek.', 'kart-alt')); return; }
+    adaylar.forEach(function (a, n) {
+      var lab = el('label'); lab.style.display = 'flex'; lab.style.gap = '8px'; lab.style.alignItems = 'center'; lab.style.padding = '6px 0';
+      var cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = String(n); cb.checked = !!secili[a.ad.toLocaleLowerCase('tr')];
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(a.ad));
+      kutu.appendChild(lab);
+    });
+    kutu._adaylar = adaylar;
+  }
+  $('rakip-sec-ac').addEventListener('click', function () { rakipFormuDoldur(); $('rakip-sec-durum').textContent = ''; $('rakip-sec-form').hidden = false; });
+  $('rakip-sec-kapat').addEventListener('click', function () { $('rakip-sec-form').hidden = true; });
+  $('rakip-adaylar').addEventListener('change', function (e) {
+    if (e.target.type !== 'checkbox') return;
+    var n = this.querySelectorAll('input:checked').length;
+    if (n > RAKIP_EN_COK) { e.target.checked = false; $('rakip-sec-durum').textContent = 'En çok ' + RAKIP_EN_COK + ' rakip seçebilirsiniz.'; }
+    else $('rakip-sec-durum').textContent = '';
+  });
+  $('rakip-sec-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var adaylar = $('rakip-adaylar')._adaylar || [];
+    var secim = [].map.call(this.querySelectorAll('#rakip-adaylar input:checked'), function (cb) { return adaylar[Number(cb.value)]; })
+      .filter(Boolean).slice(0, RAKIP_EN_COK).map(function (a) { return { ad: a.ad.slice(0, 120), place_id: a.place_id }; });
+    var btn = this.querySelector('button[type=submit]'); btn.disabled = true; $('rakip-sec-durum').textContent = 'Kaydediliyor…';
+    A.sb.from('isletmeler').update({ secili_rakipler: secim.length ? secim : null }).eq('id', isletme.id).select().single().then(function (r) {
+      if (r.error) throw r.error;
+      isletme = r.data;
+      $('rakip-sec-form').hidden = true;
+      izlenenCiz(gecmis[0]);
+      $('izlenen-not').textContent = (secim.length ? secim.length + ' rakip seçtiniz.' : 'Seçimi kaldırdınız; haritalarda en sık önünüze çıkan 3 işletmeyi izleyeceğiz.') + ' Değişiklik bir sonraki ölçümde görünecek.';
+    }).catch(function (err) { $('rakip-sec-durum').textContent = A.hataMetni(err); }).then(function () { btn.disabled = false; });
+  });
 
   function kelimeFormuDoldur() {
     var kayitli = isletme.anahtar_kelimeler || [], oto = otomatikKelimeler(isletme);

@@ -837,6 +837,42 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     s.yz_rakipler = pay;
   }
 
+  // İzlenen rakipler: kullanıcının seçtikleri (en çok 5), seçmediyse haritalarda en sık öne çıkan 3 işletme.
+  // Sadece bu ölçümde zaten alınan harita sonuçlarından ve yapay zekâ cevaplarından hesaplanır; ek ücretli sorgu yok.
+  // Bir rakip bir aramanın harita listesinde yoksa sırası null kalır ("listede yok"); tahmin yazılmaz.
+  {
+    type Hedef = { ad: string; place_id: string | null; secili: boolean };
+    const ayniMi = (r: Satir, h: Hedef) => (h.place_id && r.place_id) ? String(r.place_id) === h.place_id : sade(String(r.ad || "")) === sade(h.ad);
+    const kayitli = (Array.isArray(isl.secili_rakipler) ? isl.secili_rakipler : []) as Array<Record<string, unknown>>;
+    let hedefler: Hedef[] = kayitli.filter((x) => x && typeof x.ad === "string" && String(x.ad).trim()).slice(0, 5)
+      .map((x) => ({ ad: String(x.ad).trim().slice(0, 120), place_id: typeof x.place_id === "string" ? x.place_id : null, secili: true }));
+    if (!hedefler.length) {
+      const say = new Map<string, { r: Satir; adet: number; toplam: number }>();
+      for (const l of haritaListeleri) for (const r of (l || []).slice(0, 10)) {
+        if (benMi(r) || !r.ad) continue;
+        const k = r.place_id ? String(r.place_id) : sade(String(r.ad));
+        const v = say.get(k) || { r, adet: 0, toplam: 0 }; v.adet++; v.toplam += r.sira; say.set(k, v);
+      }
+      hedefler = [...say.values()].sort((a, b) => b.adet - a.adet || a.toplam / a.adet - b.toplam / b.adet).slice(0, 3)
+        .map((v) => ({ ad: String(v.r.ad), place_id: v.r.place_id ? String(v.r.place_id) : null, secili: false }));
+    }
+    s.izlenen_rakipler = hedefler.map((h) => {
+      let son: Satir | null = null;
+      const aramalar = haritaIdx.filter((i) => haritaListeleri[i]).map((i) => {
+        const r = haritaListeleri[i].find((x) => ayniMi(x, h)) || null;
+        if (r) son = r;
+        return { kelime: kelimeler[i], sira: r ? r.sira : null, siz: (kelimeSonuc[i].harita_sira as number | null) ?? null };
+      });
+      const bulunan = son as Satir | null;
+      return {
+        ad: h.ad, place_id: h.place_id, secili: h.secili, aramalar,
+        puan: bulunan ? bulunan.puan : null, yorum: bulunan ? bulunan.yorum : null,
+        yz_sayi: yzMetinleri.length ? yzMetinleri.filter((m) => adGeciyor(m, h.ad, haric)).length : null,
+        yz_toplam: yzMetinleri.length,
+      };
+    });
+  }
+
   const hepsiHata = sonuclar.slice(0, 3).every((r) => r.status === "rejected");
   if (denetim.length) console.log("denetim", isl.id, JSON.stringify(denetim));
   const guncel = { ...s, hatalar, denetim, durum: hepsiHata ? "hata" : "bitti", bitis: new Date().toISOString() };
