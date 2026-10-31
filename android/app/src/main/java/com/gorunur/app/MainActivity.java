@@ -32,7 +32,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import java.net.URISyntaxException;
 
 /**
- * Görünür uygulaması: sitenin canlı halini açar.
+ * Norevo uygulaması: sitenin canlı halini açar.
  * Sitede yapılan her güncelleme, uygulamayı yeniden kurmadan burada da görünür.
  */
 public class MainActivity extends Activity {

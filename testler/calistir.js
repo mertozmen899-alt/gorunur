@@ -1,4 +1,4 @@
-// Görünür otomatik testleri (test ekibi ajanı her gün çalıştırır)
+// Norevo otomatik testleri (test ekibi ajanı her gün çalıştırır)
 // Kullanım: node testler/calistir.js   (Playwright gerekir; sonuç JSON olarak yazdırılır, hata varsa çıkış kodu 1)
 // Gerçek Supabase'e bağlanmaz: supabase-js yerine testler/sahte-supabase.js yüklenir.
 const { chromium } = require('playwright');

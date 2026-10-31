@@ -17,7 +17,7 @@ android {
         versionCode derlemeNo
         versionName "1.0.${derlemeNo}"
         // Uygulama açılınca gidilen sayfa. Kendi alan adı alınınca burası değişir.
-        buildConfigField 'String', 'BASLANGIC', '"https://mertozmen899-alt.github.io/gorunur/panel.html"'
+        buildConfigField 'String', 'BASLANGIC', '"https://mertozmen899-alt.github.io/norevo/panel.html"'
     }
 
     buildFeatures {

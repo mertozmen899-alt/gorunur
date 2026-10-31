@@ -1,4 +1,4 @@
-// Görünür: çerezsiz ziyaret sayacı. Kişisel veri, IP veya cihaz bilgisi göndermez;
+// Norevo: çerezsiz ziyaret sayacı. Kişisel veri, IP veya cihaz bilgisi göndermez;
 // sadece "hangi sayfa" ve "nereden gelindi" (ör. google, instagram, atlas) bilgisi günlük toplam olarak sayılır.
 (function () {
   try {

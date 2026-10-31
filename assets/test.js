@@ -1,4 +1,4 @@
-// Görünür: 3 soruluk hızlı test
+// Norevo: 3 soruluk hızlı test
 (function () {
   'use strict';
   var durum = { adim: 1, mod: ['gelir'], sehir: '', sehirSecili: false, is: '', isSecili: false };
@@ -324,7 +324,7 @@
     var ac = el('a', 'btn btn-amber', 'Ücretsiz hesap aç, hepsini gör'); ac.href = 'giris.html#kayit'; kilit.appendChild(ac);
     k.appendChild(kilit);
     var zamanR = aramaZamani(sonVeri);
-    k.appendChild(el('p', 't-not', (zamanR ? 'Bu sonuçlar ' + zamanR + ' yapılan aramaya göre.' : 'Sonuç bugün yapılan tek bir aramaya göre.') + ' Konuma ve güne göre sıra biraz değişebilir; Görünür bunu her hafta ölçer.'));
+    k.appendChild(el('p', 't-not', (zamanR ? 'Bu sonuçlar ' + zamanR + ' yapılan aramaya göre.' : 'Sonuç bugün yapılan tek bir aramaya göre.') + ' Konuma ve güne göre sıra biraz değişebilir; Norevo bunu her hafta ölçer.'));
     out.appendChild(k);
     try { sessionStorage.setItem('gorunur_test_rapor', JSON.stringify({ ad: siz && siz.ad, sira: sira })); } catch (e) {}
     k.scrollIntoView && k.scrollIntoView({ behavior: 'smooth', block: 'start' });

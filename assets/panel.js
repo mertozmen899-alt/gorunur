@@ -1,4 +1,4 @@
-// Görünür: müşteri paneli. İşletme bilgisi + gerçek ölçüm sonuçları.
+// Norevo: müşteri paneli. İşletme bilgisi + gerçek ölçüm sonuçları.
 (function () {
   'use strict';
   var A = window.GorunurAuth;
@@ -324,7 +324,7 @@
         n: '"' + sorgu + '" aramasında sitenizi ilk sonuçlarda göremedik. Google, sitenizin başlığında işinizi ve şehrinizi görmek istiyor.',
         adimlar: [
           'Sitenizi kim yaptıysa (ajans, tanıdık, siz) aşağıdaki mesajı ona gönderin.',
-          'Değişiklik yapılınca 2-4 hafta bekleyin. Görünür bir sonraki ölçümlerde farkı gösterecek.'
+          'Değişiklik yapılınca 2-4 hafta bekleyin. Norevo bir sonraki ölçümlerde farkı gösterecek.'
         ],
         metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemizin ana sayfa başlığını (title) ve açıklamasını (meta description) şöyle değiştirebilir misiniz? Başlık: "' + i.ad + ' | ' + yer + ' ' + (i.is_turu || '') + '". Açıklama: "' + i.ad + ', ' + yer + ' bölgesinde ' + (i.is_turu || 'hizmet').toLocaleLowerCase('tr') + '. Adres, telefon ve çalışma saatlerimiz sitemizde." Ayrıca ana sayfada adresimiz, telefonumuz ve çalışma saatlerimiz yazı olarak (resim değil) görünsün. Teşekkürler.' },
         sonuc: 'Google aramasında sitenizin çıkma şansı artar.' };
@@ -391,7 +391,7 @@
       adimlar: [
         'Bu sayfaları açıp bakın: başlıkta şehir ve iş adı geçiyor, içinde ürünler, adres ve telefon var.',
         'Sitenizi yapan kişiye aşağıdaki mesajı gönderin.',
-        'Sayfa yayına girince 3-4 hafta bekleyin; Görünür haftalık ölçümde değişimi gösterecek.'
+        'Sayfa yayına girince 3-4 hafta bekleyin; Norevo haftalık ölçümde değişimi gösterecek.'
       ],
       metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemize "' + rakipSayfa[0].kelime.replace(/(^|\s)\S/g, function (h) { return h.toLocaleUpperCase('tr'); }) + '" başlıklı yeni bir sayfa ekleyebilir misiniz? Sayfada ' + yerAdi(i) + ' işletmemizin adresi, telefonu, çalışma saatleri, ürün gruplarımız (fotoğraflı), teslimat bölgelerimiz ve sık sorulan 5 soru ile cevapları olsun. Sayfa başlığı ve ana başlık aynı olsun. Teşekkürler.' },
       sonuc: 'Rakiplerinizin çıktığı aramalarda siz de Google’ın ilk sayfasına çıkma şansı yakalarsınız.'
@@ -934,7 +934,7 @@
       kutu.appendChild(el('p', 'Kurulumda web sitesi girmediniz. Siteniz varsa Hesap sayfasından "Düzenle" ile ekleyin.', 'kart-alt'));
       var tk = el('div', null, 't-teklif-panel');
       tk.appendChild(el('b', 'Siteniz yoksa biz yapalım'));
-      tk.appendChild(el('p', 'Google\'a uygun, telefonda hızlı açılan bir web sitesini sizin için hazırlıyoruz. Sırası Görünür ile her hafta takip edilir.', 'kart-alt'));
+      tk.appendChild(el('p', 'Google\'a uygun, telefonda hızlı açılan bir web sitesini sizin için hazırlıyoruz. Sırası Norevo ile her hafta takip edilir.', 'kart-alt'));
       var wa = el('a', 'WhatsApp\'tan bilgi alın', 'btn btn-wa kucuk-btn'); wa.target = '_blank'; wa.rel = 'noopener';
       wa.href = 'https://wa.me/905556984086?text=' + encodeURIComponent('Merhaba, ' + (i.ad || 'işletmem') + ' için web sitesi yaptırmak istiyorum.');
       tk.appendChild(wa); kutu.appendChild(tk);

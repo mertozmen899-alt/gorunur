@@ -1,4 +1,4 @@
-// Görünür: 5 adımlı kurulum sihirbazı. Her adımda kaydeder, yarıda kalan yerden devam eder.
+// Norevo: 5 adımlı kurulum sihirbazı. Her adımda kaydeder, yarıda kalan yerden devam eder.
 (function () {
   'use strict';
   var A = window.GorunurAuth, V = window.GorunurVeri;

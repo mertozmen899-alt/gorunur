@@ -1,4 +1,4 @@
-# Görünür hata kataloğu
+# Norevo hata kataloğu
 
 Gerçek kullanımda bulunan her hata buraya yazılır. Ajan ekibi (kalite, yazılımcı, Ar-Ge) her çalışmada bu dosyayı okur.
 Kural: Kapanan her hata için otomatik testlere (testler/calistir.js) ya da gerçeklik kontrolüne kalıcı bir kontrol eklenir, aynı hata geri gelemez.

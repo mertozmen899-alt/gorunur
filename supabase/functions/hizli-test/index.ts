@@ -1,4 +1,4 @@
-// Görünür hızlı test: ana sayfadaki 3 soruluk testin gerçek sonucu.
+// Norevo hızlı test: ana sayfadaki 3 soruluk testin gerçek sonucu.
 // Girdi: { sehir, is }. Çıktı: Google Haritalar'da ilk 20 işletme + Gemini (yz), ChatGPT (cg, OPENAI_API_KEY varsa)
 // ve Google Yapay Zekâ Modu (gyz, SerpApi) önerdiği işletmeler. Yeni testte SerpApi: haritalar 1 + yapay zekâ modu 1 arama.
 // Aynı şehir + iş 7 gün önbellekte tutulur. Kötüye kullanım sınırı: IP başına günde 6, toplam günde 8 yeni arama.

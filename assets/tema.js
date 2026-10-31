@@ -1,4 +1,4 @@
-// Görünür: açık / karanlık tema düğmesi.
+// Norevo: açık / karanlık tema düğmesi.
 // İlk boyama: her sayfanın <head>'indeki küçük betik <html data-tema> değerini daha CSS yüklenmeden koyar (yanlış renk parlaması olmaz).
 // Bu dosya: düğmeyi üst menüye ekler, seçimi kaydeder (localStorage "gorunur_tema": "acik" | "koyu"),
 // elle seçim yoksa cihazın ayarını (prefers-color-scheme) izler ve <meta name="theme-color"> değerini günceller.

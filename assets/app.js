@@ -1,4 +1,4 @@
-// Görünür: ortak kod (bekleme listesi kaydı, kaynak takibi, sayfa etkileşimleri)
+// Norevo: ortak kod (bekleme listesi kaydı, kaynak takibi, sayfa etkileşimleri)
 (function () {
   'use strict';
 
@@ -460,7 +460,7 @@
   if (!/[?&]hesap=silindi/.test(location.search)) return;
   var d = document.createElement('div');
   d.className = 'bilgi-serit'; d.setAttribute('role', 'status');
-  d.textContent = 'Hesabınız ve bütün verileriniz silindi. Görünür’ü denediğiniz için teşekkür ederiz.';
+  d.textContent = 'Hesabınız ve bütün verileriniz silindi. Norevo’yu denediğiniz için teşekkür ederiz.';
   var ust = document.querySelector('header'); if (ust && ust.parentNode) ust.parentNode.insertBefore(d, ust.nextSibling);
   history.replaceState(null, '', location.pathname);
 })();

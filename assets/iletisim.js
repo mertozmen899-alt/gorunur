@@ -1,8 +1,8 @@
-// Görünür: sağ altta WhatsApp iletişim düğmesi (her sayfada) + başka dosyaların kullanacağı bağlantı yardımcısı
+// Norevo: sağ altta WhatsApp iletişim düğmesi (her sayfada) + başka dosyaların kullanacağı bağlantı yardımcısı
 (function () {
   'use strict';
   var NUMARA = '905556984086';
-  function baglanti(metin) { return 'https://wa.me/' + NUMARA + '?text=' + encodeURIComponent(metin || 'Merhaba, Görünür sitesinden yazıyorum.'); }
+  function baglanti(metin) { return 'https://wa.me/' + NUMARA + '?text=' + encodeURIComponent(metin || 'Merhaba, Norevo sitesinden yazıyorum.'); }
   window.gorunurWhatsApp = baglanti;
 
   function kur() {

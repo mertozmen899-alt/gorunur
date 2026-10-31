@@ -1,4 +1,4 @@
-// Görünür yardımcı: (1) hazır metin yazma (sayfa metni, Google profil açıklaması, haftalık gönderi)
+// Norevo yardımcı: (1) hazır metin yazma (sayfa metni, Google profil açıklaması, haftalık gönderi)
 // (2) site sağlığı taraması (SerpApi harcamaz)
 // (3) Google yorumları + cevap taslakları (günde 1 yenileme; en fazla 2 SerpApi araması + 1 Gemini)
 // (4) "Hangi platformlarda varsınız?" kontrolü (günde 1 yenileme; 1 SerpApi araması)
@@ -140,7 +140,7 @@ async function guvenliGetir(adres: string | URL, ms: number, headers: Record<str
 // ---------------- Site sağlığı ----------------
 type Kontrol = { kod: string; ad: string; tamam: boolean; agirlik: number; detay: string; oneri: string };
 const ULASILAMADI = "Sitenize ulaşamadık. Tarayıcıda açılıyorsa bize WhatsApp'tan yazın; bazı siteler otomatik kontrolleri engelliyor.";
-const TARAYICI = { "User-Agent": "Mozilla/5.0 (compatible; GorunurSiteSagligi/1.0; +https://mertozmen899-alt.github.io/gorunur/)", "Accept-Language": "tr-TR,tr;q=0.9" };
+const TARAYICI = { "User-Agent": "Mozilla/5.0 (compatible; NorevoSiteSagligi/1.0; +https://mertozmen899-alt.github.io/norevo/)", "Accept-Language": "tr-TR,tr;q=0.9" };
 // Kesin olumsuz cümle kurmadan önce ikinci yol: https adresi bağlantı düzeyinde açılmazsa (sertifika hatası,
 // zaman aşımı, bağlantı reddi) aynı adres bir kez http ile denenir. İkinci deneme de guvenliGetir'den geçer
 // (SSRF denetimi, en fazla 3 yönlendirme). Alan adı hiç çözülmüyorsa ya da güvenlik engeli varsa ikinci deneme yapılmaz.

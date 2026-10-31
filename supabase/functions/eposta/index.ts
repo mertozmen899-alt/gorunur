@@ -1,4 +1,4 @@
-// Görünür e-posta gönderici
+// Norevo e-posta gönderici
 // Bekleme listesi çift onaylıdır (double opt-in):
 // 1) { tur: "bekleme", id }  (veritabanı tetikleyicisi çağırır, x-gorunur-cron başlığıyla): "Kaydınızı onaylayın" e-postası
 //    (bağlantı: SITE + "onay.html?a=<onay_anahtari>")
@@ -17,7 +17,7 @@ const CORS = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 const env = (ad: string) => (Deno.env.get(ad) || "").trim();
-const SITE = (env("SITE_ADRES") || "https://mertozmen899-alt.github.io/gorunur/").replace(/\/?$/, "/");
+const SITE = (env("SITE_ADRES") || "https://mertozmen899-alt.github.io/norevo/").replace(/\/?$/, "/");
 const kacis = (x: string) => String(x || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 
 function yerde(ad: string) {
@@ -31,15 +31,15 @@ function beklemeMetni(r: Record<string, any>) {
   const is = String(r.is_turu || "").toLocaleLowerCase("tr");
   const kisisel = sehir && is ? `${yerde(sehir)} "${is}" arayan müşterilerin sizi bulup bulmadığını ölçmeye hazırlanıyoruz.` : "";
   const cikis = `${SITE}cikis.html?a=${encodeURIComponent(r.cikis_anahtari)}`;
-  const konu = "Görünür bekleme listesindesiniz";
+  const konu = "Norevo bekleme listesindesiniz";
   const duz = [
     "Merhaba,",
     "",
-    `${r.eposta} adresini Görünür bekleme listesine ekledik. Teşekkür ederiz.`,
+    `${r.eposta} adresini Norevo bekleme listesine ekledik. Teşekkür ederiz.`,
     kisisel,
     "",
     "Bundan sonra ne olacak?",
-    "- Görünür açıldığında size ilk biz haber vereceğiz.",
+    "- Norevo açıldığında size ilk biz haber vereceğiz.",
     "- Google'da, Haritalar'da ve yapay zekâ cevaplarında kaçıncı sırada olduğunuzu her hafta ölçeceğiz.",
     "- Yükselmek için yapmanız gereken işleri sade dille, sıraya koyarak yazacağız.",
     "",
@@ -48,28 +48,28 @@ function beklemeMetni(r: Record<string, any>) {
     "",
     "Sorunuz olursa bu e-postayı yanıtlamanız yeterli.",
     "",
-    "Görünür",
+    "Norevo",
     SITE,
   ].filter((x, i, a) => !(x === "" && a[i - 1] === "")).join("\n");
   const madde = (t: string) => `<tr><td style="padding:6px 0;vertical-align:top;width:26px"><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#E3F4E9;color:#17703F;font-weight:800;font-size:12px;line-height:20px;text-align:center">✓</span></td><td style="padding:6px 0;font-size:15px;line-height:1.5;color:#343B48">${t}</td></tr>`;
   const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${konu}</title></head>
 <body style="margin:0;padding:0;background:#F6F7F9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#161A22">
-<div style="display:none;max-height:0;overflow:hidden">Görünür açılınca size ilk biz haber vereceğiz.</div>
+<div style="display:none;max-height:0;overflow:hidden">Norevo açılınca size ilk biz haber vereceğiz.</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F7F9;padding:32px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:1px solid #E2E5EB;border-radius:20px">
 <tr><td style="padding:28px 32px 8px">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
 <td style="width:34px;height:34px;border-radius:10px;background:#FFBD14;text-align:center;font-size:18px;line-height:34px;font-weight:800;color:#111318">◎</td>
-<td style="padding-left:10px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:#161A22">Görünür</td></tr></table>
+<td style="padding-left:10px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:#161A22">Norevo</td></tr></table>
 </td></tr>
 <tr><td style="padding:16px 32px 0">
 <h1 style="margin:0;font-size:26px;line-height:1.2;font-weight:800;letter-spacing:-.02em;color:#161A22">Bekleme listesindesiniz</h1>
-<p style="margin:14px 0 0;font-size:16px;line-height:1.6;color:#343B48"><b>${kacis(r.eposta)}</b> adresini Görünür bekleme listesine ekledik. Teşekkür ederiz.${kisisel ? " " + kacis(kisisel) : ""}</p>
+<p style="margin:14px 0 0;font-size:16px;line-height:1.6;color:#343B48"><b>${kacis(r.eposta)}</b> adresini Norevo bekleme listesine ekledik. Teşekkür ederiz.${kisisel ? " " + kacis(kisisel) : ""}</p>
 </td></tr>
 <tr><td style="padding:20px 32px 0">
 <p style="margin:0 0 6px;font-size:15px;font-weight:800;color:#161A22">Bundan sonra ne olacak?</p>
 <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-${madde("Görünür açıldığında size <b>ilk biz</b> haber vereceğiz.")}
+${madde("Norevo açıldığında size <b>ilk biz</b> haber vereceğiz.")}
 ${madde("Google'da, Haritalar'da ve yapay zekâ cevaplarında kaçıncı sırada olduğunuzu <b>her hafta</b> ölçeceğiz.")}
 ${madde("Yükselmek için yapmanız gereken işleri sade dille, sıraya koyarak yazacağız.")}
 </table>
@@ -82,7 +82,7 @@ ${madde("Yükselmek için yapmanız gereken işleri sade dille, sıraya koyarak 
 </td></tr>
 </table>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px"><tr><td style="padding:18px 20px;font-size:12px;line-height:1.6;color:#6A7385;text-align:center">
-Bu e-postayı Görünür bekleme listesine katıldığınız için aldınız. Ayda en fazla 3 e-posta göndeririz.<br>
+Bu e-postayı Norevo bekleme listesine katıldığınız için aldınız. Ayda en fazla 3 e-posta göndeririz.<br>
 Bu kaydı siz yapmadıysanız ya da artık haber almak istemiyorsanız <a href="${cikis}" style="color:#1E3A64">listeden çıkın</a>.
 Verilerinizi nasıl kullandığımız: <a href="${SITE}aydinlatma.html" style="color:#1E3A64">aydınlatma metni</a>.
 </td></tr></table>
@@ -98,29 +98,29 @@ function onayMetni(r: Record<string, any>) {
   const duz = [
     "Merhaba,",
     "",
-    `${r.eposta} adresiyle Görünür bekleme listesine katılmak istendi.`,
+    `${r.eposta} adresiyle Norevo bekleme listesine katılmak istendi.`,
     "Kaydınızı tamamlamak için aşağıdaki bağlantıyı açın:",
     onay,
     "",
     "Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz. Onaylanmayan adreslere başka e-posta göndermeyiz.",
     "Kaydınızın hemen silinmesini isterseniz: " + cikis,
     "",
-    "Görünür",
+    "Norevo",
     SITE,
   ].join("\n");
   const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${konu}</title></head>
 <body style="margin:0;padding:0;background:#F6F7F9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#161A22">
-<div style="display:none;max-height:0;overflow:hidden">Görünür bekleme listesine katılmak için tek tıkla onaylayın.</div>
+<div style="display:none;max-height:0;overflow:hidden">Norevo bekleme listesine katılmak için tek tıkla onaylayın.</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F7F9;padding:32px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:1px solid #E2E5EB;border-radius:20px">
 <tr><td style="padding:28px 32px 8px">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
 <td style="width:34px;height:34px;border-radius:10px;background:#FFBD14;text-align:center;font-size:18px;line-height:34px;font-weight:800;color:#111318">◎</td>
-<td style="padding-left:10px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:#161A22">Görünür</td></tr></table>
+<td style="padding-left:10px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:#161A22">Norevo</td></tr></table>
 </td></tr>
 <tr><td style="padding:16px 32px 0">
 <h1 style="margin:0;font-size:26px;line-height:1.2;font-weight:800;letter-spacing:-.02em;color:#161A22">Kaydınızı onaylayın</h1>
-<p style="margin:14px 0 0;font-size:16px;line-height:1.6;color:#343B48"><b>${kacis(r.eposta)}</b> adresiyle Görünür bekleme listesine katılmak istendi. Kaydınızı tamamlamak için aşağıdaki düğmeye tıklayın.</p>
+<p style="margin:14px 0 0;font-size:16px;line-height:1.6;color:#343B48"><b>${kacis(r.eposta)}</b> adresiyle Norevo bekleme listesine katılmak istendi. Kaydınızı tamamlamak için aşağıdaki düğmeye tıklayın.</p>
 </td></tr>
 <tr><td style="padding:24px 32px 8px">
 <a href="${onay}" style="display:inline-block;background:#FFBD14;color:#111318;text-decoration:none;font-weight:800;font-size:15px;padding:13px 22px;border-radius:999px">Kaydımı onayla</a>
@@ -167,7 +167,7 @@ async function gonder(alici: string, konu: string, duz: string, html: string, ci
   const kullanici = env("GMAIL_ADRES"), sifre = env("GMAIL_UYGULAMA_SIFRESI").replace(/\s+/g, "");
   if (!kullanici || !sifre) throw new Error("E-posta ayarı yok: GMAIL_ADRES ve GMAIL_UYGULAMA_SIFRESI eklenmeli");
   const t = nodemailer.createTransport({ host: "smtp.gmail.com", port: 465, secure: true, auth: { user: kullanici, pass: sifre } });
-  await t.sendMail({ from: { name: "Görünür", address: kullanici }, to: alici, subject: konu, text: duz, html, headers });
+  await t.sendMail({ from: { name: "Norevo", address: kullanici }, to: alici, subject: konu, text: duz, html, headers });
   return "gmail";
 }
 

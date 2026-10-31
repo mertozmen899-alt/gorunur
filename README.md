@@ -1,4 +1,4 @@
-# Görünür
+# Norevo
 
 Yerel işletmelerin Google'da ve yapay zekâ cevaplarında (ChatGPT, Gemini) bulunup bulunmadığını ölçen ürünün tanıtım sayfası ve bekleme listesi.
 

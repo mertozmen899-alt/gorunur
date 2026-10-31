@@ -1,4 +1,4 @@
-/* Görünür renk sistemi (v19: açık + karanlık tema)
+/* Norevo renk sistemi (v19: açık + karanlık tema)
    Beyaz zemin + tek renk ailesinde (soğuk-nötr gri, ton ~220°) griler ve çizgiler.
    Tek marka rengi: güneş sarısı (sadece dolgu: logo, ana düğme, sayaç, seçili durum).
    Yazı vurgusu (link, etiket, "siz"): koyu mürekkep laciverti; grilerle aynı ton ailesi.
@@ -79,7 +79,8 @@ h1,h2,h3{margin:0}
 .ust .kap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:16px;padding-bottom:16px;flex-wrap:wrap}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--yazi)}
 .logo:hover{color:var(--yazi)}
-.logo-isaret{width:34px;height:34px;border-radius:10px;background:var(--amber);display:flex;align-items:center;justify-content:center}
+.logo-isaret{width:34px;height:34px;display:flex;align-items:center;justify-content:center}
+.logo-isaret svg{width:100%;height:100%}
 .logo-ad{font-family:var(--baslik);font-weight:800;font-size:22px;letter-spacing:-.02em}
 .menu{display:flex;align-items:center;gap:26px;flex-wrap:wrap;font-size:15px;font-weight:600}
 .menu a{color:var(--yazi3);text-decoration:none} .menu a:hover{color:var(--yazi)}
@@ -683,7 +684,7 @@ a.sayi-kutu{color:inherit;text-decoration:none;transition:border-color .15s;bord
 .site-liste-kontrol li.eksik .site-isaret{background:var(--kirmizizemin);color:var(--kirmizi)}
 
 /* SVG simgeler renklerini değişkenlerden alır (HTML'deki stroke değerlerini ezer) */
-.logo-isaret svg,.tel-ust .av svg,.secenek .kutu svg,.adimlar svg{stroke:var(--siyah)}
+.tel-ust .av svg,.secenek .kutu svg,.adimlar svg{stroke:var(--siyah)}
 .tik{stroke:var(--vurgu)}
 .arama-kutu svg{stroke:var(--soluk)}
 .guven svg{stroke:var(--vurgu)}

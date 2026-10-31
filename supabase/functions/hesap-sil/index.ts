@@ -1,4 +1,4 @@
-// Görünür: kullanıcının kendi hesabını ve bütün verilerini silmesi (KVKK, unutulma hakkı)
+// Norevo: kullanıcının kendi hesabını ve bütün verilerini silmesi (KVKK, unutulma hakkı)
 // İşletme, ölçümler ve "Yaptım" kayıtları veritabanında hesaba bağlı olduğu için hesapla birlikte silinir.
 // Aynı e-postayla bekleme listesine katıldıysa o kayıt da silinir.
 import { createClient } from "jsr:@supabase/supabase-js@2";

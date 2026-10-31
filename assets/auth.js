@@ -1,4 +1,4 @@
-// Görünür: giriş ve hesap işlemleri (Supabase Auth)
+// Norevo: giriş ve hesap işlemleri (Supabase Auth)
 (function () {
   'use strict';
   var URL_ = 'https://drlqbwdupntqqtkmdncc.supabase.co';
@@ -30,7 +30,7 @@
     if (/check constraint .*(site|google_profil)/i.test(m)) return 'Web adresi geçersiz görünüyor. https:// ile başlayan tam adresi yazın ya da boş bırakın.';
     if (/fetch|network/i.test(m)) return 'İnternet bağlantısında sorun var. Tekrar deneyin.';
     // Teknik ayrıntı yalnız konsola yazılır, kullanıcıya sade mesaj gösterilir
-    try { console.error('Görünür hata:', e); } catch (x) {}
+    try { console.error('Norevo hata:', e); } catch (x) {}
     return 'Bir sorun oldu, tekrar deneyin. Sürerse WhatsApp\'tan bize yazın.';
   }
 

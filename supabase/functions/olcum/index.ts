@@ -1,4 +1,4 @@
-// Görünür ölçüm motoru
+// Norevo ölçüm motoru
 // Giriş yapmış kullanıcının işletmesi için: Google Haritalar sırası, Google arama sırası
 // ve yapay zekâ cevaplarında (Gemini, Google Yapay Zekâ Modu, ChatGPT) adının geçip geçmediğini ölçer.
 // Gerekli gizli anahtarlar (Supabase > Edge Functions > Secrets): SERPAPI_KEY, GEMINI_API_KEY
