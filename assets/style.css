@@ -1277,3 +1277,7 @@ body:has(.lp-promo:not([hidden])) .wa-dugme{opacity:0;pointer-events:none}
 /* Dokunma hedefleri: üst menü bağlantıları ve panel kart bağlantıları ("Tüm işler →", "Google İşletme Profili →") en az 24px */
 @media (min-width:721px){.menu a{display:inline-flex;align-items:center;min-height:24px}}
 .menu a.erken,.kart-bas a,.is-govde>a{display:inline-flex;align-items:center;min-height:24px}
+/* Panelde ok işaretli bağlantılar parmakla rahat basılsın: en az 44px dokunma alanı, görünüm aynı kalır */
+.kart-bas a,.geri-link{display:inline-flex;align-items:center;min-height:44px;margin-top:-10px;margin-bottom:-10px}
+.geri-link{margin-bottom:-6px}
+.is-govde>a,.is-detay>a{display:inline-flex;align-items:center;min-height:44px;margin-top:-2px;margin-bottom:-10px}

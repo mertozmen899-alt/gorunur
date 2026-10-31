@@ -92,14 +92,14 @@
       if (!x.bilgi) {
         var alt = el('div', null, 'is-alt');
         if (yap) {
-          alt.appendChild(el('span', 'Yaptınız · ' + kisaTarih(yap.yapildi), 'pil pil-y'));
+          alt.appendChild(el('span', 'Yaptınız · ' + kisaTarihG(yap.yapildi), 'pil pil-y'));
           var ac = el('button', 'Adımları göster', 'link-btn'); ac.type = 'button';
           ac.addEventListener('click', function () { var a = d.classList.toggle('acik'); ac.textContent = a ? 'Adımları gizle' : 'Adımları göster'; });
           var geri = el('button', 'Geri al', 'link-btn'); geri.type = 'button';
           geri.addEventListener('click', function () { geriAl(kod, geri); });
           alt.appendChild(ac); alt.appendChild(geri);
         } else {
-          var yb = el('button', 'Yaptım', 'btn btn-amber kucuk-btn'); yb.type = 'button';
+          var yb = el('button', 'Bitirdim, işaretle', 'btn btn-amber kucuk-btn'); yb.type = 'button';
           yb.addEventListener('click', function () { yaptim(kod, x, yb); });
           if (kapali) {
             var nb = el('button', 'Nasıl yapılır?', 'btn btn-cizgi kucuk-btn'); nb.type = 'button';
@@ -107,7 +107,6 @@
             alt.appendChild(nb);
           }
           alt.appendChild(yb);
-          if (!kapali) alt.appendChild(el('small', 'Bitirince işaretleyin, etkisini takip edelim.', 'is-ipucu'));
         }
         anaG.appendChild(alt);
       }
@@ -129,7 +128,7 @@
       if (r.error && r.error.code !== '23505') throw r.error;
       if (r.data) yapilanlar[kod] = r.data; else yapilanlar[kod] = { is_kodu: kod, baslik: x.t, yapildi: new Date().toISOString(), onceki: anlik() };
       isleriYenile();
-    }).catch(function (e) { btn.disabled = false; btn.textContent = 'Yaptım'; alert(A.hataMetni(e)); });
+    }).catch(function (e) { btn.disabled = false; btn.textContent = 'Bitirdim, işaretle'; alert(A.hataMetni(e)); });
   }
   function geriAl(kod, btn) {
     var y = yapilanlar[kod]; if (!y) return;
