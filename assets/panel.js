@@ -534,6 +534,37 @@
     return { aOlculen: a.length, ilkSayfa: a.filter(ilkSayfada).length, hOlculen: h.length, hCikan: h.filter(function (k) { return k.harita_sira; }).length };
   }
   function siraMetni(v, yok) { return v ? v + '.' : yok; }
+  // Bir aramanın sıralama listesi: ilk 5 + işletme aşağıdaysa kendi satırı (eski ölçümlerde ilk 3)
+  function siraListesi(tur, k) {
+    var kutu = el('div'), satirlar = [], baslik, siz = null;
+    if (tur === 'kutu') {
+      baslik = 'Harita kutusu (Google sayfasının en üstü)';
+      satirlar = (k.yerel_kutu || []).map(function (ad, j) { return { sira: j + 1, ad: ad, siz: k.yerel_kutuda === j + 1 }; });
+    } else if (tur === 'site') {
+      baslik = 'Google’da siteler';
+      satirlar = (k.arama_liste || k.arama_ilk3 || []).map(function (x) { return { sira: x.sira, ad: x.alan || x.baslik || '-', alt: x.alan ? x.baslik : '', siz: x.siz }; });
+      if (k.arama_sira && !satirlar.some(function (x) { return x.siz; })) siz = k.arama_sira;
+    } else {
+      baslik = 'Google Haritalar';
+      satirlar = (k.harita_liste || []).map(function (x) {
+        return { sira: x.sira, ad: x.ad, alt: [x.yorum != null ? sayi(x.yorum) + ' yorum' : '', x.puan ? String(x.puan).replace('.', ',') + ' ★' : ''].filter(Boolean).join(' · '), siz: x.siz };
+      });
+      if (!k.harita_liste && k.harita_birinci) satirlar = [{ sira: k.harita_birinci.sira, ad: k.harita_birinci.ad, alt: k.harita_birinci.yorum != null ? sayi(k.harita_birinci.yorum) + ' yorum' : '' }];
+      if (k.harita_sira && !satirlar.some(function (x) { return x.siz; })) siz = k.harita_sira;
+    }
+    kutu.appendChild(el('h4', baslik));
+    if (!satirlar.length) { kutu.appendChild(el('p', 'Bu ölçümde bu liste yok. Bir sonraki ölçümde görünecek.', 'kart-alt')); return kutu; }
+    var ol = el('ol', null, 'sira-liste');
+    satirlar.forEach(function (x) {
+      var li = el('li'); if (x.sira) li.value = x.sira; if (x.siz) li.className = 'siz';
+      li.appendChild(el('b', x.siz ? 'Siz' : String(x.ad || '-'))); if (x.siz && x.ad) li.appendChild(el('span', ' ' + x.ad));
+      if (x.alt) li.appendChild(el('small', x.alt));
+      ol.appendChild(li);
+    });
+    kutu.appendChild(ol);
+    if (siz) kutu.appendChild(el('p', 'Siz: ' + siz + '. sıradasınız.', 'kart-alt'));
+    return kutu;
+  }
   function aramaListeCiz(o) {
     var ks = o.kelimeler || [], kutu = $('arama-liste'); kutu.innerHTML = '';
     var ozt = aramaOzet(o);
@@ -610,10 +641,20 @@
       : en && en.sira <= 10 ? 'Hedef: ilk 3. İlk 3’e girenler tıklamaların çoğunu alıyor.'
       : 'Hedef: önce Google’ın ilk sayfasına girmek (harita kutusu veya ilk 10 site).';
     var kut = $('ar-kutular'); kut.innerHTML = '';
-    [['Harita kutusu', k.yerel_kutu ? siraMetni(k.yerel_kutuda, 'Yok') : '-', 'Sayfanın en üstündeki 3 işletme'],
-     ['Siteler', 'arama_sira' in k ? siraMetni(k.arama_sira, 'Yok') : '-', k.arama_link ? gosterLink(k.arama_link) : 'ilk 10 sonuç'],
-     ['Google Haritalar', k.harita_bakilan != null ? siraMetni(k.harita_sira, 'Yok') : '-', 'ilk 20 sonuç']].forEach(function (x) {
-      var dv = el('div', null, 'sayi-kutu'); dv.appendChild(el('span', x[0])); var bb = el('b', x[1]); if (/^\d/.test(x[1]) && parseInt(x[1], 10) <= 3) bb.className = 'iyi'; dv.appendChild(bb); dv.appendChild(el('small', x[2])); kut.appendChild(dv);
+    var sk = $('ar-sira'); sk.innerHTML = ''; sk.hidden = true;
+    // Kutuya basınca o sıralamanın listesi kutuların hemen altında açılır (tekrar basınca kapanır)
+    [['Harita kutusu', k.yerel_kutu ? siraMetni(k.yerel_kutuda, 'Yok') : '-', 'Sayfanın en üstündeki 3 işletme', 'kutu'],
+     ['Siteler', 'arama_sira' in k ? siraMetni(k.arama_sira, 'Yok') : '-', k.arama_link ? gosterLink(k.arama_link) : 'ilk 10 sonuç', 'site'],
+     ['Google Haritalar', k.harita_bakilan != null ? siraMetni(k.harita_sira, 'Yok') : '-', 'ilk 20 sonuç', 'harita']].forEach(function (x) {
+      var dv = el('button', null, 'sayi-kutu'); dv.type = 'button'; dv.setAttribute('aria-expanded', 'false'); dv.setAttribute('aria-controls', 'ar-sira');
+      dv.appendChild(el('span', x[0])); var bb = el('b', x[1]); if (/^\d/.test(x[1]) && parseInt(x[1], 10) <= 3) bb.className = 'iyi'; dv.appendChild(bb); dv.appendChild(el('small', x[2])); dv.appendChild(el('em', 'Liste', 'sira-ac'));
+      dv.addEventListener('click', function () {
+        var acik = dv.getAttribute('aria-expanded') === 'true';
+        kut.querySelectorAll('.sayi-kutu').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+        sk.innerHTML = ''; sk.hidden = acik;
+        if (!acik) { dv.setAttribute('aria-expanded', 'true'); sk.appendChild(siraListesi(x[3], k)); }
+      });
+      kut.appendChild(dv);
     });
     var on = $('ar-onde'); on.innerHTML = '';
     if (k.yerel_kutu && k.yerel_kutu.length) {

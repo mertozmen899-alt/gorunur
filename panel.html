@@ -15,12 +15,12 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&family=Fredoka:wght@600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&family=Fredoka:wght@600&display=swap"></noscript>
 <script>(function(){var t;try{t=localStorage.getItem('gorunur_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t;if(t==='koyu'){var m=document.querySelector('meta[name="theme-color"]');if(m)m.content='#0F1217'}})()</script>
-<link rel="stylesheet" href="assets/style.css?v=39">
+<link rel="stylesheet" href="assets/style.css?v=40">
 <script src="assets/tema.js?v=1" defer></script>
 <script src="assets/iletisim.js?v=3" defer></script>
 <script src="assets/vendor/supabase-js-2.45.4.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script src="assets/auth.js?v=10"></script>
-<script src="assets/panel.js?v=32" defer></script>
+<script src="assets/panel.js?v=33" defer></script>
 <script src="assets/sayac.js?v=1" defer></script>
 </head>
 <body class="olcum-yok">
@@ -262,6 +262,7 @@
 <div class="panel-bas"><p class="selam">Bu aramada durumunuz</p><h1 id="ar-baslik"></h1><span id="ar-rozet" class="rozet"></span></div>
 <p class="ar-hedef" id="ar-hedef"></p>
 <div class="uc-kutu ar-kutular" id="ar-kutular"></div>
+<div class="kart ar-sira" id="ar-sira" aria-live="polite" hidden></div>
 <div class="panel-izgara">
 <section class="kart genis">
 <div class="kart-bas"><h3>Bu aramada yapılacaklar</h3><span class="pil pil-a">Bu aramaya özel</span></div>

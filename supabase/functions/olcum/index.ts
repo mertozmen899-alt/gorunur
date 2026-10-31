@@ -697,6 +697,9 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
       kelimeSonuc[i].harita_bakilan = liste.length;
       const digerleri = liste.filter((x) => x !== ben);
       kelimeSonuc[i].harita_ilk3 = digerleri.slice(0, 3).map((x) => x.ad);
+      // Panelde sıralama listesi: ilk 5, işletme 5'ten aşağıdaysa kendi satırı da
+      kelimeSonuc[i].harita_liste = [...liste.slice(0, 5), ...(ben && !liste.slice(0, 5).includes(ben) ? [ben] : [])]
+        .map((x) => ({ sira: x.sira, ad: x.ad, puan: x.puan, yorum: x.yorum, siz: x === ben }));
       const bir = digerleri[0];
       if (bir) kelimeSonuc[i].harita_birinci = { ad: bir.ad, puan: bir.puan, yorum: bir.yorum, sira: bir.sira };
       // Denetim: adımız rakip bir işletmeyle karışıyor mu?
@@ -772,6 +775,8 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
       kelimeSonuc[i].yerel_kutu = yerel.slice(0, 3).map((p) => p.title);
       kelimeSonuc[i].arama_ilk3 = org.slice(0, 3).map((x) => ({ sira: x.sira, baslik: x.baslik, alan: alanOf(x), tur: rehberTuru(String(x.baslik || ""), alanOf(x)), siz: x === ben }));
       kelimeSonuc[i].rehberler = rehberler;
+      kelimeSonuc[i].arama_liste = [...org.slice(0, 5), ...(ben && !org.slice(0, 5).includes(ben) ? [ben] : [])]
+        .map((x) => ({ sira: x.sira, baslik: x.baslik, alan: alanOf(x), siz: x === ben }));
       const ozet = { kelime: kelimeler[i], sira: ben ? ben.sira : null, organik: org.slice(0, 10).map((x) => ({ ...x, siz: x === ben })), yerel_kutu: yerel.slice(0, 3).map((p) => p.title), yerel_kutuda: yerelBen >= 0 ? yerelBen + 1 : null };
       if (!enIyi || (ozet.sira && (!enIyi.sira || ozet.sira < (enIyi.sira as number)))) enIyi = ozet;
     });

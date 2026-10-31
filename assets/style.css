@@ -1308,3 +1308,18 @@ body:has(.lp-promo:not([hidden])) .wa-dugme{opacity:0;pointer-events:none}
 /* Tanıtım videosu yokken (data-video boş) oynat düğmesi sönük, "İzleyin" yazısı gizli */
 .lp-video-bolum[data-video=""] .lp-oynat{opacity:.6;cursor:default}
 .lp-video-bolum[data-video=""] .lp-oynat-yazi{display:none}
+/* Arama sayfası: sıralama kutuları tıklanır, liste kutuların altında açılır */
+button.sayi-kutu{font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer;border:1px solid transparent;transition:border-color .15s}
+button.sayi-kutu[aria-expanded="true"]{border-color:var(--amber)}
+@media (hover:hover){button.sayi-kutu:hover{border-color:var(--amber)}}
+.sayi-kutu .sira-ac{display:block;margin-top:8px;font-style:normal;font-size:13px;font-weight:700;color:var(--amberyazi)}
+.sayi-kutu .sira-ac::after{content:" ▾"}
+.sayi-kutu[aria-expanded="true"] .sira-ac::after{content:" ▴"}
+.ar-sira{margin-top:12px}
+.ar-sira h4{margin:0 0 10px;font-size:15px}
+.sira-liste{margin:0;padding-left:28px;display:grid;gap:8px;font-size:15px}
+.sira-liste li b{font-weight:700}
+.sira-liste li span{color:var(--yazi2)}
+.sira-liste li small{display:block;font-size:13px;color:var(--soluk)}
+.sira-liste li.siz{color:var(--vurgu)}
+.sira-liste li.siz b{color:var(--vurgu)}
