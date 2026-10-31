@@ -53,7 +53,7 @@ jobs:
         run: gradle --no-daemon --stacktrace assembleRelease
 
       - name: Dosyayı adlandır
-        run: cp android/app/build/outputs/apk/release/app-release.apk Gorunur.apk
+        run: cp android/app/build/outputs/apk/release/app-release.apk Norevo.apk
 
       - name: İndirme sayfasına koy
         env:
@@ -62,10 +62,10 @@ jobs:
         run: |
           NOT="Sürüm 1.0.${{ github.run_number }} ($(date -u +%Y-%m-%d)). Uygulama siteyi canlı açar: sitedeki her güncelleme uygulamada anında görünür."
           if gh release view android --repo "$DEPO" > /dev/null 2>&1; then
-            gh release upload android Gorunur.apk --clobber --repo "$DEPO"
+            gh release upload android Norevo.apk --clobber --repo "$DEPO"
             gh release edit android --notes "$NOT" --repo "$DEPO"
           else
-            gh release create android Gorunur.apk --title "Görünür Android uygulaması" --notes "$NOT" --repo "$DEPO"
+            gh release create android Norevo.apk --title "Norevo Android uygulaması" --notes "$NOT" --repo "$DEPO"
           fi
 
       - name: Sitedeki indirme sayfasına da koy (indir.html)
@@ -77,8 +77,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase origin main
           mkdir -p indir
-          cp Gorunur.apk indir/Gorunur.apk
-          git add indir/Gorunur.apk
+          cp Norevo.apk indir/Norevo.apk
+          git add indir/Norevo.apk
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "APK güncellendi: sürüm 1.0.${{ github.run_number }}"
           git push origin HEAD:main
@@ -87,4 +87,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Gorunur-apk
-          path: Gorunur.apk
+          path: Norevo.apk
