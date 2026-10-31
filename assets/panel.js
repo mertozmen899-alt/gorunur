@@ -1385,7 +1385,7 @@
     if (!i || !i.kurulum_bitti) { location.replace(A.KOK + 'kurulum.html'); return; }
     isletme = i;
     sayfaGoster(location.hash.slice(1), false);
-    A.sb.rpc('yonetici_mi').then(function (r) { if (r && r.data === true) $('yonetim-link').hidden = false; }, function () {});
+    A.sb.rpc('yonetici_mi').then(function (r) { if (r && r.data === true) $('yonetim-link').hidden = $('yonetim-kart').hidden = false; }, function () {});
     return Promise.all([
       A.sb.from('olcumler').select('*').eq('isletme_id', i.id).eq('durum', 'bitti').order('baslangic', { ascending: false }).limit(12),
       A.sb.from('yapilan_isler').select('*').eq('isletme_id', i.id)
