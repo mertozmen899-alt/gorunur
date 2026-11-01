@@ -287,8 +287,7 @@
   // Ekrandaki önerilen işlerden kaç tanesi yapıldı
   function onerilenler() {
     var gor = {}, out = [];
-    var sira = ['olcum-isler', 'yp-isler', 'site-isler', 'yz-isler', 'metin-isler', 'isler'];
-    kutular.slice().sort(function (a, b) { return sira.indexOf(a.id) - sira.indexOf(b.id); }).forEach(function (k) { (k._isler || []).forEach(function (x) { if (x.bilgi) return; var kod = isKodu(x); if (!gor[kod]) { gor[kod] = 1; out.push({ kod: kod, x: x }); } }); });
+    kutular.slice().sort(function (a, b) { return KUTU_SIRA.indexOf(a.id) - KUTU_SIRA.indexOf(b.id); }).forEach(function (k) { (k._gosterilen || k._isler || []).forEach(function (x) { if (x.bilgi) return; var kod = isKodu(x); if (!gor[kod]) { gor[kod] = 1; out.push({ kod: kod, x: x }); } }); });
     return out;
   }
   function isSayaci() {
@@ -413,15 +412,16 @@
         sonuc: 'Google aramasında sitenizin çıkma şansı artar.' };
     },
     siteYok: function (i) {
-      return { k: 'site-yok', t: 'Tek sayfalık basit bir web sitesi açın', s: 'Yarım gün · ücretsiz veya düşük ücretli',
-        n: 'Siteniz yok. Google aramasında ve yapay zekâ cevaplarında en çok kaynak gösterilen şey işletmelerin kendi siteleri.',
+      return { k: 'site-yok', t: 'Bir web siteniz olsun', s: 'İsterseniz biz hazırlarız · 1-2 gün içinde teslim',
+        n: 'Siteniz yok. Google aramasında ve yapay zekâ cevaplarında en çok kaynak gösterilen şey işletmelerin kendi siteleri. Sitenizi sizin için hazırlayıp 1-2 gün içinde teslim edebiliriz; kendiniz yaptırmak isterseniz de olur.',
         adimlar: [
-          'Google İşletme Profilinizin içinden ücretsiz basit site açılabiliyor mu bakın. Açılamıyorsa Wix, Ticimax veya bir tanıdığınızdan tek sayfalık site yaptırın.',
-          'Sayfada şunlar yazı olarak olsun: ne sattığınız veya hangi hizmeti verdiğiniz, açık adres, telefon, çalışma saatleri.',
-          'Müşterilerin en çok sorduğu 5 soruyu ve cevaplarını ekleyin (örnek: "Randevu gerekiyor mu?", "Hafta sonu açık mısınız?", "Kartla ödeme var mı?").',
-          'Sitenin adresini Google İşletme Profilinize ve Instagram’ınıza ekleyin.'
+          'Bize WhatsApp’tan yazın. Ne sattığınızı ya da hangi hizmeti verdiğinizi konuşalım; fiyatı ve teslim gününü baştan söyleriz, sizi bağlayan bir şey yok.',
+          'Siteyi Google’ın aradığı başlık, açık adres, telefon ve çalışma saatleriyle hazırlarız. Telefonda hızlı açılır, tek dokunuşla arama ve yol tarifi olur.',
+          'Teslimden sonra sitenin adresini Google İşletme Profilinize ve Instagram’ınıza ekleriz; sırasını Norevo her hafta ölçer.',
+          'Kendiniz yaptırmak isterseniz: sayfada ne sattığınız, açık adres, telefon ve çalışma saatleri yazı olarak (resim değil) olsun, müşterilerin en çok sorduğu 5 soru ve cevabı da eklensin.'
         ],
-        sonuc: 'Google aramasında çıkmaya başlarsınız ve yapay zekâ sizin hakkınızda okuyacak bir kaynak bulur.' };
+        sonuc: 'Google aramasında çıkmaya başlarsınız ve yapay zekâ sizin hakkınızda okuyacak bir kaynak bulur.',
+        l: 'https://wa.me/905556984086?text=' + encodeURIComponent('Merhaba, ' + (i.ad || 'işletmem') + ' için web sitesi yaptırmak istiyorum.'), lm: 'WhatsApp’tan bilgi alın' };
     },
     siteGorunmuyor: function (i, o) {
       var alan = String(i.site || '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
@@ -453,20 +453,31 @@
           'Bing sizden doğrulama ister (telefon, e-posta ya da kod). İstenen kodu girin.'
         ],
         sonuc: 'ChatGPT’ye "' + yerAdi(i) + ' ' + isAdi(i, '') + '" sorulduğunda listeye girme şansınız doğar.',
-        l: 'https://www.bingplaces.com', lm: 'Bing Places' };
+        l: 'https://www.bingplaces.com', lm: 'Bing Places', alan: 'bing.com' };
     },
-    // Yandex kaydı platform kontrolünde bulunduysa sadece Apple istenir (Apple otomatik kontrol edilemiyor)
-    digerHaritalar: function () {
-      var yandexVar = platformdaVar('yandex.com.tr');
-      return { k: 'apple-yandex', t: yandexVar ? 'Apple Haritalar’a ekleyin' : 'Apple Haritalar ve Yandex Haritalar’a ekleyin', s: yandexVar ? '10 dakika · ücretsiz' : '20 dakika · ücretsiz',
-        n: yandexVar ? 'Yandex Haritalar’da kaydınızı bulduk. iPhone kullananlar ve Siri ise Apple Haritalar’a bakıyor; orayı otomatik kontrol edemiyoruz.' : 'iPhone kullananlar ve Siri Apple Haritalar’a, Türkiye’de birçok kişi Yandex Haritalar’a bakıyor.',
+    // Apple otomatik kontrol edilemiyor; kodu eski "Yaptım" kayıtları için aynı kaldı
+    apple: function () {
+      return { k: 'apple-yandex', t: 'Apple Haritalar’a ekleyin', s: '10 dakika · ücretsiz',
+        n: 'iPhone kullananlar ve Siri Apple Haritalar’a bakıyor; orayı otomatik kontrol edemiyoruz.',
         adimlar: [
-          'Önce iPhone’da Haritalar uygulamasında adınızı aratın; çıkıyorsa bu adımı geçin. Çıkmıyorsa businessconnect.apple.com adresine Apple kimliğinizle (iPhone’unuzdaki hesap) girin, "İşletme ekle" deyin, bilgilerinizi girin.',
-          yandexVar ? null : 'Yandex için Google’a "Yandex işletme ekle" yazın, çıkan Yandex Business sayfasından ücretsiz kayıt olun.',
-          'Her yerde adı, adresi ve telefonu Google’daki ile aynı yazın. Farklı yazılmış bilgi yapay zekânın kafasını karıştırır.'
-        ].filter(Boolean),
+          'Önce iPhone’da Haritalar uygulamasında adınızı aratın; çıkıyorsa bu adımı geçin.',
+          'Çıkmıyorsa businessconnect.apple.com adresine Apple kimliğinizle (iPhone’unuzdaki hesap) girin, "İşletme ekle" deyin, bilgilerinizi girin.',
+          'Adı, adresi ve telefonu Google’daki ile aynı yazın. Farklı yazılmış bilgi yapay zekânın kafasını karıştırır.'
+        ],
         sonuc: 'Yapay zekâ sizi ne kadar çok yerde aynı bilgiyle görürse size o kadar güveniyor.',
         l: 'https://businessconnect.apple.com', lm: 'Apple Business Connect' };
+    },
+    // Kodu platform kartıyla aynı: platform kontrolü Yandex'i bulamadıysa ikisinden sadece biri görünür
+    yandex: function () {
+      return { k: 'platform-yandex-com-tr-harita', t: 'Yandex Haritalar’da profil açın', s: '15-20 dakika · ücretsiz',
+        n: 'Türkiye’de birçok kişi Yandex Haritalar’a bakıyor; yapay zekâ da Yandex kayıtlarını kaynak gösteriyor.',
+        adimlar: [
+          'Önce Yandex Haritalar’da işletmenizin adını arayın; çıkıyorsa bilgilerini güncelleyin.',
+          'Çıkmıyorsa Google’a "Yandex Business" yazın, çıkan Yandex sayfasından ücretsiz kayıt olun.',
+          'Adı, adresi ve telefonu Google’daki ile harfi harfine aynı yazın.'
+        ],
+        sonuc: 'Yapay zekâ sizi ne kadar çok yerde aynı bilgiyle görürse size o kadar güveniyor.',
+        l: 'https://yandex.com.tr/harita', lm: 'Yandex Haritalar', alan: 'yandex.com.tr' };
     }
   };
 
@@ -497,7 +508,8 @@
     var tum = (o.rehber_sayfalari || []).filter(function (x) { return sehirdeMi(x, i); });
     var sayfalar = tum.filter(function (x) { return x.tur !== 'rakip'; });
     var rakipSayfa = tum.filter(function (x) { return x.tur === 'rakip'; });
-    if (rakipSayfa.length) isler.push({
+    // Sitesi olmayana "sitenizi yapan kişiye mesaj" denmez; önce site işi gelir
+    if (rakipSayfa.length && i.site) isler.push({
       k: 'rakip-sayfa', t: 'Rakiplerinizin Google’da öne çıkan sayfasının benzerini yapın', s: '1-2 saat (sitenizi yapan kişi için)',
       n: 'Bu rakipler kendi sitelerine aramayla aynı başlıkta bir sayfa açmış ve Google’da üst sıralara çıkmış:',
       siteler: rakipSayfa.map(function (x) { return { ad: x.baslik, alan: x.alan, url: 'https://' + x.alan, not: '"' + x.kelime + '" aramasında ' + x.sira + '. sırada.' }; }),
@@ -553,7 +565,13 @@
   // ChatGPT ve Google Yapay Zekâ Modu'nun işletme önerirken kaynak gösterdiği siteler (ölçümde kaydedilir; eski ölçümde cevaptaki
   // bağlantılardan çıkarılır). Kendi siteniz, rakiplerin siteleri, sosyal medya, devlet siteleri ve zaten profil olan yerler çıkarılır.
   var KAYNAK_DISI = /(^|\.)(google\.|youtube\.com|instagram\.com|facebook\.com|twitter\.com|x\.com|tiktok\.com|linkedin\.com|wikipedia\.org|openai\.com|gov\.tr$)/;
-  function alanOf(u) { try { return new URL(/^https?:/.test(u) ? u : 'https://' + u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } }
+  // Yerel haber sitelerinin resimleri teimg.com'dan gelir ("corumhakimiyetnet.teimg.com" = corumhakimiyet.net); çevrilemeyen resim sunucusu atılır
+  var TEIMG = { comtr: 'com.tr', nettr: 'net.tr', orgtr: 'org.tr', com: 'com', net: 'net', org: 'org', tv: 'tv' };
+  function alanOf(u) {
+    try { var a = new URL(/^https?:/.test(u) ? u : 'https://' + u).hostname.replace(/^www\./, ''); } catch (e) { return ''; }
+    var m = /^(.+?)(comtr|nettr|orgtr|com|net|org|tv)\.teimg\.com$/.exec(a);
+    return m ? m[1] + '.' + TEIMG[m[2]] : /teimg\.com$/.test(a) ? '' : a;
+  }
   function yzKaynakIsi(o, i) {
     if (!o) return null;
     var say = {}, haric = {}, cevap = 0;
@@ -561,7 +579,7 @@
     (o.harita_sonuclar || []).forEach(function (r) { if (r.site) haric[alanOf(r.site)] = 1; });
     (o.cg_cevaplar || []).concat(o.gyz_cevaplar || []).forEach(function (c) {
       if (!c || c.hata) return;
-      var k = c.kaynaklar || (String(c.ozet || '').match(/https?:\/\/[^\s)\]"']+/g) || []).map(alanOf);
+      var k = (c.kaynaklar || String(c.ozet || '').match(/https?:\/\/[^\s)\]"']+/g) || []).map(alanOf);
       var bu = {}; k.forEach(function (a) { if (a) bu[a] = 1; });
       Object.keys(bu).forEach(function (a) { if (!haric[a] && !KAYNAK_DISI.test(a) && !platformdaVar(a)) say[a] = (say[a] || 0) + 1; });
       cevap++;
@@ -580,7 +598,7 @@
     var yer = yerAdi(i);
     var isK = isAdi(i, 'işletme');
     var cek = isK.split(/\s+/).filter(function (k) { return k && EKLER.indexOf(k) < 0; }).join(' ') || isK;
-    var adimlar = [IS.bing(i), IS.digerHaritalar(i)];
+    var adimlar = [IS.bing(i), IS.apple()].concat(platformdaVar('yandex.com.tr') ? [] : [IS.yandex()]);
     var yk = yzKaynakIsi(o, i); if (yk) adimlar.unshift(yk);
     var arastirilmis = rehberIsleri(i, o);
     if (arastirilmis.length) adimlar = adimlar.concat(arastirilmis);
@@ -1138,6 +1156,9 @@
     var dis = el('div', null, 'yaz-kutu'), sonucK = el('div');
     var b = el('button', null, 'btn btn-amber kucuk-btn'); b.type = 'button';
     var kayit = (isletme.hazir_metinler || {})[metinAnahtar(y)];
+    // İşletme değiştiyse (başka ad/iş türü) eski metin önceki işletmenindir: gösterilmez, yeniden yazılır
+    var degisti = isletme.degisiklik && isletme.degisiklik.zaman;
+    if (kayit && degisti && new Date(kayit.tarih || 0) < new Date(degisti)) kayit = null;
     // Haftalık gönderi her hafta yenilenir
     if (kayit && y.tur === 'gonderi' && Date.now() - new Date(kayit.tarih).getTime() > 6 * 864e5) kayit = null;
     b.textContent = kayit ? 'Yeniden yazın' : '✍ ' + YAZ_ETIKET[y.tur];
@@ -1370,7 +1391,7 @@
         adimlar: g ? ['business.google.com adresine Gmail hesabınızla girip "İşletme ekle" deyin.', 'Adı tabelanızdaki gibi, adresi ve telefonu doğru yazın.', 'Google’ın istediği doğrulamayı (genelde kısa bir video) tamamlayın.']
           : ['Önce ' + bulunma(x.ad) + ' işletmenizin adını arayın; sayfanız varsa bilgilerini güncelleyin.', 'Yoksa sitedeki "İşletme ekle", "Firma ekle" ya da "Sayfa oluştur" bölümünden ücretsiz kayıt olun.', 'Adı, adresi ve telefonu Google’daki ile harfi harfine aynı yazın.'],
         sonuc: 'Yapay zekâ sizi ne kadar çok yerde aynı bilgiyle görürse size o kadar güveniyor.',
-        l: x.link || ('https://' + x.alan), lm: x.ad });
+        l: x.link || ('https://' + x.alan), lm: x.ad, alan: x.alan });
     });
     $('yp-isler-kart').hidden = !isler.length;
     if (!isler.length) { kutu.innerHTML = ''; kutu._isler = null; return; }
