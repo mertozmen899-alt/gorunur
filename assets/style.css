@@ -540,13 +540,28 @@ span.yakinda{display:inline-block;vertical-align:middle;margin-left:8px;backgrou
 .destek-balon[hidden]{display:none}
 .duzeltme-not{margin:14px 0 0;padding:10px 12px;border-radius:10px;font-size:14px;background:var(--uyarizemin);border:1px solid var(--uyarikenar);color:var(--uyariyazi)}
 .duzeltme-not[hidden]{display:none}
-.destek-bas{display:flex;align-items:center;justify-content:space-between;padding:10px 8px 10px 16px;border-bottom:1px solid var(--cizgi)}
-.destek-kapat{min-width:44px;min-height:44px;background:none;border:0;font-size:24px;line-height:1;color:var(--soluk);cursor:pointer}
-.destek-kapat:hover{color:var(--yazi)}
-.destek-liste{display:flex;flex-direction:column;gap:8px;padding:12px;overflow-y:auto}
-.destek-mesaj{margin:0;padding:10px 12px;border-radius:12px;font-size:15px;max-width:88%}
-.destek-siz{align-self:flex-end;background:var(--amberzemin);border:1px solid var(--amberkenar)}
-.destek-biz{align-self:flex-start;background:var(--kart2);border:1px solid var(--cizgi)}
+.destek-balon{overflow:hidden;border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.28);animation:destekAc .25s ease-out}
+@keyframes destekAc{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+.destek-bas{display:flex;align-items:center;justify-content:space-between;padding:12px 8px 12px 14px;background:var(--kart2);border-bottom:1px solid var(--cizgi)}
+.destek-kim{display:flex;align-items:center;gap:10px;min-width:0}
+.destek-kim strong{display:block;font-size:15px;line-height:1.2}
+.destek-avatar{position:relative;flex:none;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--amber);color:var(--siyah);font-weight:800;font-size:17px}
+.destek-avatar::after{content:"";position:absolute;right:0;bottom:0;width:11px;height:11px;border-radius:50%;background:var(--yesil);border:2px solid var(--kart2)}
+.destek-durum{display:block;font-size:12.5px;color:var(--soluk)}
+.destek-kapat{min-width:44px;min-height:44px;background:none;border:0;font-size:24px;line-height:1;color:var(--soluk);cursor:pointer;border-radius:12px}
+.destek-kapat:hover{color:var(--yazi);background:var(--kart)}
+.destek-liste{display:flex;flex-direction:column;gap:10px;padding:14px 12px;overflow-y:auto}
+.destek-sistem{align-self:center;margin:0 0 2px;padding:4px 10px;border-radius:999px;font-size:12.5px;color:var(--soluk);background:var(--kart2)}
+.destek-mesaj{max-width:86%;padding:9px 12px 6px;border-radius:16px;font-size:15px;line-height:1.45;animation:destekAc .2s ease-out}
+.destek-mesaj p{margin:0}
+.destek-saat{display:block;margin-top:3px;font-size:11.5px;color:var(--soluk);text-align:right}
+.destek-siz{align-self:flex-end;background:var(--amberzemin);border:1px solid var(--amberkenar);border-bottom-right-radius:4px}
+.destek-biz{align-self:flex-start;background:var(--kart2);border:1px solid var(--cizgi);border-bottom-left-radius:4px}
+.destek-yaziyor p{display:flex;gap:5px;padding:6px 2px}
+.destek-yaziyor i{width:7px;height:7px;border-radius:50%;background:var(--soluk);animation:destekNokta 1.2s infinite ease-in-out}
+.destek-yaziyor i:nth-child(2){animation-delay:.15s} .destek-yaziyor i:nth-child(3){animation-delay:.3s}
+.destek-yaziyor .destek-saat{display:none}
+@keyframes destekNokta{0%,60%,100%{opacity:.35;transform:none}30%{opacity:1;transform:translateY(-3px)}}
 .siz-satir td{background:var(--amberkoyu);color:var(--yazi)}
 .yz-liste{display:flex;flex-direction:column;gap:10px;margin-top:14px}
 .yz-cevap{background:var(--kart2);border:1px solid var(--cizgi2);border-radius:16px;padding:0 16px}

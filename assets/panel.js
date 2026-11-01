@@ -1714,20 +1714,32 @@
 
   // "Bu sonuç yanlış": kart altında kısa not formu açılır; yapay zekâ ölçüm verisine bakar (yardimci, islem 'yanlis'),
   // cevabı sağ altta sohbet balonunda gösterilir. Bildirim yanlis_bildirimleri tablosuna sunucuda yazılır (sadece yönetici okur).
-  function destekMesaj(metin, kimden) {
+  // Asistan bir insan gibi sunulmaz: başlıkta "yapay zekâ" yazar
+  function destekSaat() { return new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }); }
+  function destekMesaj(metin, kimden, yaziyor) {
     var b = $('destek-balon');
     if (!b) {
-      b = el('section', null, 'destek-balon'); b.id = 'destek-balon'; b.setAttribute('aria-label', 'Norevo destek');
-      var bas = el('div', null, 'destek-bas'), kapat = el('button', '×', 'destek-kapat'), liste = el('div', null, 'destek-liste');
-      kapat.type = 'button'; kapat.setAttribute('aria-label', 'Mesajları kapat');
+      b = el('section', null, 'destek-balon'); b.id = 'destek-balon'; b.setAttribute('aria-label', 'Norevo Asistan');
+      var bas = el('div', null, 'destek-bas'), kim = el('div', null, 'destek-kim'), yazi = el('div');
+      var kapat = el('button', '×', 'destek-kapat'), liste = el('div', null, 'destek-liste');
+      kim.appendChild(el('span', 'N', 'destek-avatar'));
+      yazi.appendChild(el('strong', 'Norevo Asistan')); yazi.appendChild(el('small', 'Çevrimiçi · yapay zekâ', 'destek-durum'));
+      kim.appendChild(yazi);
+      kapat.type = 'button'; kapat.setAttribute('aria-label', 'Sohbeti kapat');
       kapat.addEventListener('click', function () { b.hidden = true; });
       liste.setAttribute('role', 'log'); liste.setAttribute('aria-live', 'polite');
-      bas.appendChild(el('strong', 'Norevo destek')); bas.appendChild(kapat); b.appendChild(bas); b.appendChild(liste);
+      liste.appendChild(el('p', 'Norevo Asistan sohbete bağlandı · ' + destekSaat(), 'destek-sistem'));
+      bas.appendChild(kim); bas.appendChild(kapat); b.appendChild(bas); b.appendChild(liste);
       document.body.appendChild(b);
     }
     b.hidden = false;
-    var l = b.querySelector('.destek-liste'), m = el('p', metin, 'destek-mesaj destek-' + kimden);
+    var l = b.querySelector('.destek-liste'), m = el('div', null, 'destek-mesaj destek-' + kimden + (yaziyor ? ' destek-yaziyor' : ''));
+    var p = el('p', yaziyor ? null : metin);
+    if (yaziyor) { p.setAttribute('aria-label', metin); p.innerHTML = '<i></i><i></i><i></i>'; }
+    m.appendChild(p); m.appendChild(el('small', destekSaat(), 'destek-saat'));
     l.appendChild(m); l.scrollTop = l.scrollHeight;
+    // Cevap gelince "yazıyor" balonu metne döner
+    m.yaz = function (t) { m.classList.remove('destek-yaziyor'); p.removeAttribute('aria-label'); p.textContent = t; m.lastChild.textContent = destekSaat(); l.scrollTop = l.scrollHeight; };
     return m;
   }
   function bildirimBaglam(bolum) {
@@ -1756,12 +1768,12 @@
       var bolum = btn.getAttribute('data-bolum'), notu = ta.value.trim().slice(0, 1000);
       gon.disabled = true; gon.textContent = 'Kontrol ediliyor…'; dr.textContent = '';
       destekMesaj(notu || 'Bu sonuç yanlış görünüyor.', 'siz');
-      var bekle = destekMesaj('Ölçüm verilerinize bakıyoruz, birkaç saniye sürebilir…', 'biz');
+      var bekle = destekMesaj('Asistan ölçüm verilerinize bakıyor, yazıyor…', 'biz', true);
       yardimci({ islem: 'yanlis', bolum: bolum, baglam: bildirimBaglam(bolum), notu: notu || null }).then(function (r) {
-        bekle.textContent = [r.cevap].concat(r.ek || []).join(' ');
+        bekle.yaz([r.cevap].concat(r.ek || []).join(' '));
         if (r.site) { isletme.site_saglik = r.site; siteCiz(); isSayaci(); }
         f.remove(); btn.textContent = 'Kontrol ettik, cevabımız sağ altta.'; btn.disabled = true; btn.removeAttribute('aria-expanded');
-      }).catch(function (err) { bekle.textContent = err.message; gon.disabled = false; gon.textContent = 'Gönder'; });
+      }).catch(function (err) { bekle.yaz(err.message); gon.disabled = false; gon.textContent = 'Gönder'; });
     });
     btn.after(f); btn.setAttribute('aria-expanded', 'true'); ta.focus();
   });
