@@ -379,7 +379,9 @@ async function serpKonumBul(adlar: string[]): Promise<string> {
       const r = await fetch(`https://serpapi.com/locations.json?q=${encodeURIComponent(sade(ad))}&limit=10`, { signal: AbortSignal.timeout(8000) });
       const l = (await r.json()) as Array<{ canonical_name?: string; country_code?: string; target_type?: string }>;
       const tr = (Array.isArray(l) ? l : []).filter((x) => x.country_code === "TR" && x.canonical_name);
-      const iyi = tr.find((x) => /city|province|neighborhood|district|municipality/i.test(String(x.target_type))) || tr[0];
+      // Şehir, il düzeyinden önce: "Corum,Turkiye" (il) ile "yakınımda" araması Samsun/Ankara sonuçları getirmişti (1 Kasım)
+      const sira = (x: { target_type?: string }) => ["neighborhood", "district", "city", "municipality", "province"].findIndex((t) => new RegExp(t, "i").test(String(x.target_type)));
+      const iyi = tr.filter((x) => sira(x) >= 0).sort((a, b) => sira(a) - sira(b))[0] || tr[0];
       if (iyi) return String(iyi.canonical_name);
     } catch (e) { console.log("konum bulunamadi", ad, String(e)); }
   }
@@ -679,9 +681,11 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
   }
   // Aramanın yapılacağı konum (bir kez bulunur, işletmeye kaydedilir)
   let konum = turkiye ? "" : (isl.serp_konum || "");
-  if (!turkiye && !isl.serp_konum && SERP) {
-    konum = await serpKonumBul([semtKisa, sehir]);
-    if (konum) guncelle.serp_konum = konum;
+  // İl düzeyinde kayıtlı eski konum ("Corum,Turkiye", 2 parça) şehir düzeyine yükseltilir (konum araması ücretsiz)
+  const ilDuzeyi = !!isl.serp_konum && String(isl.serp_konum).split(",").length < 3;
+  if (!turkiye && (!isl.serp_konum || ilDuzeyi) && SERP) {
+    const yeni = await serpKonumBul([semtKisa, sehir]);
+    if (yeni) { konum = yeni; if (yeni !== isl.serp_konum) guncelle.serp_konum = yeni; }
   }
   if (Object.keys(guncelle).length) await db.from("isletmeler").update(guncelle).eq("id", isl.id);
   // 10 arama seç ve denetle

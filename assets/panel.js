@@ -1610,6 +1610,9 @@
       if (isletme.site && !isletme.site_saglik) siteTara(true);
       // Yorumlar ve platformlar hiç getirilmemişse ilk açılışta bir kez getir (önce yorumlar: platform kontrolü harita kaydını kullanır)
       if (!isletme.yorumlar) yorumYenile(true).then(function () { if (!isletme.platformlar) platformYenile(true); });
+      // Denetçiden önce yazılmış cevap taslakları: arama harcamadan bir kez denetlet
+      else if (!isletme.yorumlar.taslak_denetim && (isletme.yorumlar.yorumlar || []).some(function (y) { return !y.cevaplandi && y.taslak; }))
+        yardimci({ islem: 'yorumlar', sadece_denetim: true }).then(function (r) { if (r && r.yorumlar) { isletme.yorumlar = r.yorumlar; yorumCiz(); } }).catch(function () {});
       else if (!isletme.platformlar) platformYenile(true);
       $('yukleniyor').hidden = true; $('panel').hidden = false;
     });
