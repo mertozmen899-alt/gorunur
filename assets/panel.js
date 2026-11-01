@@ -3,7 +3,7 @@
   'use strict';
   var A = window.NorevoAuth;
   var $ = function (id) { return document.getElementById(id); };
-  var MOD = { gelir: 'Bana gelirler', giderim: 'Ben onlara giderim', online: 'Online çalışırım' };
+  var MOD = { gelir: 'Dükkânıma gelir', giderim: 'Ben adrese giderim', online: 'İnternetten çalışırım' };
   var SIKLIK = { haftalik: 'tercihiniz haftalık kısa özet', onemli: 'tercihiniz sadece önemli bir şey olunca', yok: 'mesaj göndermeyeceğiz' };
   var oturum, isletme;
 
@@ -47,9 +47,32 @@
   // "Yaptım" ile işaretlenen işler: { is_kodu: satır }
   var yapilanlar = {}, kutular = [];
   function isKodu(x) { return x.k || sadeK(x.t).replace(/ /g, '-').slice(0, 70); }
-  function isEkle(kutu, isler) {
+  // İşlerim kutuları önem sırasıyla; aynı iş ya da aynı site sadece en üstteki kutuda bir kez görünür
+  var KUTU_SIRA = ['olcum-isler', 'yp-isler', 'site-isler', 'yz-isler', 'metin-isler', 'isler'];
+  function alanSade(a) { return String(a || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase(); }
+  function tekrarsiz(kutu, isler) {
+    var s = KUTU_SIRA.indexOf(kutu.id), kodlar = {}, alanlar = {};
+    // Kendi işi olan site (Yandex, Bing, platform kartları) başka kartın site listesinde tekrar çıkmaz
+    KUTU_SIRA.forEach(function (id) { var k = $(id); ((k === kutu ? isler : k && k._isler) || []).forEach(function (x) { if (x.alan) alanlar[alanSade(x.alan)] = 1; }); });
+    KUTU_SIRA.slice(0, s).forEach(function (id) { var k = $(id); ((k && k._gosterilen) || []).forEach(function (x) { kodlar[isKodu(x)] = 1; (x.siteler || []).forEach(function (st) { alanlar[alanSade(st.alan)] = 1; }); }); });
+    var out = [];
+    isler.forEach(function (x) {
+      if (!x.bilgi && kodlar[isKodu(x)]) return;
+      if (x.siteler) {
+        var kalan = x.siteler.filter(function (st) { return !alanlar[alanSade(st.alan)]; });
+        if (!kalan.length) return;
+        kalan.forEach(function (st) { alanlar[alanSade(st.alan)] = 1; });
+        if (kalan.length < x.siteler.length) x = Object.assign({}, x, { siteler: kalan });
+      }
+      kodlar[isKodu(x)] = 1; out.push(x);
+    });
+    return out;
+  }
+  function isEkle(kutu, isler, zincirde) {
     kutu.innerHTML = '';
     kutu._isler = isler; if (kutular.indexOf(kutu) < 0) kutular.push(kutu);
+    var s = KUTU_SIRA.indexOf(kutu.id);
+    if (s >= 0) isler = kutu._gosterilen = tekrarsiz(kutu, isler);
     var acikVar = false; // her kutuda sadece yapılmamış ilk işin adımları açık; gerisi "Nasıl yapılır?" ile açılır
     isler.forEach(function (x, k) {
       var kod = isKodu(x), yap = !x.bilgi && yapilanlar[kod];
@@ -114,6 +137,8 @@
       }
       d.appendChild(anaG); kutu.appendChild(d);
     });
+    // Üstteki kutu değişince alttakiler yeniden süzülür (kutular farklı zamanlarda dolar)
+    if (s >= 0 && !zincirde) KUTU_SIRA.slice(s + 1).forEach(function (id) { var k = $(id); if (k && k._isler) isEkle(k, k._isler, true); });
   }
   function kisaTarihG(t) { return new Date(t).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }); }
   function anlik() {
@@ -581,7 +606,8 @@
   function kisaTarih(t) { return new Date(t).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }); }
   // Basit çizgi grafik (SVG). ters=true ise küçük değer yukarıda (sıra için)
   function cizgiGrafik(kutu, noktalar, ayar) {
-    var NS = 'http://www.w3.org/2000/svg', G = 560, Y = 170, sol = 38, sag = 14, ust = 14, alt = 30;
+    // Genişlik kutunun gerçek genişliği: yazılar telefonda da küçülmeden okunur
+    var NS = 'http://www.w3.org/2000/svg', G = Math.max(300, Math.round(kutu.clientWidth || Math.min(560, innerWidth - 90))), Y = 180, sol = 40, sag = 14, ust = 30, alt = 30;
     var svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', '0 0 ' + G + ' ' + Y); svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', ayar.etiket);
     function e(ad, at, metin) { var x = document.createElementNS(NS, ad); for (var k in at) x.setAttribute(k, at[k]); if (metin != null) x.textContent = metin; svg.appendChild(x); return x; }
     var yx = function (v) { var o = (v - ayar.min) / (ayar.max - ayar.min); if (ayar.ters) o = 1 - o; return ust + (1 - o) * (Y - ust - alt); };
@@ -595,7 +621,19 @@
       var y = yx(p.v);
       e('circle', { cx: xs[k], cy: y, r: 5, 'class': p.bos ? 'g-nokta bos' : 'g-nokta' });
       e('text', { x: xs[k], y: y - 10, 'text-anchor': 'middle', 'class': 'g-deger' }, p.yazi);
-      if (n <= 8 || k === 0 || k === n - 1 || k % 2 === 0) e('text', { x: xs[k], y: Y - 8, 'text-anchor': 'middle', 'class': 'g-yazi' }, p.t);
+      var her = adim ? Math.ceil(48 / adim) : 1;
+      if (k % her === 0 || k === n - 1 && (n - 1) % her >= her / 2) e('text', { x: xs[k], y: Y - 8, 'text-anchor': 'middle', 'class': 'g-yazi' }, p.t);
+    });
+    // "Yaptım" denen işler: iki ölçüm arasına kesik çizgi (işten önce ve sonra ölçüm varsa)
+    var araliklar = {};
+    (ayar.isler || []).forEach(function (y) {
+      var z = new Date(y.yapildi).getTime(), k = noktalar.findIndex(function (p) { return p.z > z; });
+      if (k > 0) (araliklar[k] = araliklar[k] || []).push(y.baslik);
+    });
+    Object.keys(araliklar).forEach(function (k) {
+      var x = (xs[k - 1] + xs[k]) / 2, l = araliklar[k];
+      e('line', { x1: x, x2: x, y1: 18, y2: Y - alt, 'class': 'g-is' });
+      e('text', { x: x, y: 13, 'text-anchor': 'middle', 'class': 'g-is-yazi' }, l.length > 1 ? '✓ ' + l.length + ' iş' : '✓ iş').appendChild(document.createElementNS(NS, 'title')).textContent = l.join(', ');
     });
     kutu.innerHTML = ''; kutu.appendChild(svg);
   }
@@ -624,13 +662,15 @@
       not = kisaTarih(liste[0].baslangic) + ' tarihinden bu yana ' + liste.length + ' ölçüm. ' + fark + (sonraki ? ' Sıradaki otomatik ölçüm: ' + kisaTarih(sonraki) + '.' : '');
     }
     $('gelisim-not').textContent = not;
+    var isler = Object.keys(yapilanlar).map(function (k) { return yapilanlar[k]; }).filter(function (y) { return y.yapildi; });
+    if (isler.length) $('gelisim-not').textContent += ' Kesik çizgiler "Yaptım" dediğiniz işleri gösterir.';
     cizgiGrafik($('grafik-harita'), haritali.map(function (o) {
       var s = aramaHaritaSira(o, kelime);
-      return { v: s || 21, bos: !s, yazi: s ? s + '.' : 'yok', t: kisaTarih(o.baslangic) };
-    }), { min: 1, max: 21, ters: true, cizgiler: [1, 5, 10, 20], etiketle: function (v) { return v === 1 ? '1.' : v + '.'; }, etiket: 'Haritalardaki sıra' + (kelime ? ' ("' + kelime + '")' : '') });
+      return { v: s || 21, bos: !s, yazi: s ? s + '.' : 'yok', t: kisaTarih(o.baslangic), z: new Date(o.baslangic).getTime() };
+    }), { isler: isler, min: 1, max: 21, ters: true, cizgiler: [1, 5, 10, 20], etiketle: function (v) { return v === 1 ? '1.' : v + '.'; }, etiket: 'Haritalardaki sıra' + (kelime ? ' ("' + kelime + '")' : '') });
     cizgiGrafik($('grafik-yz'), liste.filter(function (o) { return o.yz_soru_sayisi; }).map(function (o) {
-      var y = yzYuzde(o); return { v: y, bos: !y, yazi: '%' + y, t: kisaTarih(o.baslangic) };
-    }), { min: 0, max: 100, cizgiler: [0, 50, 100], etiketle: function (v) { return '%' + v; }, etiket: 'Yapay zekâ önerme oranı' });
+      var y = yzYuzde(o); return { v: y, bos: !y, yazi: '%' + y, t: kisaTarih(o.baslangic), z: new Date(o.baslangic).getTime() };
+    }), { isler: isler, min: 0, max: 100, cizgiler: [0, 50, 100], etiketle: function (v) { return '%' + v; }, etiket: 'Yapay zekâ önerme oranı' });
   }
   // ---- Aramalar: her arama için durum, ayrı sayfa ve o aramaya özel işler ----
   function enIyiYer(k) {
@@ -971,6 +1011,18 @@
     if (o.harita_sira && o.harita_sira <= 3) $('k-harita').className = 'iyi';
     if (ozt.ilkSayfa) $('k-arama').className = 'iyi';
     if (yzYuzde(o) > 0) $('k-yz').className = 'iyi';
+    // Önceki ölçüme göre oklar (harita: aynı aramayla; ikisinde de ölçüldüyse)
+    var ok = function (id, fark, birim) {
+      if (!fark) return;
+      $(id).appendChild(el('span', (fark > 0 ? '▲ ' : '▼ ') + Math.abs(fark) + birim, 'ok ' + (fark > 0 ? 'iyi' : 'kotu')));
+    };
+    if (onceki) {
+      var hO = aramaHaritaSira(onceki, o.harita_sorgu);
+      if (hO && o.harita_sira) ok('k-harita', hO - o.harita_sira, ' sıra');
+      var aO = aramaOzet(onceki);
+      if (aO.aOlculen && ozt.aOlculen) ok('k-arama', ozt.ilkSayfa - aO.ilkSayfa, '');
+      if (onceki.yz_soru_sayisi && o.yz_soru_sayisi) ok('k-yz', yzYuzde(o) - yzYuzde(onceki), ' puan');
+    }
 
     var h = (o.hatalar || []).filter(Boolean);
     $('sonuc-hata').hidden = !h.length;
@@ -997,7 +1049,7 @@
       tb.appendChild(tr);
     });
 
-    izlenenCiz(o);
+    izlenenCiz(o); hareketCiz(o);
 
     // Yapay zekâ cevapları: motor motor (Gemini, Google Yapay Zekâ Modu, ChatGPT)
     var yl = $('yz-liste'); yl.innerHTML = '';
@@ -1448,6 +1500,33 @@
       tb.appendChild(tr);
     });
   }
+  // Rakip hareketleri: izlenen rakiplerin önceki ölçüme göre yorum, puan ve harita sırası farkı (yeni arama harcamaz)
+  function hareketCiz(o) {
+    var kart = $('hareket-kart'), ul = $('hareket-liste'); ul.innerHTML = '';
+    kart.hidden = !(o && o.izlenen_rakipler && o.izlenen_rakipler.length);
+    if (kart.hidden) return;
+    var p = gecmis.filter(function (x) { return x.izlenen_rakipler && x.izlenen_rakipler.length && new Date(x.baslangic) < new Date(o.baslangic); })[0];
+    if (!p) { $('hareket-not').textContent = 'Rakiplerinizin yeni yorumlarını ve sıra değişimlerini ikinci ölçümden itibaren burada göreceksiniz.'; return; }
+    var satirlar = [];
+    var ayni = function (a, b) { return a.place_id && b.place_id ? a.place_id === b.place_id : sadeK(a.ad) === sadeK(b.ad); };
+    var siraYaz = function (s) { return s ? s + '. sıra' : 'ilk 20 dışı'; };
+    o.izlenen_rakipler.forEach(function (r) {
+      var e = p.izlenen_rakipler.find(function (x) { return ayni(x, r); }); if (!e) return;
+      if (r.yorum != null && e.yorum != null && r.yorum > e.yorum) satirlar.push({ t: r.ad + ' ' + sayi(r.yorum - e.yorum) + ' yeni yorum aldı (' + sayi(e.yorum) + ' → ' + sayi(r.yorum) + ').', kotu: true });
+      if (r.puan != null && e.puan != null && Math.abs(r.puan - e.puan) >= 0.1) satirlar.push({ t: r.ad + ' Google puanı ' + String(e.puan).replace('.', ',') + ' → ' + String(r.puan).replace('.', ',') + '.', kotu: r.puan > e.puan });
+      (r.aramalar || []).forEach(function (a) {
+        var b = (e.aramalar || []).find(function (x) { return x.kelime === a.kelime; });
+        if (!b || (a.sira || 0) === (b.sira || 0)) return;
+        var cikti = a.sira && (!b.sira || a.sira < b.sira);
+        satirlar.push({ t: r.ad + ' "' + a.kelime + '" aramasında haritada ' + siraYaz(b.sira) + ' → ' + siraYaz(a.sira) + '.', kotu: cikti });
+      });
+    });
+    var bn = (o.isletme_bilgi || {}).yorum, bo = (p.isletme_bilgi || {}).yorum;
+    if (bn != null && bo != null) satirlar.push({ t: bn > bo ? 'Siz ' + sayi(bn - bo) + ' yeni yorum aldınız (' + sayi(bo) + ' → ' + sayi(bn) + ').' : 'Sizin yorum sayınız değişmedi (' + sayi(bn) + ').', siz: true, kotu: false });
+    $('hareket-not').textContent = 'Önceki ölçüme göre (' + tarih(p.baslangic) + '), izlediğiniz ' + o.izlenen_rakipler.length + ' rakipte:';
+    if (!satirlar.some(function (s) { return !s.siz; })) satirlar.unshift({ t: 'Rakiplerinizin yorum sayısında, puanında ve harita sırasında değişiklik yok.' });
+    satirlar.forEach(function (s) { ul.appendChild(el('li', s.t, s.siz ? 'siz' : (s.kotu ? 'dikkat' : ''))); });
+  }
   function rakipAdaylari() {
     var o = gecmis[0] || {}, gorulen = {}, liste = [];
     var ekle = function (ad, pid) {
@@ -1533,6 +1612,16 @@
     if (kaydir !== false) window.scrollTo(0, 0);
   }
   window.addEventListener('hashchange', function () { sayfaGoster(location.hash.slice(1)); });
+  // Google sayfası sekmeleri: uzun sayfa yerine bir seferde tek bölüm (kartların kendi "hidden" durumuna dokunmaz)
+  function sekmeSec(ad) {
+    document.querySelectorAll('#g-sekmeler [data-sekme]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-sekme') === ad)); });
+    document.querySelectorAll('[data-sayfa=google] [data-grup]').forEach(function (k) { k.classList.toggle('sekme-disi', k.getAttribute('data-grup').split(' ').indexOf(ad) < 0); });
+  }
+  sekmeSec('aramalar');
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('#g-sekmeler [data-sekme], [data-sekme-git]');
+    if (b) sekmeSec(b.getAttribute('data-sekme') || b.getAttribute('data-sekme-git'));
+  });
 
   // Hesabımı sil (KVKK): e-posta yazılarak onaylanır, bütün veriler silinir
   $('sil-ac').addEventListener('click', function () { $('sil-form').hidden = false; $('sil-ac').hidden = true; $('sil-eposta').textContent = oturum.user.email; $('sil-onay').focus(); });

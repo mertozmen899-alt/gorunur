@@ -105,6 +105,10 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     // Sahte veri tabanı yönetici gibi davranır (süzgeçsiz sorguya hata döner): panel yine de açılmalı
     kontrol(cihaz + ' panel, birden çok işletme varken de açılıyor (sahip süzgeci)', await p.isVisible('#panel').catch(() => false));
     kontrol(cihaz + ' panel yükleniyor', await p.isVisible('#panel'));
+    await p.waitForSelector('#hareket-kart', { state: 'visible', timeout: 4000 }).catch(() => {});
+    const hareket = (await p.textContent('#hareket-liste').catch(() => '')) || '';
+    kontrol(cihaz + ' rakip hareketleri: yeni yorum ve sıra değişimi', await p.isVisible('#hareket-kart') && /Modalife Çorum 9 yeni yorum aldı \(803 → 812\)/.test(hareket) && /3\. sıra → 1\. sıra/.test(hareket), hareket.slice(0, 160));
+    kontrol(cihaz + ' Gelişim grafiğinde "Yaptım" işi kesik çizgiyle', (await p.$$('#grafik-harita .g-is')).length === 1);
     for (const s of ['ozet', 'isler', 'yz', 'google', 'hesap']) {
       await p.click('#yan-menu [data-git=' + s + ']').catch(() => {});
       await p.waitForTimeout(150);
@@ -197,6 +201,9 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     await tasma('yorumlar ve platformlar');
     // "Bu sonuç yanlış": site kartında form açılıyor, yapay zekâya gidiyor, cevap sağ alttaki balonda, site kartı güncelleniyor
     kontrol(cihaz + ' Google sayfasında "Bu sonuç yanlış" düğmeleri var', (await p.$$('[data-sayfa=google] .yanlis-btn')).length === 5);
+    kontrol(cihaz + ' Google sayfası sekmeli: başta site kartı gizli', !(await p.isVisible('#site-kart')));
+    await p.click('#g-sekmeler [data-sekme=site]').catch(() => {});
+    kontrol(cihaz + ' Siteniz sekmesi site kartını açıyor', await p.isVisible('#site-kart') && !(await p.isVisible('#yorum-kart')));
     await p.click('#site-kart .yanlis-btn').catch(() => {});
     kontrol(cihaz + ' "Bu sonuç yanlış" formu açılıyor', await p.isVisible('#site-kart .yanlis-form textarea'));
     await p.fill('#site-kart .yanlis-form textarea', 'Sitem https ile açılıyor').catch(() => {});

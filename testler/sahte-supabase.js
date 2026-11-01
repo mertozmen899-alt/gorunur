@@ -38,6 +38,8 @@
     {soru:'Çorum’da en çok tavsiye edilen mobilya satıcısı hangileri?',tekrar:1,model:'google-ai-mode',aramali:true,geciyor:false,ozet:'Kullanıcı yorumlarına göre Modalife ve Doğu Mobilya sık tavsiye ediliyor.\nModalife Çorum\nDoğu Mobilya',isletmeler:['Modalife Çorum','Doğu Mobilya']}];
   ORNEK.cg_soru_sayisi=null; ORNEK.cg_gecen=null; ORNEK.cg_cevaplar=null;
   GECMIS=[0,7,14,21].map(function(n,k){return Object.assign({},ORNEK,{baslangic:gun(n+1),bitis:gun(n+1),kaynak:'haftalik',harita_sira:[9,14,null,null][k],yz_gecen:[1,0,0,0][k]});});
+  // Rakip hareketleri kartı için: bir hafta önce Modalife 803 yorumluydu ve 'çorum mobilya'da 3. sıradaydı
+  GECMIS[1].izlenen_rakipler=JSON.parse(JSON.stringify(ORNEK.izlenen_rakipler)); GECMIS[1].izlenen_rakipler[0].yorum=803; GECMIS[1].izlenen_rakipler[0].aramalar[0].sira=3;
 
   // Google yorumları ve platform kontrolü (yardimci: islem yorumlar / platformlar)
   window.SAHTE_YORUMLAR={tarih:new Date().toISOString(),gun:new Date().toISOString().slice(0,10),yer:{ad:'Macitler Mobilya',adres:'Ulukavak, İnönü Cd. No:12, 19100 Çorum Merkez/Çorum',place_id:'ChIJx'},puan:4.3,yorum_sayisi:37,bakilan:4,cevapsiz_sayi:3,taslak_hata:null,taslak_denetim:{durum:'kontrol_gerekli',notlar:['1. cevap: [TELEFON] yerine kendi numaranızı yazın.'],tarih:new Date().toISOString()},yorumlar:[

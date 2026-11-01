@@ -15,12 +15,12 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&family=Fredoka:wght@600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&family=Fredoka:wght@600&display=swap"></noscript>
 <script>(function(){var t;try{t=localStorage.getItem('norevo_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t;if(t==='koyu'){var m=document.querySelector('meta[name="theme-color"]');if(m)m.content='#0F1217'}})()</script>
-<link rel="stylesheet" href="assets/style.css?v=44">
+<link rel="stylesheet" href="assets/style.css?v=45">
 <script src="assets/tema.js?v=2" defer></script>
 <script src="assets/iletisim.js?v=5" defer></script>
 <script src="assets/vendor/supabase-js-2.45.4.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script src="assets/auth.js?v=12"></script>
-<script src="assets/panel.js?v=43" defer></script>
+<script src="assets/panel.js?v=44" defer></script>
 <script src="assets/sayac.js?v=1" defer></script>
 </head>
 <body class="olcum-yok">
@@ -97,6 +97,12 @@
 <div class="isler" id="siradaki-is"></div>
 </section>
 
+<section class="kart genis" id="hareket-kart" hidden>
+<div class="kart-bas"><h3>Rakipleriniz ne yaptı?</h3><a href="#google" data-sekme-git="rakipler">Tüm rakipler →</a></div>
+<p class="kart-alt" id="hareket-not"></p>
+<ul class="hareket-liste" id="hareket-liste"></ul>
+</section>
+
 <section class="kart genis" id="gelisim-kart">
 <div class="kart-bas"><h3>Gelişiminiz</h3><span class="pil pil-a" id="gelisim-pil">Her hafta otomatik</span></div>
 <p class="kart-alt" id="gelisim-not"></p>
@@ -136,12 +142,12 @@
 <div class="isler" id="yz-isler"></div>
 </section>
 <section class="kart genis is-bolum" id="site-isler-kart" hidden>
-<div class="kart-bas"><h3>Sitenizde düzeltilecekler</h3><a href="#google">Site taraması →</a></div>
+<div class="kart-bas"><h3>Sitenizde düzeltilecekler</h3><a href="#google" data-sekme-git="site">Site taraması →</a></div>
 <p class="kart-alt">Sitenizi taradık; eksikleri tek mesajda topladık.</p>
 <div class="isler" id="site-isler"></div>
 </section>
 <section class="kart genis is-bolum" id="yp-isler-kart" hidden>
-<div class="kart-bas"><h3>Yorumlar ve platformlar</h3><a href="#google">Ayrıntılar →</a></div>
+<div class="kart-bas"><h3>Yorumlar ve platformlar</h3><a href="#google" data-sekme-git="yorumlar">Ayrıntılar →</a></div>
 <p class="kart-alt">Google yorumlarınıza ve platform kontrolüne göre.</p>
 <div class="isler" id="yp-isler"></div>
 </section>
@@ -189,16 +195,19 @@
 <!-- GOOGLE -->
 <div class="sayfa" data-sayfa="google" hidden>
 <div class="panel-bas"><p class="selam">Haritalar ve arama</p><h1>Google</h1></div>
-<div class="kart olcum-bekle"><h3>Önce ilk ölçümü yapalım</h3><p class="kart-alt">Haritalarda ve Google aramasında kaçıncı çıktığınızı görmek için Özet sayfasından ilk ölçümü başlatın.</p><a href="#ozet" class="btn btn-amber kucuk-btn" style="margin-top:14px">Ölçüme git</a></div>
+<div class="sekmeler" id="g-sekmeler" aria-label="Google sayfası bölümleri">
+<button type="button" data-sekme="aramalar" aria-pressed="true">Aramalar</button><button type="button" data-sekme="rakipler" aria-pressed="false">Rakipler</button><button type="button" data-sekme="site" aria-pressed="false">Siteniz</button><button type="button" data-sekme="yorumlar" aria-pressed="false">Yorumlar</button><button type="button" data-sekme="platformlar" aria-pressed="false">Platformlar</button>
+</div>
+<div class="kart olcum-bekle" data-grup="aramalar rakipler"><h3>Önce ilk ölçümü yapalım</h3><p class="kart-alt">Haritalarda ve Google aramasında kaçıncı çıktığınızı görmek için Özet sayfasından ilk ölçümü başlatın.</p><a href="#ozet" class="btn btn-amber kucuk-btn" style="margin-top:14px">Ölçüme git</a></div>
 <div class="panel-izgara">
-<section class="kart genis olcumlu">
+<section class="kart genis olcumlu" data-grup="aramalar">
 <div class="kart-bas"><h3>Aramalarınız</h3><span class="pil pil-a">En sık yapılan aramalar</span></div>
 <p class="kart-alt" id="arama-ozet"></p>
 <p class="kart-alt" id="kelime-konum"></p>
 <div class="arama-liste" id="arama-liste"></div>
 <button type="button" class="yanlis-btn" data-bolum="aramalar" aria-label="Bu sonuç yanlış: bize bildirin">Yanlış mı?</button>
 </section>
-<section class="kart genis olcumlu">
+<section class="kart genis olcumlu" data-grup="rakipler">
 <h3>Haritalarda kim önde?</h3>
 <p class="kart-alt" id="rakip-not"></p>
 <div class="kaydir" style="margin-top:14px"><table class="tablo">
@@ -207,7 +216,7 @@
 </table></div>
 <button type="button" class="yanlis-btn" data-bolum="harita" aria-label="Bu sonuç yanlış: bize bildirin">Yanlış mı?</button>
 </section>
-<section class="kart genis olcumlu" id="izlenen-kart">
+<section class="kart genis olcumlu" id="izlenen-kart" data-grup="rakipler">
 <div class="kart-bas"><h3>İzlediğiniz rakipler</h3><button type="button" class="btn btn-cizgi kucuk-btn" id="rakip-sec-ac">Rakipleri seç</button></div>
 <p class="kart-alt" id="izlenen-not"></p>
 <p class="kart-alt">Her ölçümde bu rakiplere, sizin için zaten yaptığımız harita aramalarında ve yapay zekâ cevaplarında bakıyoruz: haritadaki sıraları, Google puanları, yorum sayıları ve yapay zekânın onları kaç kez önerdiği. Rakiplerin sitelerini, Google gönderilerini, yorumlarının içeriğini ve Instagram hesaplarını incelemiyoruz.</p>
@@ -222,28 +231,28 @@
 <p class="uyari" id="rakip-sec-durum" role="status"></p>
 </form>
 </section>
-<section class="kart genis" id="site-kart">
+<section class="kart genis" id="site-kart" data-grup="site">
 <div class="kart-bas"><h3>Sitenizin sağlığı</h3><button type="button" class="btn btn-cizgi kucuk-btn" id="site-tara">Siteyi tara</button></div>
 <p class="kart-alt">Google’ın ve yapay zekânın sitenizi rahat okuyup okuyamadığına bakıyoruz: başlık, açıklama, telefonda görünüm, hız, adres ve telefon bilgisi.</p>
 <p class="uyari" id="site-durum" role="status"></p>
 <div id="site-saglik" style="margin-top:12px"></div>
 <button type="button" class="yanlis-btn" data-bolum="site" aria-label="Bu sonuç yanlış: bize bildirin">Yanlış mı?</button>
 </section>
-<section class="kart genis" id="yorum-kart">
+<section class="kart genis" id="yorum-kart" data-grup="yorumlar">
 <div class="kart-bas"><h3>Google yorumlarınız</h3><button type="button" class="btn btn-cizgi kucuk-btn" id="yorum-yenile">Yorumları yenile</button></div>
 <p class="kart-alt">Google Haritalar’daki son yorumlarınızı getiriyoruz. Cevap vermediğiniz yorumlar için sizin adınıza bir cevap taslağı yazıyoruz; taslağı kopyalayıp kendiniz yayınlarsınız, biz hiçbir şeyi sizin yerinize paylaşmayız.</p>
 <p class="uyari" id="yorum-durum" role="status"></p>
 <div id="yorum-icerik" style="margin-top:12px"></div>
 <button type="button" class="yanlis-btn" data-bolum="yorumlar" aria-label="Bu sonuç yanlış: bize bildirin">Yanlış mı?</button>
 </section>
-<section class="kart genis" id="platform-kart">
+<section class="kart genis" id="platform-kart" data-grup="platformlar">
 <div class="kart-bas"><h3>Hangi platformlarda varsınız?</h3><button type="button" class="btn btn-cizgi kucuk-btn" id="platform-yenile">Yeniden kontrol et</button></div>
 <p class="kart-alt">Google’da işletmenizin adıyla arama yapıp hangi sitelerde sayfanız çıktığına bakıyoruz. Yapay zekâ bir işletmeyi önermeden önce bu sitelere bakıyor.</p>
 <p class="uyari" id="platform-durum" role="status"></p>
 <div id="platform-icerik" style="margin-top:12px"></div>
 <button type="button" class="yanlis-btn" data-bolum="platformlar" aria-label="Bu sonuç yanlış: bize bildirin">Yanlış mı?</button>
 </section>
-<section class="kart genis" id="kelime-kart">
+<section class="kart genis" id="kelime-kart" data-grup="aramalar">
 <div class="kart-bas"><h3>Hangi aramalarda ölçüyoruz?</h3><span class="pil pil-a">10 arama</span></div>
 <p class="kart-alt">Google'ın kendi önerilerinden sektörünüzde en çok yapılan aramaları buluyoruz. Mutlaka ölçülmesini istediğiniz aramalar varsa buraya yazın (en fazla 3), listeye ekleriz.</p>
 <form id="kelime-form" class="kelime-form" novalidate>
