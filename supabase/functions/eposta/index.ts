@@ -60,7 +60,7 @@ function beklemeMetni(r: Record<string, any>) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:1px solid #E2E5EB;border-radius:20px">
 <tr><td style="padding:28px 32px 8px">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-<td style="width:34px;height:34px;border-radius:10px;background:#FD703C;text-align:center;font-size:22px;line-height:32px;font-weight:800;color:#111318">n</td>
+<td style="width:34px;height:34px;border-radius:10px;background:#155E75;text-align:center;font-size:22px;line-height:32px;font-weight:800;color:#FFFFFF">n</td>
 <td style="padding-left:10px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:#17253B">norevo</td></tr></table>
 </td></tr>
 <tr><td style="padding:16px 32px 0">
@@ -76,7 +76,7 @@ ${madde("Yükselmek için yapmanız gereken işleri sade dille, sıraya koyarak 
 </table>
 </td></tr>
 <tr><td style="padding:24px 32px 8px">
-<a href="${SITE}test.html?k=eposta" style="display:inline-block;background:#FD703C;color:#111318;text-decoration:none;font-weight:800;font-size:15px;padding:13px 22px;border-radius:999px">Durumunuzu şimdi görün →</a>
+<a href="${SITE}test.html?k=eposta" style="display:inline-block;background:#155E75;color:#FFFFFF;text-decoration:none;font-weight:800;font-size:15px;padding:13px 22px;border-radius:999px">Durumunuzu şimdi görün →</a>
 </td></tr>
 <tr><td style="padding:20px 32px 28px">
 <p style="margin:0;font-size:14px;line-height:1.6;color:#5B6375">Sorunuz olursa bu e-postayı yanıtlamanız yeterli.</p>
@@ -116,7 +116,7 @@ function onayMetni(r: Record<string, any>) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:1px solid #E2E5EB;border-radius:20px">
 <tr><td style="padding:28px 32px 8px">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-<td style="width:34px;height:34px;border-radius:10px;background:#FD703C;text-align:center;font-size:22px;line-height:32px;font-weight:800;color:#111318">n</td>
+<td style="width:34px;height:34px;border-radius:10px;background:#155E75;text-align:center;font-size:22px;line-height:32px;font-weight:800;color:#FFFFFF">n</td>
 <td style="padding-left:10px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:#17253B">norevo</td></tr></table>
 </td></tr>
 <tr><td style="padding:16px 32px 0">
@@ -124,7 +124,7 @@ function onayMetni(r: Record<string, any>) {
 <p style="margin:14px 0 0;font-size:16px;line-height:1.6;color:#343B48"><b>${kacis(r.eposta)}</b> adresiyle Norevo bekleme listesine katılmak istendi. Kaydınızı tamamlamak için aşağıdaki düğmeye tıklayın.</p>
 </td></tr>
 <tr><td style="padding:24px 32px 8px">
-<a href="${onay}" style="display:inline-block;background:#FD703C;color:#111318;text-decoration:none;font-weight:800;font-size:15px;padding:13px 22px;border-radius:999px">Kaydımı onayla</a>
+<a href="${onay}" style="display:inline-block;background:#155E75;color:#FFFFFF;text-decoration:none;font-weight:800;font-size:15px;padding:13px 22px;border-radius:999px">Kaydımı onayla</a>
 </td></tr>
 <tr><td style="padding:16px 32px 28px">
 <p style="margin:0;font-size:14px;line-height:1.6;color:#5B6375">Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz. Onaylanmayan adreslere başka e-posta göndermeyiz.</p>
@@ -187,7 +187,7 @@ function ozetMetni(isl: Olc, o: Olc, p: Olc | null) {
   const ilk = satirlar[0] || "Bu haftanın ölçümü panelinizde.";
   const konu = `${isl.ad}: haftalık Norevo özetiniz`;
   const duz = ["Merhaba,", "", `${isl.ad} için bu haftanın ölçümü bitti.`, ...satirlar, "", "Bu hafta ne yapmanız gerektiğini hazır metinleriyle panelinize koyduk:", panel, "", "Bu özetleri istemiyorsanız ya da sadece önemli değişikliklerde almak istiyorsanız:", ayar, "", "Norevo", SITE].join("\n");
-  const madde = (t: string) => `<tr><td style="padding:7px 0;vertical-align:top;width:22px;color:#FD703C;font-weight:800">•</td><td style="padding:7px 0;font-size:16px;line-height:1.5;color:#343B48">${kacis(t)}</td></tr>`;
+  const madde = (t: string) => `<tr><td style="padding:7px 0;vertical-align:top;width:22px;color:#155E75;font-weight:800">•</td><td style="padding:7px 0;font-size:16px;line-height:1.5;color:#343B48">${kacis(t)}</td></tr>`;
   const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${kacis(konu)}</title></head>
 <body style="margin:0;padding:0;background:#F6F7F9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#161A22">
 <div style="display:none;max-height:0;overflow:hidden">${kacis(ilk)}</div>
@@ -195,7 +195,7 @@ function ozetMetni(isl: Olc, o: Olc, p: Olc | null) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:1px solid #E2E5EB;border-radius:20px">
 <tr><td style="padding:28px 32px 8px">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-<td style="width:34px;height:34px;border-radius:10px;background:#FD703C;text-align:center;font-size:22px;line-height:32px;font-weight:800;color:#111318">n</td>
+<td style="width:34px;height:34px;border-radius:10px;background:#155E75;text-align:center;font-size:22px;line-height:32px;font-weight:800;color:#FFFFFF">n</td>
 <td style="padding-left:10px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:#17253B">norevo</td></tr></table>
 </td></tr>
 <tr><td style="padding:16px 32px 0">
@@ -204,7 +204,7 @@ function ozetMetni(isl: Olc, o: Olc, p: Olc | null) {
 </td></tr>
 <tr><td style="padding:14px 32px 0"><table role="presentation" cellpadding="0" cellspacing="0" width="100%">${satirlar.map(madde).join("")}</table></td></tr>
 <tr><td style="padding:22px 32px 8px">
-<a href="${panel}" style="display:inline-block;background:#FD703C;color:#111318;text-decoration:none;font-weight:800;font-size:15px;padding:13px 22px;border-radius:999px">Bu haftanın işlerini görün →</a>
+<a href="${panel}" style="display:inline-block;background:#155E75;color:#FFFFFF;text-decoration:none;font-weight:800;font-size:15px;padding:13px 22px;border-radius:999px">Bu haftanın işlerini görün →</a>
 </td></tr>
 <tr><td style="padding:16px 32px 28px"><p style="margin:0;font-size:14px;line-height:1.6;color:#5B6375">İşleri hazır metinleriyle panelinize koyduk. Sorunuz olursa bu e-postayı yanıtlamanız yeterli.</p></td></tr>
 </table>
