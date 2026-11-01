@@ -118,7 +118,7 @@
   function kisaTarihG(t) { return new Date(t).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }); }
   function anlik() {
     var o = gecmis[0];
-    return o ? { olcum_id: o.id || null, tarih: o.baslangic, harita_sira: o.harita_sira || null, arama_sira: o.arama_sira || null, yz_yuzde: o.yz_soru_sayisi ? Math.round(100 * (o.yz_gecen || 0) / o.yz_soru_sayisi) : null } : null;
+    return o ? { olcum_id: o.id || null, tarih: o.baslangic, harita_sira: o.harita_sira || null, harita_olculdu: !!o.harita_sonuclar, arama_sira: o.arama_sira || null, yz_yuzde: o.yz_soru_sayisi ? Math.round(100 * (o.yz_gecen || 0) / o.yz_soru_sayisi) : null } : null;
   }
   function isleriYenile() {
     kutular.forEach(function (k) { if (k._isler) isEkle(k, k._isler); });
@@ -185,11 +185,11 @@
     $('hafta-pil').textContent = bitenSayi + ' / ' + Math.max(3, bitenSayi + gosterilen.length) + ' bitti';
     $('hafta-not').textContent = acik.length
       ? 'Her hafta sadece 3 işe odaklanın. Bitirdiğiniz işi "Bitirdim, işaretle" düğmesiyle işaretleyin, etkisini takip edelim.'
-      : 'Size özel bütün işleri bitirdiniz, harika. Haftalık ölçümlerde etkisini izleyin.';
+      : 'Bütün işleri bitirdiniz. Etkisini haftalık ölçümlerde görürsünüz.';
     var alt = $('hafta-alt'); alt.innerHTML = '';
     if (acik.length && !gosterilen.length) {
       var b = el('div', null, 'hafta-bitti');
-      b.appendChild(el('p', 'Bu haftanın 3 işini bitirdiniz, harika! Google’ın fark etmesi birkaç hafta sürer. Acele etmeyin; isterseniz şimdiden devam edin.'));
+      b.appendChild(el('p', 'Bu haftanın 3 işi bitti. Google’ın fark etmesi birkaç hafta sürer; isterseniz şimdiden sıradakilere geçebilirsiniz.'));
       var ac = el('button', 'Gelecek haftanın işlerini şimdi aç', 'btn btn-amber'); ac.type = 'button';
       ac.addEventListener('click', function () { ekstraIs += 3; haftaCiz(); });
       b.appendChild(ac); alt.appendChild(b);
@@ -227,14 +227,16 @@
     var net = gun >= 28;
     var parca = [];
     var hs = function (v) { return v ? v + '.' : 'ilk 20’de yok'; };
+    // Anlık kayıtta harita listesi yok; eski kayıtlarda harita_olculdu alanı da yok (o zaman ölçülmüş sayılır)
+    var onceHarita = once && once.harita_olculdu !== false;
     if (once) {
       var a = once.harita_sira, b = sonra.harita_sira;
-      if (once.harita_sonuclar && sonra.harita_sonuclar) parca.push('Haritalar: ' + (a === (b || null) ? 'değişmedi (' + hs(b) + ')' : hs(a) + ' → ' + hs(b)));
+      if (onceHarita && sonra.harita_sonuclar) parca.push('Haritalar: ' + (a === (b || null) ? 'değişmedi (' + hs(b) + ')' : hs(a) + ' → ' + hs(b)));
       else parca.push('Haritalar bu ölçümlerde alınamadı');
       var yz2 = sonra.yz_soru_sayisi ? Math.round(100 * (sonra.yz_gecen || 0) / sonra.yz_soru_sayisi) : null;
       if (once.yz_yuzde != null && yz2 != null) parca.push('yapay zekâ: ' + (once.yz_yuzde === yz2 ? 'değişmedi (%' + yz2 + ')' : '%' + once.yz_yuzde + ' → %' + yz2));
     } else parca.push('İşaretlediğinizde ölçüm yoktu; şu an haritalarda ' + (sonra.harita_sonuclar ? hs(sonra.harita_sira) : 'ölçülemedi'));
-    var iyi = once && ((once.harita_sonuclar && sonra.harita_sira && (!once.harita_sira || sonra.harita_sira < once.harita_sira)) || (sonra.yz_soru_sayisi && once.yz_yuzde != null && Math.round(100 * (sonra.yz_gecen || 0) / sonra.yz_soru_sayisi) > once.yz_yuzde));
+    var iyi = once && ((onceHarita && sonra.harita_sira && (!once.harita_sira || sonra.harita_sira < once.harita_sira)) || (sonra.yz_soru_sayisi && once.yz_yuzde != null && Math.round(100 * (sonra.yz_gecen || 0) / sonra.yz_soru_sayisi) > once.yz_yuzde));
     return { pil: net ? 'Net sonuç' : 'İlk bakış', sinif: iyi ? 'pil-y' : 'pil-a', yazi: parca.join(', ') + '.' + (!net ? ' Net sonuç 4 hafta dolunca (' + kisaTarihG(new Date(new Date(y.yapildi).getTime() + 28 * 864e5)) + ').' : (iyi ? '' : ' Bazı işlerin etkisi daha geç görünür; diğer işlerle birlikte devam edin.')) };
   }
   function yapilanCiz() {
@@ -262,7 +264,7 @@
   function isSayaci() {
     var l = onerilenler(), kalan = l.filter(function (z) { return !yapilanlar[z.kod]; }).length;
     $('isler-sayi').textContent = kalan; $('isler-sayi').hidden = !kalan;
-    $('isler-ozet').textContent = l.length ? 'Size özel ' + l.length + ' işten ' + (l.length - kalan) + ' tanesini yaptınız.' + (kalan ? ' Her seferinde sadece sıradaki işe odaklanın.' : ' Hepsi tamam, harika. Haftalık ölçümlerde etkisini izleyin.') : '';
+    $('isler-ozet').textContent = l.length ? l.length + ' işten ' + (l.length - kalan) + ' tanesini yaptınız.' + (kalan ? ' Her seferinde sadece sıradaki işe odaklanın.' : ' Hepsi tamam; etkisini haftalık ölçümlerde görürsünüz.') : '';
     haftaCiz();
   }
   // Özet sayfasında: yapılmamış en önemli iş
@@ -523,9 +525,11 @@
     var olculdu = ('arama_sira' in k) || k.harita_bakilan != null;
     if (!olculdu) return { yazi: 'Ölçülmedi', sinif: 'rozet-gri' };
     var en = enIyiYer(k);
-    if (en && en.sira === 1) return { yazi: '1. sırada · Koru', sinif: 'rozet-yesil' };
-    if (en && en.sira <= 10) return { yazi: en.sira + '. sırada · Yüksel', sinif: 'rozet-sari' };
-    return { yazi: 'Çıkmıyor · Görün', sinif: 'rozet-kirmizi' };
+    if (en && en.sira === 1) return { yazi: '1. sıradasınız', sinif: 'rozet-yesil' };
+    if (en && en.sira <= 10) return { yazi: en.sira + '. sıradasınız', sinif: 'rozet-sari' };
+    // Haritalar ilk 20'ye bakar: 11-20. sıradaki işletme "çıkmıyor" değil, ilk sayfanın gerisinde
+    if (en) return { yazi: en.yer + ' ' + en.sira + '. sıradasınız', sinif: 'rozet-sari' };
+    return { yazi: 'İlk sayfada yoksunuz', sinif: 'rozet-kirmizi' };
   }
   function aramaOzet(o) {
     var ks = o.kelimeler || [];

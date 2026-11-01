@@ -146,6 +146,9 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     const sonra = (await p.textContent('#isler-ozet')) || '';
     kontrol(cihaz + ' Yaptım düğmesi sayacı değiştiriyor', !!dugme && once !== sonra, once + ' -> ' + sonra);
     kontrol(cihaz + ' yapılan iş tam tarihle görünüyor', /Yaptınız · \d+ [A-ZÇĞİÖŞÜ][a-zçğıöşü]{3,}/.test((await p.textContent('#hafta-isler')) || ''));
+    // 10 gün önce yapılan işin etkisi: işaretlendiği andaki harita sırası (14.) ile son ölçüm karşılaştırılır, "alınamadı" denmez
+    const etki = (await p.textContent('#yapilan-liste').catch(() => '')) || '';
+    kontrol(cihaz + ' yapılan işin etkisinde harita karşılaştırması var', /Haritalar: 14\./.test(etki) && !/alınamadı/.test(etki), etki.slice(0, 160));
     // Tüm işleri göster: diğer bölümler açılır
     await p.click('#tum-isler-btn').catch(() => {}); await p.waitForTimeout(150);
     kontrol(cihaz + ' "Tüm işleri göster" diğer bölümleri açıyor', await p.isVisible('#genel-isler-kart'));
