@@ -56,7 +56,8 @@ async function haritalar(sorgu: string, anahtar: string) {
 }
 
 async function yapayZeka(soru: string, anahtar: string) {
-  const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-flash-lite-latest", "gemini-flash-latest"].filter(Boolean) as string[];
+  // Sabit sürüm ("-latest" adlarının arkasını Google değiştirebiliyor); en sondaki "-latest" yedek
+  const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-3.5-flash-lite", "gemini-3.5-flash-lite", "gemini-3.7-flash", "gemini-flash-lite-latest"].filter(Boolean) as string[];
   const istek = `${soru} Gerçek bir müşteriye cevap verir gibi 3 ile 5 işletme öner. Sadece şu JSON'u döndür: {"isletmeler":[{"ad":"işletme adı","neden":"tek kısa cümle"}]}`;
   let son = "";
   for (const model of modeller) {

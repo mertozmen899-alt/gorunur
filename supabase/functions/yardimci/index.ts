@@ -24,7 +24,8 @@ const sade = (x: string) => (x || "").toLocaleLowerCase("tr").replace(/ı/g, "i"
 
 // ---------------- Gemini (JSON cevap) ----------------
 async function gemini(soru: string, anahtar: string, sicaklik = 0.7) {
-  const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-flash-lite-latest"].filter(Boolean) as string[];
+  // Sabit sürüm ("-latest" adlarının arkasını Google değiştirebiliyor); en sondaki "-latest" yedek
+  const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-3.7-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"].filter(Boolean) as string[];
   let son = "";
   for (const model of modeller) {
     try {
@@ -47,7 +48,8 @@ const KURAL = "Kurallar: sade ve doğal Türkçe yaz, abartılı reklam dili kul
 
 function metinSorusu(tur: string, isl: Record<string, any>, kelime: string) {
   const yer = isl.semt === "Türkiye geneli" ? "Türkiye geneli" : String(isl.semt || "").split(",")[0].trim();
-  const tanim = `İşletme adı: "${isl.ad}". İş türü: "${isl.is_turu}". Bölge: "${yer}".${isl.site ? ` Web sitesi: ${isl.site}.` : ""}`;
+  const saglikNot = saglikMi(isl) ? " Bu bir sağlık işletmesi: övücü, karşılaştırmalı ya da sonuç vaat eden ifade, fiyat ve kampanya yazma; hastanın tedavisini anma." + (/hastane/.test(sade(`${isl.is_turu || ""} ${isl.ad || ""}`)) ? "" : ' İşletme hastane değil: "hastane" kelimesini (ör. "diş hastanesi") hiç kullanma.') : "";
+  const tanim = `İşletme adı: "${isl.ad}". İş türü: "${isl.is_turu}". Bölge: "${yer}".${isl.site ? ` Web sitesi: ${isl.site}.` : ""}${saglikNot}`;
   if (tur === "sayfa") return `${tanim}
 Bu işletmenin web sitesine, Google'da "${kelime}" diye arayan müşterilerin bulacağı yeni bir sayfa eklenecek. Sayfanın metnini yaz. ${KURAL}
 Sadece şu JSON'u döndür:
@@ -81,7 +83,16 @@ function metinler(tur: string, ic: Record<string, any>): Array<[string, string]>
   if (tur === "yorum") return (ic.taslaklar || []).map((t: Record<string, string>) => [`${t.no}. cevap`, String(t.metin || "")]);
   return [];
 }
-function kuralSorunlari(tur: string, ic: Record<string, any>): string[] {
+// Uzun Türkçe metinde hiç ç/ğ/ı/ö/ş/ü yoksa model Türkçe karakterleri atlamış demektir (1 Kasım: Lite model "Corum bolgesinde..." yazdı)
+// Her metin ayrı bakılır: normal Türkçede harflerin ~%5-8'i ç/ğ/ı/ö/ş/ü; %2'nin altı "ASCII'ye çevrilmiş" sayılır
+// (tek bir doğru harf yetmez: 614 karakterlik gönderide 3 Türkçe harf vardı)
+function turkceVar(ic: Record<string, any>, tur: string): boolean {
+  return metinler(tur, ic).every(([, x]) => {
+    const m = x.replace(/\[[^\]]*\]/g, "");
+    return m.length < 80 || (m.match(/[çğıöşüÇĞİÖŞÜ]/g) || []).length / m.length >= 0.02;
+  });
+}
+function kuralSorunlari(tur: string, ic: Record<string, any>, isl?: Record<string, any>): string[] {
   const s: string[] = [];
   const hepsi = metinler(tur, ic);
   if (!hepsi.length || hepsi.some(([, m]) => !m.trim())) s.push("Metin eksik ya da boş.");
@@ -102,6 +113,10 @@ function kuralSorunlari(tur: string, ic: Record<string, any>): string[] {
     if (String(ic.aciklama || "").length > 170) s.push("Google açıklaması 155 karakteri aşıyor.");
   }
   if (tur === "gonderi") for (const [yol, m] of hepsi) if (m.length > 1500) s.push(`${yol}: Google gönderisi en fazla 1500 karakter.`);
+  if (!turkceVar(ic, tur)) s.push("Metin Türkçe karakterler (ç, ğ, ı, ö, ş, ü) olmadan yazılmış; yayınlamadan önce düzeltin.");
+  // Özel klinik kendini "hastane" diye tanıtamaz (1 Kasım: gönderiye "Çorum diş hastanesi" aranma kelimesi girmişti)
+  if (isl && saglikMi(isl) && !/hastane/.test(sade(`${isl.is_turu || ""} ${isl.ad || ""}`)))
+    for (const [yol, m] of hepsi) if (/hastane/.test(sade(m))) s.push(`${yol}: "hastane" kelimesi geçiyor; özel klinik kendini hastane olarak tanıtamaz.`);
   if (tur === "yorum") for (const [yol, m] of hepsi) if (m.length > 600) s.push(`${yol}: cevap çok uzun.`);
   return s;
 }
@@ -114,12 +129,13 @@ function ayniYapi(a: Record<string, any>, b: unknown): boolean {
 function denetciSorusu(tur: string, isl: Record<string, any>, ic: Record<string, any>, ekBaglam = "") {
   const ne = { aciklama: "Google İşletme Profili açıklaması", sayfa: "web sitesine eklenecek sayfa metni", gonderi: "Google İşletme Profili gönderileri", yorum: "Google yorumlarına işletme sahibi adına yazılmış cevaplar" }[tur] || "metin";
   const saglik = saglikMi(isl);
+  const hastaneNot = /hastane/.test(sade(`${isl.is_turu || ""} ${isl.ad || ""}`)) ? "" : ' Bu işletme hastane değil: "hastane" kelimesi (ör. "diş hastanesi") hiç geçmemeli.';
   return `Sen bir yayın denetçisisin. Aşağıdaki ${ne}, "${isl.ad}" adına herkese açık yayınlanacak. Metni başka bir yapay zekâ yazdı; hata yapmış olabilir. İşletme sahibi metne güvenip olduğu gibi yayınlayabilir, bu yüzden titiz ol.
 İşletme hakkında KESİN bildiğimiz bilgiler sadece şunlar: ad "${isl.ad}", iş türü "${isl.is_turu}", bölge "${isl.semt}"${isl.site ? `, web sitesi ${isl.site}` : ""}. Bunların dışındaki her somut bilgi uydurmadır.${ekBaglam ? "\n" + ekBaglam : ""}
 Kontrol et:
 1. Uydurma bilgi: fiyat, indirim, kampanya, hediye, kuruluş yılı, deneyim süresi, ödül, sertifika, uzman ya da çalışan sayısı, marka veya cihaz adı, adres, telefon, çalışma saati, verilmiş bir söz ya da yapılmış bir değişiklik. Köşeli parantezli yer tutucular ([TELEFON], [ADRES] gibi) uygundur.
 2. Kanıtlanamayan üstünlük ya da sonuç vaadi: "en iyi", "bir numara", "lider", "garanti", "kesin sonuç", "ağrısız", "%100".
-3. ${saglik ? "Bu bir sağlık işletmesi. Türkiye'de sağlık hizmetlerinde reklam yasak: övücü, karşılaştırmalı, hasta yönlendiren, tedavi sonucu vaat eden, fiyat ya da kampanya içeren ifadeler olmamalı; dil bilgilendirici ve tarafsız olmalı. Yorum cevaplarında hastanın tedavisi, hastalığı ya da sağlık durumu herkese açık şekilde anılmamalı." : "Sağlık işletmesi değil; bu maddeyi atla."}
+3. ${saglik ? "Bu bir sağlık işletmesi. Türkiye'de sağlık hizmetlerinde reklam yasak: övücü, karşılaştırmalı, hasta yönlendiren, tedavi sonucu vaat eden, fiyat ya da kampanya içeren ifadeler olmamalı; dil bilgilendirici ve tarafsız olmalı. Yorum cevaplarında hastanın tedavisi, hastalığı ya da sağlık durumu herkese açık şekilde anılmamalı." + hastaneNot : "Sağlık işletmesi değil; bu maddeyi atla."}
 4. Google kuralları: açıklamada web adresi, telefon, kampanya, büyük harfle bağırma olmamalı.
 5. Rakibi kötüleme, müşteriyi suçlama, tartışmaya girme, hakaret.
 6. Türkçe yazım hatası ya da anlamı bozuk cümle.
@@ -140,7 +156,7 @@ function sinirla(tur: string, ic: Record<string, any>): Record<string, any> {
 async function denetle(tur: string, isl: Record<string, any>, ic0: Record<string, any>, GEM: string, ekBaglam = ""): Promise<{ icerik: Record<string, any>; denetim: Denetim }> {
   const tarih = new Date().toISOString();
   const ic = sinirla(tur, ic0);
-  const kod = kuralSorunlari(tur, ic);
+  const kod = kuralSorunlari(tur, ic, isl);
   let c: Record<string, any>;
   try { c = await gemini(denetciSorusu(tur, isl, ic, ekBaglam), GEM, 0.1); }
   catch (e) {
@@ -154,7 +170,7 @@ async function denetle(tur: string, isl: Record<string, any>, ic0: Record<string
     .map((x: Record<string, unknown>) => uzunTireYok(`"${String(x.alinti).trim()}": ${String(x.sorun || "").trim()}`).slice(0, 220)).slice(0, 6) as string[];
   if (!sorunlar.length && !kod.length) return { icerik: ic, denetim: { durum: "onaylandi", notlar: [], tarih } };
   const duz = sorunlar.length ? sinirla(tur, c?.duzeltilmis) : null;
-  if (duz && ayniYapi(ic, duz) && !kuralSorunlari(tur, duz).length) return { icerik: duz, denetim: { durum: "duzeltildi", notlar: [...kod, ...sorunlar], tarih } };
+  if (duz && ayniYapi(ic, duz) && !kuralSorunlari(tur, duz, isl).length) return { icerik: duz, denetim: { durum: "duzeltildi", notlar: [...kod, ...sorunlar], tarih } };
   return { icerik: ic, denetim: { durum: "kontrol_gerekli", notlar: [...kod, ...sorunlar].length ? [...kod, ...sorunlar] : ["Denetçi bu metinden emin olamadı."], tarih } };
 }
 
@@ -234,7 +250,7 @@ async function guvenliGetir(adres: string | URL, ms: number, headers: Record<str
 // ---------------- Site sağlığı ----------------
 type Kontrol = { kod: string; ad: string; tamam: boolean; agirlik: number; detay: string; oneri: string };
 const ULASILAMADI = "Sitenize ulaşamadık. Tarayıcıda açılıyorsa bize WhatsApp'tan yazın; bazı siteler otomatik kontrolleri engelliyor.";
-const TARAYICI = { "User-Agent": "Mozilla/5.0 (compatible; NorevoSiteSagligi/1.0; +https://mertozmen899-alt.github.io/norevo/)", "Accept-Language": "tr-TR,tr;q=0.9" };
+const TARAYICI = { "User-Agent": "Mozilla/5.0 (compatible; NorevoSiteSagligi/1.0)", "Accept-Language": "tr-TR,tr;q=0.9" };
 // Kesin olumsuz cümle kurmadan önce ikinci yol: https adresi bağlantı düzeyinde açılmazsa (sertifika hatası,
 // zaman aşımı, bağlantı reddi) aynı adres bir kez http ile denenir. İkinci deneme de guvenliGetir'den geçer
 // (SSRF denetimi, en fazla 3 yönlendirme). Alan adı hiç çözülmüyorsa ya da güvenlik engeli varsa ikinci deneme yapılmaz.
@@ -750,7 +766,10 @@ Deno.serve(async (req) => {
     // Günde en fazla 15 metin ("Yeniden yazın" da sayılır)
     if (!(await harca("metin", 1, 15))) return json({ hata: "Bugünlük metin hakkınız doldu. Yarın tekrar deneyin." }, 429);
     try {
-      const d = await denetle(tur, isl, await gemini(metinSorusu(tur, isl, kelime), GEM), GEM);
+      let ham = await gemini(metinSorusu(tur, isl, kelime), GEM);
+      // Türkçe karakterler atlanmışsa bir kez daha yazdır
+      if (!turkceVar(ham, tur)) ham = await gemini(metinSorusu(tur, isl, kelime) + "\nÖNEMLİ: Türkçe karakterleri (ç, ğ, ı, ö, ş, ü, İ) mutlaka doğru kullan; ASCII'ye çevirme.", GEM);
+      const d = await denetle(tur, isl, ham, GEM);
       const sonuc = { tur, kelime: tur === "sayfa" ? kelime : null, icerik: d.icerik, denetim: d.denetim, tarih: new Date().toISOString() };
       kayit[anahtar] = sonuc;
       delete kayit._sayac; // eski sayaç (artık kullanim sütununda)

@@ -22,6 +22,9 @@ const CORS = {
 };
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
+// Gemini modelleri sabit sürüm: "-latest" adlarının arkasını Google değiştirebiliyor (1 Kasım: flash-latest = 3.8 Flash,
+// fiyatı 1 Ocak 2027'de artıyor). Sabit sürüm kaldırılırsa en sondaki "-latest" yedek olarak çalışır.
+const GEMINI_MODELLER = () => [Deno.env.get("GEMINI_MODEL"), "gemini-3.5-flash-lite", "gemini-3.7-flash", "gemini-flash-lite-latest"].filter(Boolean) as string[];
 // Türkiye takvim ayının başı (UTC+3, yaz saati yok), ISO
 const ayBasiTR = () => { const t = new Date(Date.now() + 3 * 36e5); return new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), 1) - 3 * 36e5).toISOString(); };
 
@@ -504,7 +507,7 @@ Deno.serve(async (req) => {
     // SerpApi harcamaz (Google önerileri kullanılmaz), sadece yapay zekâ profili ve kurallar denenir.
     const govde = await req.json().catch(() => ({}));
     if (Array.isArray(govde?.deneme)) {
-      const modellerP = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-flash-latest"].filter(Boolean) as string[];
+      const modellerP = GEMINI_MODELLER();
       const sonuc = [];
       for (const d of govde.deneme.slice(0, 12)) {
         const parca = String(d.semt || "").split(/[,/]/).map((x: string) => x.trim()).filter(Boolean);
@@ -651,7 +654,7 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
   const yerK = turkiye ? "" : semtKisa.toLocaleLowerCase("tr");
   const sehirK = sehir.toLocaleLowerCase("tr");
   const elle = ((isl.anahtar_kelimeler || []) as string[]).map(temizArama).filter((k) => k.length >= 2).slice(0, 3);
-  const modellerP = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-flash-latest"].filter(Boolean) as string[];
+  const modellerP = GEMINI_MODELLER();
   // Yer veya iş türü değiştiyse eski öneriler, profil ve konum çöpe
   const kaynakImza = sade(String(isl.semt || "") + "|" + String(isl.is_turu || ""));
   const degisti = isl.kelime_kaynak !== kaynakImza;
@@ -857,7 +860,7 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     const TEKRAR = Math.min(5, Math.max(1, Number(Deno.env.get("YZ_TEKRAR") || "3")));
     const SORU_SAYISI = Math.min(10, Math.max(3, Number(Deno.env.get("YZ_SORU") || "6")));
     const sorular = tumSorular.slice(0, SORU_SAYISI);
-    const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-flash-latest"].filter(Boolean) as string[];
+    const modeller = GEMINI_MODELLER();
     const isler: Array<{ soru: string; tekrar: number }> = [];
     for (let t = 1; t <= TEKRAR; t++) for (const soru of sorular) isler.push({ soru, tekrar: t });
     const cevaplar: Array<Record<string, unknown>> = new Array(isler.length);
@@ -960,7 +963,7 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     if (!GEM) return;
     const eskiR = !isl.sektor_rehberleri_tarih || Date.now() - new Date(isl.sektor_rehberleri_tarih).getTime() > 30 * 864e5;
     if (!eskiR) return;
-    const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-lite-latest", "gemini-flash-latest"].filter(Boolean) as string[];
+    const modeller = GEMINI_MODELLER();
     try {
       const liste = await sektorRehberleri(isK, GEM, modeller);
       if (liste.length) await db.from("isletmeler").update({ sektor_rehberleri: liste, sektor_rehberleri_tarih: new Date().toISOString() }).eq("id", isl.id);
