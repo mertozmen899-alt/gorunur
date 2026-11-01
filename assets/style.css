@@ -168,6 +168,21 @@ h1,h2,h3{margin:0}
 .ekran-ad{display:inline-flex;align-items:center;gap:7px;margin:0 auto}
 .ekran-ad .logo-isaret{width:18px;height:18px;border-radius:6px}
 .ekran-ornek{background:var(--kart3);color:var(--yazi3);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:800}
+/* Ana sayfa "Ne ölçüyoruz": mesajlaşma uygulaması görünümünde örnek yazışma */
+.sohbet{--s-zemin:#EFEAE2;--s-gelen:#FFFFFF;--s-giden:#D9FDD3;--s-yazi:#111B21;--s-soluk:#667781;--s-gsoluk:#4A6B5D;--s-bas:#F0F2F5;--s-alinti:#F0F2F5;border-radius:18px;overflow:hidden;border:1px solid var(--cizgi2);background:var(--s-zemin);color:var(--s-yazi)}
+:root[data-tema="koyu"] .sohbet{--s-zemin:#0B141A;--s-gelen:#202C33;--s-giden:#005C4B;--s-yazi:#E9EDEF;--s-soluk:#8696A0;--s-gsoluk:#B3D1C9;--s-bas:#202C33;--s-alinti:#111B21}
+.sohbet-bas{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--s-bas);border-bottom:1px solid rgba(0,0,0,.08)}
+.sohbet-bas b{display:block;font-size:15px} .sohbet-bas small{display:block;font-size:12px;color:var(--s-soluk)}
+.sohbet-avatar{flex:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--amber);color:var(--siyah);font-weight:800}
+.sohbet-akis{display:flex;flex-direction:column;gap:6px;padding:14px 12px 16px}
+.msj{margin:0;max-width:86%;padding:7px 10px 6px;border-radius:10px;font-size:14px;line-height:1.45;box-shadow:0 1px .5px rgba(0,0,0,.13);overflow-wrap:anywhere}
+.msj.gelen{align-self:flex-start;background:var(--s-gelen);border-top-left-radius:2px}
+.msj.giden{align-self:flex-end;background:var(--s-giden);border-top-right-radius:2px}
+.msj time{display:block;text-align:right;font-size:11px;color:var(--s-soluk);margin-top:2px}
+.msj.giden time{color:var(--s-gsoluk)}
+.msj .alinti{display:block;margin:6px 0;padding:6px 9px;border-left:3px solid var(--amber);border-radius:6px;background:var(--s-alinti)}
+.sohbet-not{margin:10px 2px 0;font-size:12.5px;color:var(--soluk)}
+@keyframes msjGel{from{opacity:0;transform:translateY(10px)}}
 .harita{background-color:var(--harita);box-shadow:inset 0 1px 3px rgba(var(--golgerenk),.08)}
 .harita .yol{background:var(--yol);box-shadow:0 0 0 1px var(--cizgi2)}
 .harita .park{position:absolute;border-radius:38% 62% 55% 45%/50% 40% 60% 50%;background:var(--parkzemin)}
@@ -828,6 +843,11 @@ main:has(> .lp-hero){overflow-x:clip}
   .lp-geldi .izgara .nokta:is(:nth-child(7),:nth-child(8),:nth-child(9),:nth-child(12),:nth-child(14),:nth-child(17),:nth-child(18),:nth-child(19)){animation-delay:220ms}
   .harita.lp-gor .nokta.merkez::before{animation:lpYay 2.4s ease-out infinite}
   .ekran [role="tabpanel"]:not([hidden]){animation:lpPanel .35s ease backwards}
+  /* Örnek yazışma: sekme açılınca mesajlar sırayla gelir */
+  .ekran [role="tabpanel"]:not([hidden]) .msj{animation:msjGel .35s cubic-bezier(.2,.7,.2,1) backwards}
+  .ekran [role="tabpanel"]:not([hidden]) .msj:nth-child(2){animation-delay:.8s}
+  .ekran [role="tabpanel"]:not([hidden]) .msj:nth-child(3){animation-delay:1.7s}
+  .ekran [role="tabpanel"]:not([hidden]) .msj:nth-child(4){animation-delay:2.8s}
   .sss details[open] p{animation:lpAcil .35s ease backwards}
 }
 @media (prefers-reduced-motion:no-preference) and (max-width:640px){

@@ -73,6 +73,14 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     const pm = await p.$eval('header a.erken', (a) => [a.textContent.trim(), a.getAttribute('href')].join(' ')).catch(() => '');
     kontrol(cihaz + ' oturum varken menüde "Panelim" var', pm === 'Panelim panel.html', pm);
     await p.evaluate(() => localStorage.removeItem('sb-test-auth-token'));
+    // Ana sayfa "Ne ölçüyoruz": her sekmenin paneli çerçevenin içinde; site, yorum, platform sekmeleri örnek yazışma
+    await p.reload(); await p.waitForTimeout(150);
+    const sekmeler = await p.evaluate(() => ['t2', 't3', 't4', 't5', 't6'].map((t) => {
+      document.getElementById(t).click();
+      const pn = document.getElementById(document.getElementById(t).getAttribute('aria-controls'));
+      return (document.querySelector('.ekran').contains(pn) && !pn.hidden ? 'ic' : 'DIS') + ':' + pn.querySelectorAll('.sohbet .msj').length;
+    }).join(' '));
+    kontrol(cihaz + ' "Ne ölçüyoruz" panelleri çerçevede, 3 sekmede örnek yazışma', sekmeler === 'ic:0 ic:0 ic:4 ic:4 ic:4', sekmeler);
     // Kurulum düzenleme: son adımda kaydet, upsert çağrılıyor ve panele dönülüyor
     await p.goto(ADRES + '/kurulum.html?adim=5'); await p.waitForSelector('#kurulum:not([hidden])', { timeout: 8000 }).catch(() => {});
     const upOnce = await p.evaluate(() => (JSON.parse(localStorage.getItem('fake') || '{}').upsert || 0));

@@ -26,7 +26,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&family=Fredoka:wght@600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&family=Fredoka:wght@600&display=swap"></noscript>
 <script>(function(){var t;try{t=localStorage.getItem('norevo_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t;if(t==='koyu'){var m=document.querySelector('meta[name="theme-color"]');if(m)m.content='#0F1217'}})()</script>
-<link rel="stylesheet" href="assets/style.css?v=42">
+<link rel="stylesheet" href="assets/style.css?v=43">
 <script src="assets/tema.js?v=2" defer></script>
 <script src="assets/iletisim.js?v=5" defer></script>
 <script src="assets/app.js?v=16" defer></script>
@@ -202,40 +202,45 @@
 <div class="oge" style="display:block"><div style="display:flex;justify-content:space-between;font-weight:700"><span>ChatGPT</span><span style="color:var(--vurgu)">%33</span></div><div class="cubuk"><i style="width:33%"></i></div><div style="margin-top:10px;font-size:13px;color:var(--soluk)">ChatGPT internette arayıp cevap veriyor. 3 sorunun birinde adınız geçti.</div></div>
 </div>
 </div>
-</div>
 
+<!-- p4-p6: örnek yazışma simülasyonu; sekme açılınca mesajlar sırayla gelir (style.css .sohbet) -->
 <div id="p4" role="tabpanel" aria-labelledby="t4" hidden>
-<div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
-<div class="halka"><div><b>68</b><small>/ 100</small></div></div>
-<div style="flex:1 1 200px"><h3>Site sağlığı</h3><p class="k" style="line-height:1.5">Sitenizi Google'ın gözüyle okuyoruz. Sizi geri iten hataları bulup düzeltme metnini hazır veriyoruz.</p></div>
+<div class="sohbet" role="group" aria-label="Örnek yazışma: haftalık site kontrolü">
+<div class="sohbet-bas"><span class="sohbet-avatar" aria-hidden="true">N</span><span><b>Norevo</b><small>haftalık site kontrolü</small></span></div>
+<div class="sohbet-akis">
+<p class="msj gelen">Merhaba, Gülüş Diş'in bu haftaki site kontrolü hazır. Puanınız <b>68 / 100</b>.<time>09:02</time></p>
+<p class="msj gelen">Sizi Google'da geri iten 3 şey bulduk:<br>1. Ana sayfa başlığı boş, Google ne iş yaptığınızı anlamıyor.<br>2. "İmplant tedavisi" için ayrı sayfanız yok.<br>3. Telefonda siteniz 6 saniyede açılıyor.<time>09:02</time></p>
+<p class="msj gelen">Sitenizi yapan kişiye bu mesajı aynen iletebilirsiniz:<span class="alinti">Merhaba, ana sayfa başlığını "Çorum Diş Kliniği | Gülüş Diş" yapar mısın? İmplant tedavisi için de ayrı bir sayfa açalım, metni hazır.</span><time>09:03</time></p>
+<p class="msj giden">Teşekkürler, hemen iletiyorum 🙏<time>09:15 <span aria-label="okundu">✓✓</span></time></p>
 </div>
-<div class="liste">
-<div class="oge"><span class="pil pil-k">!</span><span class="ad">Ana sayfa başlığı boş, Google ne iş yaptığınızı anlamıyor</span></div>
-<div class="oge"><span class="pil pil-k">!</span><span class="ad">"İmplant tedavisi" için ayrı bir sayfanız yok</span></div>
-<div class="oge"><span class="pil pil-a">!</span><span class="ad">Telefonda site 6 saniyede açılıyor</span></div>
-<div class="oge"><span class="pil pil-y">✓</span><span class="ad">Telefon ve adres her sayfada var</span></div>
 </div>
+<p class="sohbet-not">Örnek yazışmadır. Haftalık özet şimdilik panelinizde; WhatsApp gönderimi yakında.</p>
 </div>
 
 <div id="p5" role="tabpanel" aria-labelledby="t5" hidden>
-<h3>Yorumlar ve hazır cevaplar</h3>
-<p class="k">Cevapsız kalan son yorumlarınıza sizin ağzınızdan bir taslak yazıyoruz. Siz kopyalayıp Google'da yayınlarsınız; biz sizin yerinize bir şey paylaşmayız.</p>
-<div class="oge" style="display:block;margin-top:20px">
-<div style="display:flex;justify-content:space-between;gap:12px"><b>Ayşe K.</b><span style="color:var(--uyariyazi);font-weight:700">★★★★☆</span></div>
-<p style="margin:8px 0 0;color:var(--yazi2)">Kızım Elif'le çok ilgilendiler, sadece bekleme biraz uzun sürdü.</p>
-<div class="taslak"><div class="etiket" style="font-size:12px">Hazır cevap taslağı</div><p style="margin:6px 0 0">Ayşe, Elif'e selamlar! Güzel sözleriniz için teşekkür ederiz. Bekleme süresi için haklısınız, özür dileriz; geri bildiriminizi dikkate alıyoruz.</p></div>
+<div class="sohbet" role="group" aria-label="Örnek yazışma: yorumlar ve hazır cevap">
+<div class="sohbet-bas"><span class="sohbet-avatar" aria-hidden="true">N</span><span><b>Norevo</b><small>yorum takibi</small></span></div>
+<div class="sohbet-akis">
+<p class="msj gelen">Bu hafta 2 yeni Google yorumunuz var, 1'i cevapsız:<span class="alinti"><b>Ayşe K.</b> ★★★★☆<br>Çok ilgilendiler, sadece bekleme biraz uzun sürdü.</span><time>10:40</time></p>
+<p class="msj gelen">Sizin ağzınızdan hazır cevap:<span class="alinti">Ayşe Hanım, güzel sözleriniz için teşekkür ederiz. Bekleme süresi için haklısınız, randevu düzenimizi gözden geçiriyoruz.</span>Kopyalayıp Google'da yayınlamanız yeterli. Biz sizin yerinize bir şey paylaşmayız.<time>10:40</time></p>
+<p class="msj gelen">Rakibinizle karşılaştırma: puanınız <b>4,6</b>, 1. sıradaki klinik <b>4,8</b>. Son bir ayda siz 3, o 12 yorum aldı.<time>10:41</time></p>
+<p class="msj giden">Tamam, yayınladım 👍<time>10:52 <span aria-label="okundu">✓✓</span></time></p>
 </div>
+</div>
+<p class="sohbet-not">Örnek yazışmadır. Haftalık özet şimdilik panelinizde; WhatsApp gönderimi yakında.</p>
 </div>
 
 <div id="p6" role="tabpanel" aria-labelledby="t6" hidden>
-<h3>Hangi platformda varsınız?</h3>
-<p class="k">Yapay zekâ önerirken bu sitelere bakıyor. Bulamadıklarımız yapılacaklar listenize eklenir.</p>
-<div class="liste">
-<div class="oge"><span class="ad">Google İşletme Profili</span><span class="pil pil-y">Var</span></div>
-<div class="oge"><span class="ad">Instagram</span><span class="pil pil-y">Var</span></div>
-<div class="oge"><span class="ad">Yandex Haritalar</span><span class="pil pil-k">Bulunamadı</span></div>
-<div class="oge"><span class="ad">Apple Haritalar</span><span class="pil pil-a">Kendiniz kontrol edin</span></div>
+<div class="sohbet" role="group" aria-label="Örnek yazışma: haftalık rapor ve platformlar">
+<div class="sohbet-bas"><span class="sohbet-avatar" aria-hidden="true">N</span><span><b>Norevo</b><small>haftalık rapor</small></span></div>
+<div class="sohbet-akis">
+<p class="msj gelen"><b>Haftalık raporunuz · 27 Ekim - 2 Kasım</b><br>🔎 "diş kliniği Çorum": 9. sıradan 3. sıraya çıktınız<br>🤖 Gemini cevaplarının %21'inde adınız geçti<time>09:00</time></p>
+<p class="msj gelen">Hangi platformlarda varsınız?<br>✅ Google İşletme Profili<br>✅ Instagram<br>❌ Yandex Haritalar: bulunamadı<br>❔ Apple Haritalar: kendiniz kontrol edin<time>09:00</time></p>
+<p class="msj gelen">Bu haftanın tek işi: Yandex Haritalar'a ücretsiz kaydolun. Yapay zekâ önerirken bu sitelere de bakıyor. Adımlar panelinizde, yaklaşık 10 dakika.<time>09:01</time></p>
+<p class="msj giden">Tamamdır, akşam hallederim<time>09:20 <span aria-label="okundu">✓✓</span></time></p>
 </div>
+</div>
+<p class="sohbet-not">Örnek yazışmadır. Haftalık özet şimdilik panelinizde; WhatsApp gönderimi yakında.</p>
 </div>
 </div>
 </div>
