@@ -398,6 +398,19 @@
     return g <= 0 ? 'bugün' : g + ' gün önce';
   }
   var ACIKLAMA_ILK = null;
+  // İşletme adını karşılaştırmak için sade kelimeler (Türkçe harfler sadeleşir, sektör ve şirket ekleri sayılmaz)
+  var GENEL_AD = ['ozel', 'egitim', 'rehabilitasyon', 'merkez', 'merkezi', 'klinik', 'klinigi', 'dis', 'agiz', 'sagligi', 'saglik', 'poliklinik', 'poliklinigi',
+    'hastane', 'hastanesi', 've', 'ltd', 'sti', 'san', 'tic', 'sirketi', 'magaza', 'magazasi', 'hizmetleri', 'dr', 'uzm', 'the'];
+  function adParca(x) {
+    return String(x || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9 ]+/g, ' ').split(' ').filter(function (t) { return t.length >= 3 && GENEL_AD.indexOf(t) < 0; });
+  }
+  // Önerilen adın ayırt edici ilk kelimesi Haritalar listesindeki bir adda geçiyor mu (yalnız genel kelimelerden oluşan adda karar verilmez)
+  function haritadaVar(ad, harita, haric) {
+    var t = adParca(ad).filter(function (x) { return haric.indexOf(x) < 0; });
+    if (!t.length) return true;
+    return harita.some(function (h) { return adParca(h.ad).indexOf(t[0]) >= 0; });
+  }
   function liSatir(no, ad, ek) {
     var li = document.createElement('li');
     var b = document.createElement('b'); b.className = 't-no'; b.textContent = no; li.appendChild(b);
@@ -426,7 +439,7 @@
     }
     if (ACIKLAMA_ILK === null) ACIKLAMA_ILK = $('t-aciklama').textContent;
     var zaman = aramaZamani(v);
-    $('t-aciklama').textContent = zaman ? 'Bu sonuçlar ' + zaman + ' yapılan aramaya göre. Google Haritalar\'a ve yapay zekâya bir müşteri gibi sorduk; bunlar gerçek sonuçlar.' : ACIKLAMA_ILK;
+    $('t-aciklama').textContent = zaman ? 'Bu sonuçlar ' + zaman + ' yapılan aramaya göre. Google Haritalar\'a ve yapay zekâya bir müşteri gibi sorduk; listeler onların cevabından alındı.' : ACIKLAMA_ILK;
     var hl = $('t-harita'); hl.innerHTML = '';
     if (v.harita && v.harita.length) {
       $('t-harita-not').textContent = '"' + durum.is.toLocaleLowerCase('tr') + ' ' + durum.sehir.split(',')[0] + '" diye aratınca:';
@@ -439,7 +452,14 @@
     var yl = $('t-yz'); yl.innerHTML = '';
     if (v.yz && v.yz.isletmeler) {
       $('t-yz-soru').textContent = 'Sorduğumuz soru: "' + v.soru + '". Gemini önerdikleri:';
-      v.yz.isletmeler.forEach(function (x, i) { yl.appendChild(liSatir((i + 1) + '.', x.ad, '')); });
+      // Gemini internete bakmadan cevaplıyor ve bazen olmayan işletme adı uyduruyor: her adı aynı aramanın Haritalar listesinde ararız
+      var haric = adParca(durum.is + ' ' + durum.sehir), suphe = 0;
+      v.yz.isletmeler.forEach(function (x, i) {
+        var yok = v.harita && v.harita.length && !haritadaVar(x.ad, v.harita, haric);
+        if (yok) suphe++;
+        yl.appendChild(liSatir((i + 1) + '.', x.ad, yok ? 'Haritalar\'ın ilk 20\'sinde yok' : ''));
+      });
+      if (suphe) yl.appendChild(el('li', 't-not', 'Gemini bu cevabı internete bakmadan, kendi bilgisinden verdi. "Haritalar\'ın ilk 20\'sinde yok" yazan adlar başka şehirde olabilir ya da gerçekte hiç olmayabilir.'));
     } else {
       $('t-yz-soru').textContent = 'Yapay zekâ şu an cevap vermedi, birazdan tekrar deneyin.';
     }
@@ -529,7 +549,7 @@
       var t = el('table', 't-kiyas'); var bas = el('tr'); bas.appendChild(el('th')); bas.appendChild(el('th', null, 'Siz')); bas.appendChild(el('th', null, lider.sira + '. sıradaki')); t.appendChild(bas);
       kiyasSatir(t, 'Puan', siz.puan ? siz.puan.toLocaleString('tr-TR') + ' ★' : 'Yok', lider.puan ? lider.puan.toLocaleString('tr-TR') + ' ★' : 'Yok', siz.puan && lider.puan ? siz.puan >= lider.puan - 0.1 : false);
       kiyasSatir(t, 'Yorum sayısı', String(siz.yorum || 0), String(lider.yorum || 0), (siz.yorum || 0) >= (lider.yorum || 0) * 0.8);
-      kiyasSatir(t, 'Web sitesi', varYok(siz.web), varYok(lider.web), siz.web ? true : (lider.web ? false : null));
+      kiyasSatir(t, 'Profilde site bağlantısı', varYok(siz.web), varYok(lider.web), siz.web ? true : (lider.web ? false : null));
       kiyasSatir(t, 'Telefon', varYok(siz.tel), varYok(lider.tel), siz.tel ? true : false);
       kiyasSatir(t, 'Çalışma saatleri', varYok(siz.saat), varYok(lider.saat), siz.saat ? true : false);
       var liderYz = yzListeleri(sonVeri).some(function (l) { return l.some(function (x) { return eslesir(lider.ad, x.ad); }); });
@@ -556,8 +576,9 @@
     });
     if (!siz || !siz.web) {
       var tk = el('div', 't-teklif');
-      tk.appendChild(el('b', null, 'Web siteniz yok mu? Google\'a uygun sitenizi biz yapalım.'));
-      tk.appendChild(el('p', null, 'İşinizi, semtinizi ve telefonunuzu Google\'ın anlayacağı şekilde anlatan, telefonda hızlı açılan bir site hazırlıyoruz.'));
+      // Haritalar yalnız profilde site bağlantısı olup olmadığını söyler; işletmenin sitesi olabilir
+      tk.appendChild(el('b', null, 'Google profilinizde web sitesi görünmüyor.'));
+      tk.appendChild(el('p', null, 'Siteniz varsa adresini Google profilinize ekleyin (5 dakika). Yoksa işinizi, semtinizi ve telefonunuzu Google\'ın anlayacağı şekilde anlatan, telefonda hızlı açılan bir siteyi biz yapalım.'));
       var wa = el('a', 'btn btn-wa', 'WhatsApp\'tan bilgi alın'); wa.target = '_blank'; wa.rel = 'noopener';
       wa.href = 'https://wa.me/905556984086?text=' + encodeURIComponent('Merhaba, ' + (siz ? siz.ad : 'işletmem') + ' için web sitesi yaptırmak istiyorum. (' + aramaAdi() + ')');
       tk.appendChild(wa); k.appendChild(tk);

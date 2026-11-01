@@ -168,7 +168,14 @@ function aramalariSec(o: { yer: string; sehir: string; turkiye: boolean; isK: st
   // Başka kişi/işletme adı geçen öneriler ("gözde koçak diş hekimi çorum", "dr ahmet ...") listeye girmez
   const ozel = new Set((o.profil?.ozel_adlar || []).map(imza));
   const kisiAdiYok = (k: string) => !ozel.has(imza(k)) && !UNVAN.test(" " + sade(k) + " ");
-  const oneriler = o.oneriler.filter((k) => uygun(k) && kisiAdiYok(k));
+  // Google önerisindeki her kelime tanıdık olmalı (yer, iş türü, eş anlamlılar, ürünler, yapay zekânın önerdiği aramalar).
+  // Yoksa başka bir işin ya da işletmenin aramasıdır: "çorum hayvan rehabilitasyon merkezi", "çorum belediyesi ...",
+  // rakip adı ("defne rehabilitasyon merkezi çorum"). Türkçe ek için kelimenin sonunda 3 harfe kadar fazlalık sayılmaz.
+  const bilinen = [temel, isTemiz, o.isK, o.profil?.uzmanlik || "", ...(o.profil?.esler || []), ...(o.profil?.urunler || []),
+    ...(o.profil?.aramalar || []), ...o.elle, ...yerler, "özel", "acil", "yakın", "yakınımda", "merkez", "merkezi", "hizmet"]
+    .flatMap((x) => imza(x).split(" ")).filter((t) => t.length >= 2);
+  const tanidik = (k: string) => imza(k).split(" ").every((t) => !t || bilinen.some((b) => t.startsWith(b) && t.length - b.length <= 3));
+  const oneriler = o.oneriler.filter((k) => uygun(k) && kisiAdiYok(k) && tanidik(k));
   const uzm = o.profil?.uzmanlik ? ile(o.turkiye ? "" : o.yer, o.profil.uzmanlik) : "";   // "çorum ortodonti" (işletme adındaki uzmanlık)
   const populerImza = new Set(oneriler.map(imza));
   const esler = (o.profil?.esler || []).slice(0, 2).map((x) => ile(o.turkiye ? "" : o.yer, x));

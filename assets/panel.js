@@ -118,7 +118,7 @@
   function kisaTarihG(t) { return new Date(t).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }); }
   function anlik() {
     var o = gecmis[0];
-    return o ? { olcum_id: o.id || null, tarih: o.baslangic, harita_sira: o.harita_sira || null, harita_olculdu: !!o.harita_sonuclar, arama_sira: o.arama_sira || null, yz_yuzde: o.yz_soru_sayisi ? Math.round(100 * (o.yz_gecen || 0) / o.yz_soru_sayisi) : null } : null;
+    return o ? { olcum_id: o.id || null, tarih: o.baslangic, harita_sira: o.harita_sira || null, harita_olculdu: !!o.harita_sonuclar, arama_sira: o.arama_sira || null, yz_yuzde: yzYuzde(o) } : null;
   }
   function isleriYenile() {
     kutular.forEach(function (k) { if (k._isler) isEkle(k, k._isler); });
@@ -203,7 +203,12 @@
   $('tum-isler-btn').addEventListener('click', function () { tumIsler = !tumIsler; haftaCiz(); });
   function yaptim(kod, x, btn) {
     btn.disabled = true; btn.textContent = 'Kaydediliyor…';
-    A.sb.from('yapilan_isler').insert({ isletme_id: isletme.id, is_kodu: kod, baslik: String(x.t).slice(0, 200), onceki: anlik() }).select().single().then(function (r) {
+    var ekle = function () { return A.sb.from('yapilan_isler').insert({ isletme_id: isletme.id, is_kodu: kod, baslik: String(x.t).slice(0, 200), onceki: anlik() }).select().single(); };
+    ekle().then(function (r) {
+      // Aynı kodlu eski kayıt var: işletme bilgisi değişmeden önceye ait olduğu için gizlenmişti; silinip yenisi yazılır
+      if (r.error && r.error.code === '23505') return A.sb.from('yapilan_isler').delete().eq('isletme_id', isletme.id).eq('is_kodu', kod).then(ekle);
+      return r;
+    }).then(function (r) {
       if (r.error && r.error.code !== '23505') throw r.error;
       if (r.data) yapilanlar[kod] = r.data; else yapilanlar[kod] = { is_kodu: kod, baslik: x.t, yapildi: new Date().toISOString(), onceki: anlik() };
       isleriYenile();
@@ -233,10 +238,10 @@
       var a = once.harita_sira, b = sonra.harita_sira;
       if (onceHarita && sonra.harita_sonuclar) parca.push('Haritalar: ' + (a === (b || null) ? 'değişmedi (' + hs(b) + ')' : hs(a) + ' → ' + hs(b)));
       else parca.push('Haritalar bu ölçümlerde alınamadı');
-      var yz2 = sonra.yz_soru_sayisi ? Math.round(100 * (sonra.yz_gecen || 0) / sonra.yz_soru_sayisi) : null;
+      var yz2 = yzYuzde(sonra);
       if (once.yz_yuzde != null && yz2 != null) parca.push('yapay zekâ: ' + (once.yz_yuzde === yz2 ? 'değişmedi (%' + yz2 + ')' : '%' + once.yz_yuzde + ' → %' + yz2));
     } else parca.push('İşaretlediğinizde ölçüm yoktu; şu an haritalarda ' + (sonra.harita_sonuclar ? hs(sonra.harita_sira) : 'ölçülemedi'));
-    var iyi = once && ((onceHarita && sonra.harita_sira && (!once.harita_sira || sonra.harita_sira < once.harita_sira)) || (sonra.yz_soru_sayisi && once.yz_yuzde != null && Math.round(100 * (sonra.yz_gecen || 0) / sonra.yz_soru_sayisi) > once.yz_yuzde));
+    var iyi = once && ((onceHarita && sonra.harita_sira && (!once.harita_sira || sonra.harita_sira < once.harita_sira)) || (sonra.yz_soru_sayisi && once.yz_yuzde != null && yzYuzde(sonra) > once.yz_yuzde));
     return { pil: net ? 'Net sonuç' : 'İlk bakış', sinif: iyi ? 'pil-y' : 'pil-a', yazi: parca.join(', ') + '.' + (!net ? ' Net sonuç 4 hafta dolunca (' + kisaTarihG(new Date(new Date(y.yapildi).getTime() + 28 * 864e5)) + ').' : (iyi ? '' : ' Bazı işlerin etkisi daha geç görünür; diğer işlerle birlikte devam edin.')) };
   }
   function yapilanCiz() {
@@ -342,6 +347,26 @@
         ],
         sonuc: 'Google aramasında çıkmaya başlarsınız ve yapay zekâ sizin hakkınızda okuyacak bir kaynak bulur.' };
     },
+    siteGorunmuyor: function (i, o) {
+      var alan = String(i.site || '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
+      return { k: 'site-gorunmuyor', t: 'Sitenizi Google’a tanıtın', s: '20 dakika · ücretsiz',
+        n: 'Google’da "' + ((o.marka_arama && o.marka_arama.kelime) || i.ad) + '" diye aratınca bile siteniz (' + alan + ') ilk 10 sonuçta çıkmıyor. Google sitenizi henüz tanımıyor ya da önemsemiyor olabilir.',
+        adimlar: [
+          'Google Search Console’u açın (search.google.com/search-console), Google hesabınızla girin ve sitenizi ekleyin. Sitenizi yapan kişi bunu 10 dakikada yapar.',
+          'Search Console’da "URL denetimi" kısmına ana sayfa adresinizi yazıp "Dizine eklenmesini iste" deyin.',
+          'Sitenin adresini Google İşletme Profilinize ve Instagram’ınıza ekleyin.'
+        ],
+        sonuc: 'Google sitenizi tanır; adınızla ve işinizle yapılan aramalarda siteniz çıkmaya başlar.' };
+    },
+    profilSite: function (i) {
+      return { k: 'profil-site', t: 'Google profilinize sitenizin adresini ekleyin', s: '5 dakika · ücretsiz',
+        n: 'Siteniz var ama Google Haritalar’daki profilinizde site bağlantısı görünmüyor. Müşteri sitenize oradan ulaşamıyor, Google da ikisini birbirine bağlayamıyor.',
+        adimlar: [
+          'Telefonda Google Haritalar’ı açın, işletmenizi bulun ve "İşletmenizi düzenleyin"e basın.',
+          '"İletişim" bölümünde "Web sitesi" kutusuna şu adresi yazın: ' + (i.site || '') + '. Kaydedin.'
+        ],
+        sonuc: 'Profilinizden sitenize gelen olur; Google işletmenizle sitenizi aynı yer olarak tanır.' };
+    },
     bing: function (i) {
       return { k: 'bing', t: 'Bing Haritalar’da işletme hesabı açın', s: '15 dakika · ücretsiz',
         n: 'ChatGPT’nin baktığı kaynaklardan biri Bing; orada da kaydınızın olması şansınızı artırır.',
@@ -424,7 +449,10 @@
     if (b.bulundu && b.puan != null && ortPuan != null && b.puan + 0.1 < ortPuan) isler.push(IS.puan(i, b.puan, ortPuan));
     // Arama ölçülemediyse (arama_sonuclar yok) "sitenizi göremedik" denmez
     if (o.arama_sonuclar && o.arama_sira == null && !i.site) isler.push(IS.siteYok(i));
-    else if (o.arama_sonuclar && o.arama_sira == null && i.site) isler.push(IS.siteBaslik(i, o.arama_sorgu || ''));
+    // Site adıyla aratınca bile ilk 10'da yoksa asıl sorun başlık değil, Google'ın siteyi tanımaması
+    else if (o.arama_sonuclar && o.arama_sira == null && i.site) isler.push(o.marka_arama && o.marka_arama.sira == null ? IS.siteGorunmuyor(i, o) : IS.siteBaslik(i, o.arama_sorgu || ''));
+    var benH = (o.harita_sonuclar || []).filter(function (r) { return r.siz; })[0];
+    if (i.site && benH && !benH.site) isler.push(IS.profilSite(i));
     if (o.yz_soru_sayisi && o.yz_gecen === 0) isler.push(IS.bing(i));
     if (o.harita_sira && o.harita_sira <= 3 && o.yz_gecen > 0) {
       isler.push({ k: 'koru', t: 'İyi durumdasınız, yerinizi koruyun', s: 'Her hafta', n: 'Haritalarda ilk 3’tesiniz ve yapay zekâ sizi öneriyor. Bunu korumak için:', adimlar: ['Her hafta birkaç yeni Google yorumu toplamaya devam edin.', 'Ayda 2-3 yeni fotoğraf ekleyin.', 'Kampanya veya yeni ürün olunca Google profilinizde "Güncelleme" paylaşın.'] });
@@ -508,7 +536,7 @@
       return { v: s || 21, bos: !s, yazi: s ? s + '.' : 'yok', t: kisaTarih(o.baslangic) };
     }), { min: 1, max: 21, ters: true, cizgiler: [1, 5, 10, 20], etiketle: function (v) { return v === 1 ? '1.' : v + '.'; }, etiket: 'Haritalardaki sıra' + (kelime ? ' ("' + kelime + '")' : '') });
     cizgiGrafik($('grafik-yz'), liste.filter(function (o) { return o.yz_soru_sayisi; }).map(function (o) {
-      var y = Math.round(100 * o.yz_gecen / o.yz_soru_sayisi); return { v: y, bos: !y, yazi: '%' + y, t: kisaTarih(o.baslangic) };
+      var y = yzYuzde(o); return { v: y, bos: !y, yazi: '%' + y, t: kisaTarih(o.baslangic) };
     }), { min: 0, max: 100, cizgiler: [0, 50, 100], etiketle: function (v) { return '%' + v; }, etiket: 'Yapay zekâ önerme oranı' });
   }
   // ---- Aramalar: her arama için durum, ayrı sayfa ve o aramaya özel işler ----
@@ -684,7 +712,10 @@
   // Yapay zekâ 6'dan az cevap verdiyse oran güvenilir değil: ölçülemedi say (kota/zaman aşımı)
   var YZ_EN_AZ = 6;
   function yzDuzelt(o) { if (o && o.yz_soru_sayisi && o.yz_soru_sayisi < YZ_EN_AZ) { o.yz_eksik = o.yz_soru_sayisi; o.yz_soru_sayisi = 0; } return o; }
-  function yzYuzde(o) { return o && o.yz_soru_sayisi ? Math.round(100 * (o.yz_gecen || 0) / o.yz_soru_sayisi) : null; }
+  // Yapay zekâ oranı her yerde aynı hesap: üç yapay zekânın (Gemini, Google Yapay Zekâ Modu, ChatGPT) bütün cevapları birlikte.
+  // Özet, grafik, 4 haftalık ortalama ve "Yaptım" karşılaştırması bu sayıyı kullanır (önceden Özet yalnız Gemini'yi sayıyordu).
+  function yzToplam(o) { return o && o.yz_soru_sayisi ? { n: o.yz_soru_sayisi + (o.gyz_soru_sayisi || 0) + (o.cg_soru_sayisi || 0), gecen: (o.yz_gecen || 0) + (o.gyz_gecen || 0) + (o.cg_gecen || 0) } : null; }
+  function yzYuzde(o) { var t = yzToplam(o); return t ? Math.round(100 * t.gecen / t.n) : null; }
   function yzGruplar(o) {
     var g = [], bul = {};
     (o.yz_cevaplar || []).forEach(function (c) { if (!c) return; if (!bul[c.soru]) { bul[c.soru] = { soru: c.soru, cevaplar: [] }; g.push(bul[c.soru]); } bul[c.soru].cevaplar.push(c); });
@@ -766,7 +797,7 @@
     var son = new Date(o.baslangic).getTime();
     var l = gecmis.concat([o]).filter(function (x, k, a) { return x.yz_soru_sayisi && son - new Date(x.baslangic).getTime() < 28 * 864e5 && son >= new Date(x.baslangic).getTime() && a.findIndex(function (y) { return y === x || (x.id && y.id === x.id); }) === k; });
     if (l.length < 2) return null;
-    var t = 0, n = 0; l.forEach(function (x) { t += x.yz_gecen || 0; n += x.yz_soru_sayisi; });
+    var t = 0, n = 0; l.forEach(function (x) { var z = yzToplam(x); t += z.gecen; n += z.n; });
     return { yuzde: Math.round(100 * t / n), olcum: l.length };
   }
   function payCiz(o, i) {
@@ -801,9 +832,8 @@
     else if (o.harita_sonuclar) c = '"' + o.harita_sorgu + '" aramasında Google Haritalar’ın ilk 20 sonucunda yoksunuz.';
     else c = 'Haritalar ölçümü yapılamadı.';
     $('sonuc-cumle').textContent = c;
-    var gr = yzGruplar(o), tekrarli = gr.length && gr.length < o.yz_soru_sayisi;
     $('sonuc-alt').textContent = o.yz_soru_sayisi
-      ? (tekrarli ? 'Yapay zekâya ' + gr.length + ' müşteri sorusunu birkaç kez sorduk (' + o.yz_soru_sayisi + ' cevap). Adınız her 100 cevapta ' + yzYuzde(o) + ' kez geçti.' : 'Yapay zekâya sorduğumuz ' + o.yz_soru_sayisi + ' sorunun ' + o.yz_gecen + ' tanesinde adınız geçti.') + (b.bulundu && b.yorum != null ? ' Google’da ' + sayi(b.yorum) + ' yorumunuz ve ' + String(b.puan || '-').replace('.', ',') + ' puanınız var.' : '')
+      ? 'Yapay zekâlardan müşteri gibi ' + yzToplam(o).n + ' cevap aldık; adınız ' + yzToplam(o).gecen + ' tanesinde geçti (her 100 cevapta ' + yzYuzde(o) + ').' + (b.bulundu && b.yorum != null ? ' Google’da ' + sayi(b.yorum) + ' yorumunuz ve ' + String(b.puan || '-').replace('.', ',') + ' puanınız var.' : '')
       : (b.bulundu && b.yorum != null ? 'Google’da ' + sayi(b.yorum) + ' yorumunuz ve ' + String(b.puan || '-').replace('.', ',') + ' puanınız var.' : '');
 
     var onceki = gecmis.filter(function (x) { return x !== o && (!o.id || x.id !== o.id) && new Date(x.baslangic) < new Date(o.baslangic); })[0];
@@ -839,7 +869,7 @@
     ['k-harita', 'k-arama', 'k-yz'].forEach(function (id) { $(id).className = ''; });
     if (o.harita_sira && o.harita_sira <= 3) $('k-harita').className = 'iyi';
     if (ozt.ilkSayfa) $('k-arama').className = 'iyi';
-    if (o.yz_gecen > 0) $('k-yz').className = 'iyi';
+    if (yzYuzde(o) > 0) $('k-yz').className = 'iyi';
 
     var h = (o.hatalar || []).filter(Boolean);
     $('sonuc-hata').hidden = !h.length;
@@ -1434,7 +1464,8 @@
     return Promise.all([
       // Ad, konum ya da iş türü değiştiyse eski ölçümler başka bir işletmeye aittir: gösterilmez
       A.sb.from('olcumler').select('*').eq('isletme_id', i.id).eq('durum', 'bitti').gte('baslangic', (i.degisiklik && i.degisiklik.zaman) || '2000-01-01').order('baslangic', { ascending: false }).limit(12),
-      A.sb.from('yapilan_isler').select('*').eq('isletme_id', i.id)
+      // Yapılan işler de aynı tarihten sonrası: önceki işletmenin "Yaptım" kayıtları yenisine geçmez
+      A.sb.from('yapilan_isler').select('*').eq('isletme_id', i.id).gte('yapildi', (i.degisiklik && i.degisiklik.zaman) || '2000-01-01')
     ]).then(function (s) {
       ((s[1] && s[1].data) || []).forEach(function (y) { yapilanlar[y.is_kodu] = y; });
       gecmis = ((s[0] && s[0].data) || []).map(yzDuzelt);
