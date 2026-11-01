@@ -3,10 +3,10 @@
 Kullanıcı "norevo", "görünür" ya da "devam" yazarsa önce bu dosyanın "Durum" bölümünü oku, kısa bir özet ver ve ne yapmak istediğini sor.
 
 ## Durum (31 Ekim 2026, öğle)
-- **Proje klasörü: `E:\Claude Code\norevo\gorunur`** (31 Ekim'de `C:\Users\Mierd\gorunur`'dan kopyalandı; C: kopyası eski, Mert onaylayınca silinecek). Claude hafızası: `C:\Users\Mierd\.claude\projects\E--Claude-Code-norevo-gorunur\memory\`.
+- **Proje klasörü: `E:\Claude Code\norevo`** (1 Kasım: `norevo\gorunur` içeriği bir üst klasöre taşındı; önceki yol `E:\Claude Code\norevo\gorunur`). C: kopyası (`C:\Users\Mierd\gorunur`) eski, Mert onaylayınca silinecek. Claude hafızası: `C:\Users\Mierd\.claude\projects\E--Claude-Code-norevo\memory\`.
 - Site: https://mertozmen899-alt.github.io/norevo/ (GitHub Pages, `main` dalından yayında; depo adı `mertozmen899-alt/norevo`, eski /gorunur adresi 404)
 - Supabase projesi: `drlqbwdupntqqtkmdncc`
-- Son yayın (1 Kasım): `e783b79` kod içindeki Görünür adları Norevo oldu (panel.js v34); `olcum` edge function sürüm 32 (canlı = repo). Bilerek kalan eski adlar: `x-gorunur-cron` başlığı, `gorunur-tuz`, keystore adları, `com.gorunur.app`, klasör adı.
+- Son yayın (1 Kasım öğle): `39de7a5` ana sayfa sadeleşti (tasarım denetimi), `c346870` müşteri testi düzeltmeleri (alakasız aramalar, Gemini uydurma adları, eski "Yaptım" kayıtları, tek yapay zekâ oranı, site işleri); `olcum` edge function sürüm 34, `yardimci` sürüm 11 (canlı = repo). Raporlar: `raporlar/2026-11-01-tasarim.md`, `raporlar/2026-11-01-musteri-testi.md` (41 bulgu; 5 yüksek veri sorunu çözüldü, kalanlar raporda). Rapor sayfası: https://claude.ai/artifact/BtKqPL1sCUGKw67RttnidN. Bilerek kalan eski adlar: `x-gorunur-cron`, `gorunur-tuz`, keystore adları, `com.gorunur.app`, klasör adı.
 - 3. denetçi puanlaması: **71/100**. Mert kararı: hukuk işleri ilk gerçek müşteriye kadar ertelendi, şimdilik hedef **90**. Tahmini şu an ~85-87.
 - Ayrıntılı denetim raporu: Claude hafızasında `denetim-3-puanlama.md`.
 - Her gün 18:00'de 4 zamanlanmış denetçi görevi çalışıyor (kod, karar, plan, metin); raporlar `raporlar/<tarih>-*.md` (commit edilmiyor).
@@ -18,7 +18,7 @@ Kullanıcı "norevo", "görünür" ya da "devam" yazarsa önce bu dosyanın "Dur
 - Gerçek bir uçtan uca ölçüm henüz denenmedi (SerpApi harcar): Mert panelden "Tekrar ölç" ile denemeli.
 
 ### Claude'un yapacakları (öneri sırası, 90 için)
-1. Hızlı testte ve Gemini'de uydurma ad riski: "internette arama yapmadan cevapladı" notu; yaygın adlarda iki kelime şartı (`olcum/index.ts` adGeciyor, `hizli-test/index.ts`).
+1. ~~Uydurma ad riski~~ (1 Kasım): "internete bakmadan" notu zaten `c346870`'de vardı; yaygın ad kuralı (`YAYGIN` listesi: "Güneş Diş" artık "Güneş Kuaför" ile eşleşmez) `olcum` ve `yardimci` adGeciyor'a eklendi, test `testler/ad-geciyor.js` (10/10). **Canlıda** (Mert yükledi): `olcum` v34, `yardimci` v11 (canlı = repo). CLI girişi yapıldı; yükleme komutu proje klasöründen çalışmalı: `npx supabase functions deploy <ad> --project-ref drlqbwdupntqqtkmdncc --no-verify-jwt`.
 2. `yanlis_bildirimleri` izinlerini daralt (Mert onayıyla migration) + günde en fazla 20 bildirim sınırı.
 3. Yönetim sayfasına SerpApi bütçe sayaçları ve takılı ölçüm sayısı.
 4. Deno birim testleri (fonksiyonları ayrı modüle almak gerekir) ve hızlı test sonucu için Playwright testi.

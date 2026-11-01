@@ -44,6 +44,14 @@ const GENEL = new Set([
 function cekirdek(ad: string): string[] {
   return sade(ad).split(" ").filter((t) => t.length >= 3 && !GENEL.has(t));
 }
+// Pek çok işletme adında geçen kelimeler: tek başına geçmesi o işletme olduğunu göstermez ("Güneş Diş" ile "Güneş Kuaför")
+// (yardimci/index.ts'de aynı liste var, birlikte değiştirin)
+const YAYGIN = new Set([
+  "gunes", "yildiz", "deniz", "umut", "guven", "yeni", "ozel", "altin", "gul", "inci", "yesil", "mavi", "beyaz", "kartal", "aslan",
+  "can", "huzur", "saglik", "hayat", "nur", "bereket", "baris", "dost", "aile", "sevgi", "ozgur", "ege", "anadolu", "defne", "cicek",
+  "bahar", "lale", "star", "park", "life", "city", "center", "plus", "pro", "prime", "royal", "elit", "lux", "vip", "moda", "nova",
+  "ali", "mehmet", "ahmet", "mustafa", "ayse", "fatma", "elif", "zeynep", "emre", "murat", "hasan", "huseyin", "yusuf", "osman", "omer",
+]);
 function alanAdi(url?: string | null): string {
   if (!url) return "";
   try {
@@ -341,6 +349,13 @@ function adGeciyor(metin: string, ad: string, haric?: Set<string>): boolean {
   // Tam kelime olarak (sonuna iyelik/yer eki gelebilir: macitlerde, macitlerin)
   const var_ = (t: string) => new RegExp(" " + t + "(da|de|ta|te|in|nin|un|nun|i|u)? ").test(m);
   const bulunan = c.filter(var_).length;
+  if (YAYGIN.has(c[0])) {
+    // Yaygın kelimeyle başlayan ad: en az iki ayırt edici kelime ya da yanındaki kelimeyle birlikte ("güneş diş") geçmeli
+    if (c.length > 1) return var_(c[0]) && bulunan >= Math.max(2, Math.ceil(c.length * 0.5));
+    const k = sade(ad).split(" "), i = k.indexOf(c[0]);
+    if (k[i + 1]) return m.includes(" " + c[0] + " " + k[i + 1]);
+    if (i > 0) return m.includes(" " + k[i - 1] + " " + c[0]);
+  }
   // İlk ayırt edici kelime (genelde marka) mutlaka geçmeli; çok kelimeli adlarda en az yarısı
   return var_(c[0]) && (c.length === 1 ? c[0].length >= 3 : bulunan >= Math.ceil(c.length * 0.5));
 }

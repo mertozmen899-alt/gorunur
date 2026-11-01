@@ -285,10 +285,23 @@ async function serp(params: Record<string, string>, anahtar: string) {
 // İşletme adının ayırt edici kelimeleri ("Macitler Mobilya Ltd." -> macitler, mobilya)
 const GENEL = new Set(["ve", "the", "ltd", "sti", "as", "limited", "sirketi", "san", "tic", "ticaret", "sube", "subesi", "merkezi", "merkez", "magaza", "magazasi", "firmasi", "grup", "group", "istanbul", "ankara", "izmir"]);
 const cekirdek = (ad: string) => sade(ad).split(" ").filter((t) => t.length >= 3 && !GENEL.has(t));
+// olcum/index.ts'deki YAYGIN listesinin aynısı (birlikte değiştirin)
+const YAYGIN = new Set([
+  "gunes", "yildiz", "deniz", "umut", "guven", "yeni", "ozel", "altin", "gul", "inci", "yesil", "mavi", "beyaz", "kartal", "aslan",
+  "can", "huzur", "saglik", "hayat", "nur", "bereket", "baris", "dost", "aile", "sevgi", "ozgur", "ege", "anadolu", "defne", "cicek",
+  "bahar", "lale", "star", "park", "life", "city", "center", "plus", "pro", "prime", "royal", "elit", "lux", "vip", "moda", "nova",
+  "ali", "mehmet", "ahmet", "mustafa", "ayse", "fatma", "elif", "zeynep", "emre", "murat", "hasan", "huseyin", "yusuf", "osman", "omer",
+]);
 // Metinde işletme adının ilk ayırt edici kelimesi tam kelime olarak (ekleriyle) geçiyor mu
 function adGeciyor(metin: string, ad: string): boolean {
   const m = " " + sade(metin) + " ", c = cekirdek(ad);
   if (!c.length) return m.includes(" " + sade(ad) + " ");
+  // Yaygın kelimeyle başlayan ad ("Güneş Diş"): yanındaki kelimeyle birlikte geçmeli, yoksa "Güneş Kuaför" de eşleşir
+  if (YAYGIN.has(c[0])) {
+    const k = sade(ad).split(" "), i = k.indexOf(c[0]);
+    if (k[i + 1]) return m.includes(" " + c[0] + " " + k[i + 1]);
+    if (i > 0) return m.includes(" " + k[i - 1] + " " + c[0]);
+  }
   return new RegExp(" " + c[0] + "(da|de|ta|te|in|nin|un|nun|i|u|e|a)? ").test(m);
 }
 const yerKisa = (isl: Record<string, any>) => isl.semt === "Türkiye geneli" ? "" : String(isl.semt || "").split(",")[0].trim();
