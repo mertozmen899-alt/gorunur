@@ -1275,6 +1275,11 @@ body:has(.lp-promo:not([hidden])) .wa-dugme{opacity:0;pointer-events:none}
 }
 /* Dokunma hedefleri: tek başına duran metin bağlantıları en az 24px yüksekliğinde */
 .platform>a,#vazgec,.metin-bag,.alt-bilgi:not(.lp-alt) .kap span a{display:inline-flex;align-items:center;min-height:24px;padding-block:2px}
+/* Alt bilgideki yasal sayfa bağlantıları parmakla rahat basılsın: en az 44px dokunma alanı */
+.alt-bilgi:not(.lp-alt) .kap span a{min-height:44px}
+.alt-bilgi:not(.lp-alt) .kap{align-items:center}
+.alt-bilgi:not(.lp-alt) .kap span{row-gap:0!important}
+.taslak-eksik{color:var(--kirmizi2);font-weight:700}
 
 /* v33: telefonda WhatsApp düğmesi */
 @media (max-width:720px){

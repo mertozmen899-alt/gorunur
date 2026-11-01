@@ -66,11 +66,14 @@
     return x.slice(0, 500);
   }
 
+  // Baştaki/sondaki boşluğu siler, ortadaki üst üste boşlukları teke indirir
+  function tekBosluk(x) { return String(x || '').trim().replace(/\s+/g, ' '); }
+
   function kaydet(bitti) {
     var alan = { kurulum_adim: Math.max(d.adim, 0), onay_metni_surumu: 'v1' };
     if (d.adim >= 1) alan.calisma_sekli = d.mod.slice(0, 3);
-    if (d.adim >= 2) alan.semt = d.semt.trim().slice(0, 120);
-    if (d.adim >= 3) { alan.ad = d.ad.trim().slice(0, 120); alan.is_turu = d.is.trim().slice(0, 120); }
+    if (d.adim >= 2) alan.semt = tekBosluk(d.semt).slice(0, 120);
+    if (d.adim >= 3) { alan.ad = tekBosluk(d.ad).slice(0, 120); alan.is_turu = tekBosluk(d.is).slice(0, 120); }
     if (d.adim >= 4) { alan.site = temizUrl(d.site); alan.instagram = (d.instagram || '').trim().slice(0, 300) || null; alan.google_profil = temizUrl(d.google); }
     if (d.adim >= 5) { alan.whatsapp = (d.whatsapp || '').replace(/[^\d+]/g, '').slice(0, 20) || null; alan.mesaj_sikligi = d.siklik; }
     if (bitti) alan.kurulum_bitti = true;
