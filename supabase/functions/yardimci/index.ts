@@ -434,7 +434,50 @@ async function haritadaBul(isl: Record<string, any>, SERP: string, kapi: Kapi) {
   // Bölge verildiyse adres o bölgede olmalı; başka şehirdeki aynı adlı şube bizim profil sayılmaz
   const b = yer ? ayni.find((r) => (" " + sade(String(r.address || "")) + " ").includes(" " + sade(yer))) : ayni[0];
   if (!b) return { bulunamadi: true, baska_sube: ayni[0] ? { ad: ayni[0].title || null, adres: ayni[0].address || null } : null };
-  return { data_id: String(b.data_id), ad: b.title || null, adres: b.address || null, place_id: b.place_id || null, puan: b.rating ?? null, yorum_sayisi: b.reviews ?? null };
+  const g = b.gps_coordinates || {};
+  return { data_id: String(b.data_id), ad: b.title || null, adres: b.address || null, place_id: b.place_id || null, puan: b.rating ?? null, yorum_sayisi: b.reviews ?? null,
+    gps: Number.isFinite(g.latitude) && Number.isFinite(g.longitude) ? { lat: g.latitude, lng: g.longitude } : null };
+}
+
+// Yorum konuları: Google'ın profil geneli konu etiketleri (ek arama yok) + son yorumlardan yapay zekâyla övgü/şikâyet özeti.
+// Yazanların adları gönderilmez.
+function konuSorusu(isl: Record<string, any>, liste: Array<Record<string, any>>) {
+  const yorumlar = liste.map((y, n) => `${n + 1}) ${y.puan}/5: "${y.metin}"`).join("\n");
+  return `Aşağıda "${isl.is_turu || "işletme"}" türündeki bir işletmenin son Google yorumları var.
+Müşterilerin en çok övdüğü ve en çok şikâyet ettiği konuları çıkar.
+Kurallar:
+- Her madde en fazla 60 karakterlik kısa bir konu olsun (ör. "Teslimat gecikiyor", "Montaj ekibi özenli"). En fazla 3 övgü, en fazla 3 şikâyet.
+- Sadece yorumlarda gerçekten geçen konuları yaz, uydurma; yorumlarda şikâyet yoksa "sikayet" boş liste olsun.
+- Kişi adı, hastalık ya da tedavi adı yazma. Uzun tire (—) ve Markdown kullanma.
+Yorumlar:
+${yorumlar}
+Sadece şu JSON'u döndür: {"ovgu":["konu"],"sikayet":["konu"]}`;
+}
+async function yorumKonulari(isl: Record<string, any>, liste: Array<Record<string, any>>, topics: Array<Record<string, any>>, GEM: string) {
+  const google = topics.filter((t) => t && t.keyword && t.keyword !== "all").slice(0, 8).map((t) => ({ ad: String(t.keyword), sayi: Number(t.mentions) || null }));
+  const yazili = liste.filter((y) => y.metin);
+  let ovgu: string[] = [], sikayet: string[] = [];
+  if (GEM && yazili.length >= 3) {
+    try {
+      const c = await gemini(konuSorusu(isl, yazili), GEM, 0.2);
+      const temiz = (x: unknown) => (Array.isArray(x) ? x : []).map((s) => uzunTireYok(String(s)).replace(/[*#]/g, "").trim().slice(0, 80)).filter(Boolean).slice(0, 3);
+      ovgu = temiz(c?.ovgu); sikayet = temiz(c?.sikayet);
+    } catch (e) { console.log("yorum konulari", String(e).slice(0, 120)); }
+  }
+  return google.length || ovgu.length || sikayet.length ? { google, ovgu, sikayet, bakilan: yazili.length } : null;
+}
+
+// ---------------- Mahalle ısı haritası ----------------
+// Asıl haritalar araması işletmenin çevresindeki 3x3 noktadan (adimKm arayla) yapılır; her noktada işletmenin sırası (ilk 20'de yoksa null).
+function isiNoktalari(lat: number, lng: number, adimKm: number) {
+  const dLat = adimKm / 111, dLng = adimKm / (111 * Math.cos(lat * Math.PI / 180));
+  const L: Array<{ lat: number; lng: number }> = [];
+  for (const y of [1, 0, -1]) for (const x of [-1, 0, 1]) L.push({ lat: +(lat + y * dLat).toFixed(6), lng: +(lng + x * dLng).toFixed(6) });
+  return L;
+}
+function isiSira(sonuclar: Array<Record<string, any>>, dataId: string): number | null {
+  const i = sonuclar.slice(0, 20).findIndex((r) => String(r.data_id || "") === dataId);
+  return i < 0 ? null : (Number(sonuclar[i].position) || i + 1);
 }
 
 function taslakSorusu(isl: Record<string, any>, liste: Array<Record<string, any>>) {
@@ -505,13 +548,14 @@ async function yorumlariGetir(isl: Record<string, any>, db: any, SERP: string, G
       taslakDenetim = await taslaklariDenetle(isl, secilen, GEM);
     } catch (e) { taslakHata = String((e as Error).message).slice(0, 160); }
   } else if (secilen.length) taslakHata = "Yapay zekâ anahtarı eksik.";
+  const konular = await yorumKonulari(isl, liste, (j.topics || []) as Array<Record<string, any>>, GEM);
   const sonuc = {
     tarih: new Date().toISOString(), gun: bugunTR(),
     yer: yer ? { ad: yer.ad || pi.title || null, adres: yer.adres || pi.address || null, place_id: yer.place_id || null } : (pi.title ? { ad: pi.title, adres: pi.address || null, place_id: null } : null),
     puan: pi.rating ?? yer?.puan ?? null,
     yorum_sayisi: pi.reviews ?? yer?.yorum_sayisi ?? null,
     yorumlar: liste, bakilan: liste.length, cevapsiz_sayi: cevapsiz.length,
-    taslak_hata: taslakHata, taslak_denetim: taslakDenetim, arama,
+    taslak_hata: taslakHata, taslak_denetim: taslakDenetim, konular, arama,
   };
   await db.from("isletmeler").update({ yorumlar: sonuc }).eq("id", isl.id);
   return sonuc;
@@ -776,6 +820,53 @@ Deno.serve(async (req) => {
       await db.from("isletmeler").update({ hazir_metinler: kayit }).eq("id", isl.id);
       return json({ metin: sonuc });
     } catch (e) { return json({ hata: String((e as Error).message).slice(0, 200) }, 502); }
+  }
+
+  // Mahalle ısı haritası: ayda 1 kez, 9 (merkez bilinmiyorsa 10) SerpApi araması; kişi başı günlük arama sayacı yerine aylık hak
+  if (govde.islem === "isi_haritasi") {
+    const onceki = isl.isi_haritasi as Record<string, any> | null;
+    const ay = bugunTR().slice(0, 7);
+    if (onceki?.ay === ay && !(deneme && govde.zorla)) return json({ isi_haritasi: onceki, mesaj: "Bu ayın haritasını çıkardık. Gelecek ay yeniden çıkarabilirsiniz." });
+    if (!SERP) return json({ hata: "Arama anahtarı eksik.", isi_haritasi: onceki }, 503);
+    const { data: son } = await db.from("olcumler").select("*").eq("isletme_id", isl.id).eq("durum", "bitti").order("baslangic", { ascending: false }).limit(1).maybeSingle();
+    const kelime = String(son?.harita_sorgu || "").trim();
+    if (!kelime) return json({ hata: "Önce bir ölçüm yapalım: haritayı, ölçümde en iyi çıktığınız haritalar aramasıyla çıkarıyoruz.", isi_haritasi: onceki }, 400);
+    // Aynı ay için iki istek aynı anda gelirse sadece biri geçer (sütunu kullanıcı yazamaz)
+    let al = db.from("isletmeler").update({ isi_haritasi: { ...(onceki || {}), ay, suruyor: true } }).eq("id", isl.id);
+    if (!deneme) al = al.or(`isi_haritasi.is.null,isi_haritasi->>ay.neq.${ay}`);
+    const { data: alindi } = await al.select("id");
+    if (!alindi?.length) return json({ hata: "Haritanız şu an hazırlanıyor ya da bu ay çıkarıldı.", isi_haritasi: onceki }, 429);
+    const geriAl = () => db.from("isletmeler").update({ isi_haritasi: onceki }).eq("id", isl!.id);
+    let merkez = onceki?.merkez as { lat: number; lng: number } | null;
+    let dataId = String(isl.gmaps_data_id || onceki?.data_id || ""); // işletme değişince isi_haritasi tetikleyiciyle silinir
+    const adet = 9 + (merkez && dataId ? 0 : 1);
+    const { data: izin, error: bErr } = await db.rpc("serp_harca", { adet, sinir: SERP_SINIR, p_aylik: SERP_AYLIK });
+    if (bErr) console.log("serp_harca hata", bErr.message);
+    if (izin !== true) { await geriAl(); return json({ hata: "Bugün çok yoğunuz, arama sınırımıza ulaştık. Yarın tekrar deneyin.", isi_haritasi: onceki }, 429); }
+    try {
+      if (!merkez || !dataId) {
+        const b = await haritadaBul(isl, SERP, async () => {}) as Record<string, any>;
+        if (b.bulunamadi || !b.gps || (dataId && b.data_id !== dataId)) { await geriAl(); return json({ hata: "Google Haritalar’da işletmenizin yerini bulamadık. Google İşletme Profilinizin adı tabelanızla aynı mı?", isi_haritasi: onceki }, 404); }
+        merkez = b.gps; dataId = b.data_id;
+      }
+      const ADIM = Number(Deno.env.get("ISI_ADIM_KM") || "1");
+      const noktalar = isiNoktalari(merkez!.lat, merkez!.lng, ADIM);
+      const r = await Promise.allSettled(noktalar.map((n) => serp({ engine: "google_maps", type: "search", q: kelime, ll: `@${n.lat},${n.lng},15z`, hl: "tr" }, SERP)));
+      if (r.every((x) => x.status === "rejected")) { await geriAl(); return json({ hata: "Harita şu an çıkarılamadı. Biraz sonra tekrar deneyin.", isi_haritasi: onceki }, 502); }
+      const sonuc = {
+        ay, tarih: new Date().toISOString(), kelime, merkez, data_id: dataId, adim_km: ADIM,
+        noktalar: noktalar.map((n, i) => {
+          const x = r[i];
+          return x.status === "fulfilled" ? { ...n, sira: isiSira((x.value.local_results || []) as Array<Record<string, any>>, dataId) } : { ...n, sira: null, hata: true };
+        }),
+      };
+      await db.from("isletmeler").update({ isi_haritasi: sonuc }).eq("id", isl.id);
+      return json({ isi_haritasi: sonuc });
+    } catch (e) {
+      await geriAl();
+      console.log("isi haritasi", String(e).slice(0, 160));
+      return json({ hata: "Harita şu an çıkarılamadı. Biraz sonra tekrar deneyin.", isi_haritasi: onceki }, 502);
+    }
   }
 
   // "Yanlış mı?": günde 10 bildirim; hatalı ya da belirsizse site yeniden taranır ya da elle ölçüm hakkı iade edilir (günde en fazla 2)

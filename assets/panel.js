@@ -1297,6 +1297,22 @@
     kutu.appendChild(ozet);
     kutu.appendChild(el('p', (y.yer && y.yer.ad ? 'Google’daki profil: ' + y.yer.ad + (y.yer.adres ? ', ' + y.yer.adres : '') + '. ' : '') + 'Son yenileme: ' + tarih(y.tarih) + '.', 'kart-alt yorum-kaynak'));
     if (!liste.length) { kutu.appendChild(el('p', 'Profilinizde henüz yorum yok. İşlerim sayfasındaki "Her hafta 3-5 yeni Google yorumu toplayın" adımıyla başlayabilirsiniz.', 'kart-alt')); ypIsleriCiz(); return; }
+    var kn = y.konular;
+    if (kn) {
+      var kk = el('div', null, 'yorum-konular');
+      kk.appendChild(el('b', 'Müşterileriniz ne diyor?'));
+      [['Övülen', kn.ovgu, 'pil-y'], ['Şikâyet edilen', kn.sikayet, 'pil-a']].forEach(function (x) {
+        if (!x[1] || !x[1].length) return;
+        var s = el('p', null, 'konu-satir'); s.appendChild(el('span', x[0] + ':', 'konu-etiket'));
+        x[1].forEach(function (k) { s.appendChild(el('span', k, 'pil ' + x[2])); }); kk.appendChild(s);
+      });
+      if (kn.google && kn.google.length) {
+        var g = el('p', null, 'konu-satir'); g.appendChild(el('span', 'Google’ın yorumlarınızda öne çıkardığı konular:', 'konu-etiket'));
+        kn.google.forEach(function (k) { g.appendChild(el('span', k.ad + (k.sayi ? ' (' + k.sayi + ')' : ''), 'pil')); }); kk.appendChild(g);
+      }
+      if (kn.ovgu && (kn.ovgu.length || kn.sikayet.length)) kk.appendChild(el('small', 'Övgü ve şikâyetleri son ' + kn.bakilan + ' yazılı yorumdan yapay zekâ çıkardı; parantezdeki sayılar Google’ın saydığı yorum sayısı.', 'kart-alt'));
+      kutu.appendChild(kk);
+    }
     if (y.taslak_hata) kutu.appendChild(el('p', 'Cevap taslakları bu sefer yazılamadı. Yarın "Yorumları yenile" ile tekrar deneyin.', 'kart-alt'));
     var tdk = denetimKutu(y.taslak_denetim); if (tdk) kutu.appendChild(tdk);
     var ul = el('ul', null, 'yorum-liste');
@@ -1333,6 +1349,40 @@
       if (r.mesaj && !sessiz) $('yorum-durum').textContent = r.mesaj;
     }).catch(function (e) { if (!sessiz) $('yorum-durum').textContent = e.message; })
       .then(function () { b.disabled = false; yorumCiz(); isSayaci(); });
+  }
+
+  // ---- Mahalle ısı haritası (yardimci: isi_haritasi, ayda 1) ----
+  function isiRenk(s) { return s == null ? 'isi-yok' : s <= 3 ? 'isi-1' : s <= 10 ? 'isi-2' : 'isi-3'; }
+  function isiCiz() {
+    var kutu = $('isi-icerik'); if (!kutu) return;
+    var h = isletme.isi_haritasi, b = $('isi-cikar'); kutu.innerHTML = '';
+    var buAy = h && h.ay === new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 7);
+    if (!b.disabled) { b.textContent = h && h.noktalar ? 'Haritayı yenile' : 'Haritayı çıkar'; b.hidden = !!(buAy && h.noktalar); }
+    if (!h || !h.noktalar) { kutu.appendChild(el('p', 'Haritanızı henüz çıkarmadık. "Haritayı çıkar" düğmesine basın, 20-40 saniye sürer.', 'kart-alt')); return; }
+    var izg = el('div', null, 'isi-izgara'); izg.setAttribute('role', 'img');
+    var ilk3 = 0, yok = 0;
+    h.noktalar.forEach(function (n, i) {
+      var d = el('span', n.hata ? '?' : n.sira == null ? '20+' : String(n.sira), 'isi-nokta ' + (n.hata ? 'isi-yok' : isiRenk(n.sira)) + (i === 4 ? ' isi-siz' : ''));
+      izg.appendChild(d);
+      if (n.sira != null && n.sira <= 3) ilk3++; if (n.sira == null && !n.hata) yok++;
+    });
+    izg.setAttribute('aria-label', '9 noktanın ' + ilk3 + ' tanesinde ilk 3’tesiniz, ' + yok + ' tanesinde ilk 20’de yoksunuz.');
+    kutu.appendChild(izg);
+    var ac = el('div', null, 'isi-aciklama');
+    [['isi-1', '1-3'], ['isi-2', '4-10'], ['isi-3', '11-20'], ['isi-yok', '20’den sonra']].forEach(function (x) { var s = el('span'); s.appendChild(el('i', null, 'isi-nokta kucuk ' + x[0])); s.appendChild(document.createTextNode(x[1])); ac.appendChild(s); });
+    kutu.appendChild(ac);
+    var yon = (h.adim_km || 1) + ' km';
+    kutu.appendChild(el('p', '"' + h.kelime + '" araması, noktalar arası ' + yon + '. ' + (ilk3 === 9 ? 'Her noktada ilk 3’tesiniz.' : ilk3 ? '9 noktanın ' + ilk3 + ' tanesinde ilk 3’tesiniz.' : 'Hiçbir noktada ilk 3’te değilsiniz.') + (yok ? ' ' + yok + ' noktada ilk 20’de çıkmıyorsunuz: oradan arayanlar sizi görmüyor.' : '') + ' Çıkarıldığı tarih: ' + tarih(h.tarih) + '.', 'kart-alt'));
+    if (buAy) kutu.appendChild(el('small', 'Yeni haritayı gelecek ay çıkarabilirsiniz.', 'kart-alt'));
+  }
+  function isiCikar() {
+    var b = $('isi-cikar'); b.disabled = true; b.textContent = 'Çıkarılıyor… (20-40 saniye)';
+    $('isi-durum').textContent = '';
+    return yardimci({ islem: 'isi_haritasi' }).then(function (r) {
+      if (r.isi_haritasi) isletme.isi_haritasi = r.isi_haritasi;
+      if (r.mesaj) $('isi-durum').textContent = r.mesaj;
+    }).catch(function (e) { $('isi-durum').textContent = e.message; })
+      .then(function () { b.disabled = false; isiCiz(); });
   }
 
   // ---- Hangi platformlarda varsınız? ----
@@ -1428,6 +1478,7 @@
     isEkle($('metin-isler'), metinIsleri(i));
     siteCiz();
     yorumCiz();
+    isiCiz();
     platformCiz();
   }
 
@@ -1717,6 +1768,7 @@
 
   $('site-tara').addEventListener('click', function () { siteTara(false); });
   $('yorum-yenile').addEventListener('click', function () { yorumYenile(false); });
+  $('isi-cikar').addEventListener('click', isiCikar);
   $('platform-yenile').addEventListener('click', function () { platformYenile(false); });
 
   $('olc').addEventListener('click', olc);

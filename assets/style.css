@@ -1060,6 +1060,16 @@ body:has(.lp-promo:not([hidden])) .wa-dugme{opacity:0;pointer-events:none}
 .yorum-ozet .sayi-kutu{padding:14px}
 .yorum-ozet .sayi-kutu b{font-size:28px}
 .yorum-ozet .sayi-kutu.dikkat b{color:var(--uyariyazi)}
+.yorum-konular{margin-top:14px;background:var(--kart2);border-radius:16px;padding:14px 16px}
+.konu-satir{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0 0}
+.konu-etiket{font-size:13px;color:var(--soluk);margin-right:2px}
+.isi-izgara{display:grid;grid-template-columns:repeat(3,56px);gap:14px;justify-content:center;padding:18px;background:var(--kart2);border-radius:16px}
+.isi-nokta{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px}
+.isi-nokta.kucuk{width:14px;height:14px;display:inline-block;vertical-align:-2px;margin-right:6px}
+.isi-1{background:var(--yesil);color:var(--kart)} .isi-2{background:var(--yesilzemin);color:var(--yesil);border:2px solid var(--yesil)}
+.isi-3{background:var(--uyarizemin);color:var(--uyariyazi);border:2px solid var(--uyarikenar)} .isi-yok{background:var(--cizgi2);color:var(--soluk)}
+.isi-siz{outline:3px solid var(--amber);outline-offset:3px}
+.isi-aciklama{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;font-size:13px;color:var(--soluk);margin:10px 0}
 .yorum-kaynak{margin-top:10px}
 .yorum-liste,.platform-liste{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:10px}
 .yorum,.platform{background:var(--kart2);border:1px solid var(--cizgi2);border-radius:14px;padding:14px 16px;min-width:0}

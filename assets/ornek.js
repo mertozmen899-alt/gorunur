@@ -18,8 +18,12 @@
       { ad: 'Müşteri A.', puan: 2, tarih: gun(6), zaman: '6 gün önce', metin: 'Ürün güzel ama teslimat söylenen günden bir hafta sonra geldi.', cevaplandi: false, taslak: 'Teslimatın gecikmesi için özür dileriz, bunun sizi zor durumda bıraktığını biliyoruz. Yaşadığınızı daha iyi anlamak için [TELEFON] numaramızdan bize ulaşırsanız seviniriz.' },
       { ad: 'Müşteri B.', puan: 5, tarih: gun(12), zaman: '2 hafta önce', metin: 'Montaj ekibi çok özenliydi, mağazadaki ilgi de güzeldi.', cevaplandi: false, taslak: 'Güzel yorumunuz için çok teşekkür ederiz. Montaj ekibimize ilettik; yeni mobilyalarınızı güle güle kullanın.' },
       { ad: 'Müşteri C.', puan: 5, tarih: gun(30), zaman: 'bir ay önce', metin: 'Yemek odası takımı tam istediğimiz gibi.', cevaplandi: true },
-      { ad: 'Müşteri D.', puan: 4, tarih: gun(70), zaman: '2 ay önce', metin: 'Çeşit fazla, fiyatlar makul.', cevaplandi: true }]
+      { ad: 'Müşteri D.', puan: 4, tarih: gun(70), zaman: '2 ay önce', metin: 'Çeşit fazla, fiyatlar makul.', cevaplandi: true }],
+    konular: { bakilan: 4, ovgu: ['Montaj ekibi özenli', 'Çeşit fazla, fiyatlar makul'], sikayet: ['Teslimat gecikiyor'],
+      google: [{ ad: 'montaj', sayi: 9 }, { ad: 'teslimat', sayi: 7 }, { ad: 'koltuk takımı', sayi: 5 }, { ad: 'ilgi', sayi: 4 }] }
   };
+  var isiHaritasi = { ay: gun(3).slice(0, 7), tarih: gun(3), kelime: 'çorum mobilya', adim_km: 1, merkez: { lat: 40.55, lng: 34.95 },
+    noktalar: [5, 2, 9, 3, 1, 4, 14, 6, null].map(function (s) { return { sira: s }; }) };
   var platformlar = {
     tarih: gun(1), gun: gun(1).slice(0, 10), sorgu: '"' + ISL_AD + '" ' + SEHIR, arama: 1, liste: [
       { ad: 'Google İşletme Profili', alan: 'google.com/maps', durum: 'var', link: null, ne_yapmali: 'Profiliniz var. Adres, telefon, çalışma saatleri ve fotoğrafların güncel olduğundan emin olun.' },
@@ -38,7 +42,7 @@
   };
   var ISL = {
     id: 'ornek', ad: ISL_AD, is_turu: 'mobilya mağazası', site: 'https://lalemobilya.example', semt: SEHIR, calisma_sekli: ['gelir'],
-    kurulum_bitti: true, mesaj_sikligi: 'haftalik', yorumlar: yorumlar, platformlar: platformlar, site_saglik: site,
+    kurulum_bitti: true, mesaj_sikligi: 'haftalik', yorumlar: yorumlar, platformlar: platformlar, site_saglik: site, isi_haritasi: isiHaritasi,
     sektor_rehberleri: [{ ad: 'Trendyol', alan: 'trendyol.com', ne_ise_yarar: 'Mobilya alıcılarının en çok baktığı pazar yeri.' }, { ad: 'Şikayetvar', alan: 'sikayetvar.com', ne_ise_yarar: 'Güvenilirlik sorularında yapay zekânın baktığı site.' }]
   };
 
@@ -121,6 +125,7 @@
       invoke: function (ad, o) {
         var g = (o && o.body) || {};
         if (ad === 'yardimci' && g.islem === 'yorumlar') return Promise.resolve({ data: { yorumlar: yorumlar }, error: null });
+        if (ad === 'yardimci' && g.islem === 'isi_haritasi') return Promise.resolve({ data: { isi_haritasi: isiHaritasi, mesaj: MESAJ }, error: null });
         if (ad === 'yardimci' && g.islem === 'platformlar') return Promise.resolve({ data: { platformlar: platformlar }, error: null });
         if (ad === 'yardimci' && g.islem === 'site') return Promise.resolve({ data: { site: site }, error: null });
         if (ad === 'yardimci' && g.islem === 'metin') return new Promise(function (r) { setTimeout(function () { r({ data: { metin: metinOrnek(g) }, error: null }); }, 600); });
