@@ -576,7 +576,7 @@ Deno.serve(async (req) => {
   }
 
   // Bütçe hemen kontrol edilir ki kullanıcı "kapasite doldu" cevabını beklemeden alsın
-  const butce = await serpButce(db, SERP);
+  const butce = await serpButce(db, SERP, !!ymt);
   if (butce === "aylik") { await kayitSil(); return json({ hata: "Bu ayki ölçüm kapasitemiz doldu, ölçümler ay başında devam edecek." }, 503); }
   if (butce) { await kayitSil(); return json({ hata: "Bugün çok yoğunuz, günlük ölçüm kapasitemiz doldu. Yarın tekrar deneyin." }, 503); }
 
@@ -602,10 +602,11 @@ async function takiliTemizle(db: Db, sahip?: string) {
 }
 
 // Sistem geneli SerpApi bütçesi: günlük ve aylık (bir ölçüm yaklaşık 20 arama). Yer ayırır; doluysa hangisinin dolduğunu döner.
-async function serpButce(db: Db, SERP: string): Promise<"gunluk" | "aylik" | null> {
+// Yönetici (deneme ölçümü) günlük bütçeden muaf; aylık bütçe herkese uygulanır
+async function serpButce(db: Db, SERP: string, gunlukMuaf = false): Promise<"gunluk" | "aylik" | null> {
   if (!SERP) return null;
   const tahmin = parseInt(Deno.env.get("OLCUM_SERP_TAHMIN") || "20", 10) || 20;
-  const sinir = parseInt(Deno.env.get("SERP_GUNLUK_SINIR") || "25", 10) || 25;
+  const sinir = gunlukMuaf ? 1e6 : parseInt(Deno.env.get("SERP_GUNLUK_SINIR") || "25", 10) || 25;
   const aylik = parseInt(Deno.env.get("SERPAPI_AYLIK_SINIR") || "230", 10) || 230;
   const { data: izin, error } = await db.rpc("serp_harca", { adet: tahmin, sinir, p_aylik: aylik });
   if (error) console.log("serp_harca hata", error.message);

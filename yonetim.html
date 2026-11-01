@@ -87,7 +87,7 @@
     if (!r.data) { $('yukleniyor').textContent = 'Bu sayfa sadece yöneticiler için.'; return; }
     return Promise.all([
       A.sb.from('gunluk_raporlar').select('*').order('tarih', { ascending: false }).limit(30),
-      A.sb.from('isletmeler').select('id,ad,semt,is_turu,kurulum_bitti,kurulum_adim,olusturma').order('olusturma', { ascending: false }),
+      A.sb.from('isletmeler').select('id,ad,semt,is_turu,kurulum_bitti,kurulum_adim,olusturma,degisiklik').order('olusturma', { ascending: false }),
       A.sb.from('olcumler').select('isletme_id,baslangic,durum,harita_sira,yz_gecen,yz_soru_sayisi,kaynak').order('baslangic', { ascending: false }).limit(500),
       A.sb.from('ajan_raporlari').select('*').order('olusturma', { ascending: false }).limit(30),
       A.sb.from('ziyaretler').select('*').gte('gun', new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10)),
@@ -157,7 +157,9 @@
 
       $('isl-sayi').textContent = isl.length + ' işletme';
       isl.forEach(function (i) {
-        var o = olc.filter(function (x) { return x.isletme_id === i.id && x.durum === 'bitti'; })[0];
+        // İşletme bilgisi değiştiyse (degisiklik.zaman) önceki ölçümler başka işletmeye ait: panel gibi onları sayma
+        var kimlik = (i.degisiklik && i.degisiklik.zaman) || '';
+        var o = olc.filter(function (x) { return x.isletme_id === i.id && x.durum === 'bitti' && x.baslangic >= kimlik; })[0];
         var tr = el('tr');
         tr.appendChild(el('td', i.ad || '-'));
         tr.appendChild(el('td', (i.semt || '-') + ' · ' + (i.is_turu || '-')));
