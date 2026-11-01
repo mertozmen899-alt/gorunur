@@ -663,9 +663,10 @@ Deno.serve(async (req) => {
             islem = "site_tarandi"; site = s; ek.push("Sitenizi yeniden taradık, güncel sonuç ekranda.");
           }
         } catch (e) { console.log("yanlis site", String(e)); }
-      } else if (o && o.kaynak === "elle" && !o.hak_iade && o.durum !== "hata" && Date.now() - Date.parse(o.baslangic) < 864e5 && (await harca("iade", 1, 2))) {
+      } else if (o && o.kaynak === "elle" && !o.hak_iade && o.durum !== "hata" && Date.now() - Date.parse(o.baslangic) < 31 * 864e5 && (await harca("iade", 1, 2))) {
+        // Aylık hak (olcum: AYLIK_OLCUM_HAKKI) bu ayın ölçümlerini sayar; geçen aydan kalan iade zararsız
         await db.from("olcumler").update({ hak_iade: true }).eq("id", o.id);
-        islem = "hak_iade"; ek.push("Bu ölçüm günlük ölçüm hakkınızdan düşülmedi, \"Tekrar ölç\" ile yeniden ölçebilirsiniz.");
+        islem = "hak_iade"; ek.push("Bu ölçüm aylık ölçüm hakkınızdan düşülmedi, \"Tekrar ölç\" ile yeniden ölçebilirsiniz.");
       }
       ek.push("Ekibimiz de bildiriminizi inceleyecek.");
     }

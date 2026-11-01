@@ -1,6 +1,6 @@
 -- "Yanlış mı?" artık yapay zekâyla kontrol ediliyor (yardimci, islem: 'yanlis'):
 -- bildirimi sunucu ekler; yapay zekânın kararı, kullanıcıya gösterilen cevap ve yapılan işlem kaydedilir.
--- Hatalı bulunan elle ölçüm günlük ölçüm hakkına sayılmaz (olcumler.hak_iade).
+-- Hatalı bulunan elle ölçüm ölçüm hakkına sayılmaz (olcumler.hak_iade).
 -- kullanim_harca iki yeni sayaç alır: 'yanlis' (günlük bildirim) ve 'iade' (günlük hak iadesi).
 alter table public.yanlis_bildirimleri add column if not exists karar text check (karar in ('hata', 'dogru', 'belirsiz'));
 alter table public.yanlis_bildirimleri add column if not exists cevap text check (char_length(cevap) <= 2000);

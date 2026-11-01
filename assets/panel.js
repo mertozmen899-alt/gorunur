@@ -1241,7 +1241,7 @@
         A.sb.from('olcumler').select('*').eq('id', id).maybeSingle().then(function (r) {
           var o = r.data;
           if (o && o.durum === 'bitti') return coz(o);
-          if (o && o.durum === 'hata') return red(new Error('Ölçüm şu an yapılamadı. Bu deneme günlük hakkınızdan sayılmadı; biraz sonra tekrar deneyin.'));
+          if (o && o.durum === 'hata') return red(new Error('Ölçüm şu an yapılamadı. Bu deneme aylık ölçüm hakkınızdan sayılmadı; biraz sonra tekrar deneyin.'));
           if (Date.now() > son) return red(new Error('Ölçüm beklenenden uzun sürdü. Birkaç dakika sonra sayfayı yenileyin.'));
           setTimeout(bak, 5000);
         }, function () {

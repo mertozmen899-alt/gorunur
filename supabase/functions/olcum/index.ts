@@ -3,7 +3,7 @@
 // ve yapay zekâ cevaplarında (Gemini, Google Yapay Zekâ Modu, ChatGPT) adının geçip geçmediğini ölçer.
 // Gerekli gizli anahtarlar (Supabase > Edge Functions > Secrets): SERPAPI_KEY, GEMINI_API_KEY
 // İsteğe bağlı anahtar: OPENAI_API_KEY (yoksa ChatGPT ölçümü sessizce atlanır, cg_* alanları boş kalır)
-// İsteğe bağlı ayarlar: GEMINI_MODEL, GEMINI_ARAMALI, GUNLUK_OLCUM_HAKKI (varsayılan 3), HARITA_ARAMA (varsayılan 5), YZ_TEKRAR, YZ_SORU,
+// İsteğe bağlı ayarlar: GEMINI_MODEL, GEMINI_ARAMALI, AYLIK_OLCUM_HAKKI (varsayılan 8, Türkiye takvim ayı), HARITA_ARAMA (varsayılan 5), YZ_TEKRAR, YZ_SORU,
 //   GOOGLE_YZ_SORU (Google Yapay Zekâ Modu soru sayısı, varsayılan 2, en fazla 4),
 //   OPENAI_MODEL, CHATGPT_SORU (varsayılan 3, en fazla 6), CHATGPT_TEKRAR (varsayılan 1, en fazla 3)
 // SerpApi harcaması (bir ölçümde): Haritalar 5 (+1 adla arama, bulunamazsa) + Google arama 10 (+1 marka araması, gerekirse)
@@ -12,7 +12,7 @@
 // Sistem geneli SerpApi bütçesi: ölçüm başlamadan public.serp_harca(OLCUM_SERP_TAHMIN=20, SERP_GUNLUK_SINIR=25,
 //   SERPAPI_AYLIK_SINIR=230) düşülür; bütçe yoksa elle ölçüm kibar bir mesajla reddedilir (aylık doluysa ay başı mesajı),
 //   haftalık ölçüm o tur atlanır.
-// Yarış durumuna karşı ölçüm kaydı ("suruyor") her dış çağrıdan ÖNCE eklenir; günlük elle ölçüm hakkı bu kayıtlar dahil sayılır.
+// Yarış durumuna karşı ölçüm kaydı ("suruyor") her dış çağrıdan ÖNCE eklenir; aylık elle ölçüm hakkı bu kayıtlar dahil sayılır.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const CORS = {
@@ -22,6 +22,8 @@ const CORS = {
 };
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
+// Türkiye takvim ayının başı (UTC+3, yaz saati yok), ISO
+const ayBasiTR = () => { const t = new Date(Date.now() + 3 * 36e5); return new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), 1) - 3 * 36e5).toISOString(); };
 
 // Türkçe karakterleri sadeleştirip karşılaştırmaya hazırlar
 function sade(x: string): string {
@@ -562,14 +564,15 @@ Deno.serve(async (req) => {
   if (kayitHata || !kayit) return json({ hata: "Ölçüm başlatılamadı. Birazdan tekrar deneyin." }, 500);
   const kayitSil = () => db.from("olcumler").delete().eq("id", kayit.id);
 
-  // Günlük ölçüm hakkı (otomatik haftalık ölçümler sayılmaz; süren ölçümler dahil). Yöneticiler (deneme için) sınırsız.
+  // Aylık ölçüm hakkı, Türkiye takvim ayı (otomatik haftalık ölçümler sayılmaz; süren ölçümler dahil). Yöneticiler (deneme için) sınırsız.
+  // Günlük sınır her gün kullanılınca ayda ~3.400 TL SerpApi maliyeti çıkarıyordu (raporlar/2026-11-01-maliyet-kar.md).
   const { data: ymt } = await db.from("yoneticiler").select("eposta").eq("eposta", String(u.user.email || "").toLowerCase()).maybeSingle();
   if (!ymt) {
-    const hak = parseInt(Deno.env.get("GUNLUK_OLCUM_HAKKI") || "3", 10);
+    const hak = parseInt(Deno.env.get("AYLIK_OLCUM_HAKKI") || "8", 10);
     // Hatalı biten ölçümler ve "Yanlış mı?" ile iade edilenler (yardimci) hakka sayılmaz
     const { count } = await db.from("olcumler").select("id", { count: "exact", head: true })
-      .eq("sahip", u.user.id).eq("kaynak", "elle").neq("durum", "hata").eq("hak_iade", false).gte("baslangic", new Date(Date.now() - 864e5).toISOString());
-    if ((count || 0) > hak) { await kayitSil(); return json({ hata: `Bugünkü ölçüm hakkınız (${hak}) doldu. Yarın tekrar deneyin.` }, 429); }
+      .eq("sahip", u.user.id).eq("kaynak", "elle").neq("durum", "hata").eq("hak_iade", false).gte("baslangic", ayBasiTR());
+    if ((count || 0) > hak) { await kayitSil(); return json({ hata: `Bu ayki ölçüm hakkınız (${hak}) doldu. Haftalık otomatik ölçüm devam ediyor; hakkınız ayın 1'inde yenilenir.` }, 429); }
   }
 
   // Bütçe hemen kontrol edilir ki kullanıcı "kapasite doldu" cevabını beklemeden alsın
