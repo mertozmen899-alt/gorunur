@@ -554,6 +554,12 @@ Deno.serve(async (req) => {
         try {
           const r = await olcumYap(db, isl, SERP, GEM, "haftalik");
           if (r.butceYok) { console.log("haftalik olcum atlandi: SerpApi butcesi doldu", r.butceYok, isl.id); break; }
+          // Haftalık özet e-postası (sahibin tercihine göre eposta fonksiyonu karar verir; gönderilemezse ölçüm etkilenmez)
+          const sonId = (r.son as { id?: string } | undefined)?.id;
+          if (sonId && !r.hepsiHata) {
+            const e = await fetch(`${URL_}/functions/v1/eposta`, { method: "POST", headers: { "Content-Type": "application/json", "x-gorunur-cron": cronAnahtar }, body: JSON.stringify({ tur: "haftalik", olcum_id: sonId }), signal: AbortSignal.timeout(30000) }).catch((x) => ({ status: 0, text: () => Promise.resolve(String(x)) }));
+            if (e.status !== 200) console.log("haftalik ozet gonderilemedi", isl.id, e.status, (await e.text()).slice(0, 200));
+          }
         } catch (e) { console.log("haftalik olcum hatasi", isl.id, String(e)); }
       }
     })());
