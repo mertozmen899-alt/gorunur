@@ -4,9 +4,9 @@ Kullanıcı "norevo", "görünür" ya da "devam" yazarsa önce bu dosyanın "Dur
 
 ## Durum (31 Ekim 2026, öğle)
 - **Proje klasörü: `E:\Claude Code\norevo\gorunur`** (31 Ekim'de `C:\Users\Mierd\gorunur`'dan kopyalandı; C: kopyası eski, Mert onaylayınca silinecek). Claude hafızası: `C:\Users\Mierd\.claude\projects\E--Claude-Code-norevo-gorunur\memory\`.
-- Site: https://mertozmen899-alt.github.io/gorunur/ (GitHub Pages, `main` dalından yayında)
+- Site: https://mertozmen899-alt.github.io/norevo/ (GitHub Pages, `main` dalından yayında; depo adı `mertozmen899-alt/norevo`, eski /gorunur adresi 404)
 - Supabase projesi: `drlqbwdupntqqtkmdncc`
-- Son yayın: PR #3 birleşti (`4a4b3a0`), panel.js v30 canlıda; `olcum` edge function sürüm 28 deploy edildi (canlı = repo, birebir karşılaştırıldı).
+- Son yayın (1 Kasım): `e783b79` kod içindeki Görünür adları Norevo oldu (panel.js v34); `olcum` edge function sürüm 32 (canlı = repo). Bilerek kalan eski adlar: `x-gorunur-cron` başlığı, `gorunur-tuz`, keystore adları, `com.gorunur.app`, klasör adı.
 - 3. denetçi puanlaması: **71/100**. Mert kararı: hukuk işleri ilk gerçek müşteriye kadar ertelendi, şimdilik hedef **90**. Tahmini şu an ~85-87.
 - Ayrıntılı denetim raporu: Claude hafızasında `denetim-3-puanlama.md`.
 - Her gün 18:00'de 4 zamanlanmış denetçi görevi çalışıyor (kod, karar, plan, metin); raporlar `raporlar/<tarih>-*.md` (commit edilmiyor).
@@ -38,6 +38,8 @@ Kullanıcı "norevo", "görünür" ya da "devam" yazarsa önce bu dosyanın "Dur
 - Ödemeli servisleri (SerpApi ücretli plan, alan adı, şirket/ödeme) Mert onaylamadan alma.
 - Her oturum sonunda Durum bölümünü güncelle.
 - **İşe başlamadan önce `git fetch` ve `git log main..origin/main`**: başka oturumlar origin/main'e push ediyor; 31 Ekim'de yerel kopya 6 commit gerideydi.
+- **Adres, ad ya da ayar değiştiren oturum aynı işte Durum'u günceller** (site adresi, depo adı, alan adı, Supabase/GitHub ayarı, klasör yeri). 1 Kasım'da depo `norevo` oldu ama Durum'da eski `/gorunur` adresi kaldı; başka oturum eski adresi kontrol edip vakit kaybetti.
+- **İşe başlarken son commit başlıklarını tara** (`git log --oneline -30`): "adres", "ad değişti", "taşındı", "marka", "depo" geçen bir commit varsa önce onu oku; Durum'daki bilgi ondan eskiyse Durum'u düzelt.
 - **Edge Function deploy etmeden önce** canlıdaki sürümü (Supabase `get_edge_function`) repodakiyle karşılaştır.
 - Supabase bağlayıcısı `revoke` / `drop policy` içeren migration'ı Mert yokken reddediyor; gerekmiyorsa bu satırları koyma.
 - Testler: Playwright repoda kurulu değil; geçici klasöre kur, `NODE_PATH=<klasör>/node_modules node testler/calistir.js`.
