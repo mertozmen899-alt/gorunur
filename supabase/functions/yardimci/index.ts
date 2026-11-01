@@ -124,11 +124,22 @@ Kontrol et:
 5. Rakibi kötüleme, müşteriyi suçlama, tartışmaya girme, hakaret.
 6. Türkçe yazım hatası ya da anlamı bozuk cümle.
 Metin (JSON): ${JSON.stringify(ic)}
+Sadece metinde GERÇEKTEN geçen sorunları yaz; metinde olmayan bir şeyi sorun diye yazma. Her sorun için metinden birebir kısa bir alıntı ver.
 Sorun yoksa sadece {"uygun":true,"sorunlar":[]} döndür.
-Sorun varsa {"uygun":false,"sorunlar":["işletme sahibinin anlayacağı kısa açıklama"],"duzeltilmis":{...}} döndür. "duzeltilmis" girdiyle aynı JSON yapısında olsun (aynı alanlar, aynı sayıda öğe); sorunlu kısmı çıkar ya da köşeli parantezli yer tutucuyla değiştir, YENİ BİLGİ EKLEME, sorunsuz kısımlara dokunma.`;
+Sorun varsa {"uygun":false,"sorunlar":[{"alinti":"metinden birebir 2-8 kelime","sorun":"işletme sahibinin anlayacağı kısa açıklama"}],"duzeltilmis":{...}} döndür. "duzeltilmis" girdiyle aynı JSON yapısında olsun (aynı alanlar, aynı sayıda öğe); sorunlu kısmı çıkar ya da köşeli parantezli yer tutucuyla değiştir, YENİ BİLGİ EKLEME, sorunsuz kısımlara dokunma.`;
 }
-async function denetle(tur: string, isl: Record<string, any>, ic: Record<string, any>, GEM: string, ekBaglam = ""): Promise<{ icerik: Record<string, any>; denetim: Denetim }> {
+// Google açıklaması 750 karakteri aşarsa son tam cümleden kısaltılır (anlam bozulmaz, yeni bilgi eklenmez)
+function kisalt(m: string, sinir = 750): string {
+  if (m.length <= sinir) return m;
+  const kes = m.slice(0, sinir), son = Math.max(kes.lastIndexOf(". "), kes.lastIndexOf("! "), kes.lastIndexOf("? "));
+  return (son > sinir / 2 ? kes.slice(0, son + 1) : kes.replace(/\s+\S*$/, "") + ".").trim();
+}
+function sinirla(tur: string, ic: Record<string, any>): Record<string, any> {
+  return tur === "aciklama" && typeof ic?.metin === "string" ? { ...ic, metin: kisalt(ic.metin) } : ic;
+}
+async function denetle(tur: string, isl: Record<string, any>, ic0: Record<string, any>, GEM: string, ekBaglam = ""): Promise<{ icerik: Record<string, any>; denetim: Denetim }> {
   const tarih = new Date().toISOString();
+  const ic = sinirla(tur, ic0);
   const kod = kuralSorunlari(tur, ic);
   let c: Record<string, any>;
   try { c = await gemini(denetciSorusu(tur, isl, ic, ekBaglam), GEM, 0.1); }
@@ -136,10 +147,14 @@ async function denetle(tur: string, isl: Record<string, any>, ic: Record<string,
     console.log("denetci hata", String(e).slice(0, 120));
     return { icerik: ic, denetim: { durum: "denetlenemedi", notlar: kod, tarih } };
   }
-  const sorunlar = (Array.isArray(c?.sorunlar) ? c.sorunlar : []).map((x: unknown) => uzunTireYok(String(x)).slice(0, 200)).slice(0, 6) as string[];
-  if (c?.uygun === true && !sorunlar.length && !kod.length) return { icerik: ic, denetim: { durum: "onaylandi", notlar: [], tarih } };
-  const duz = c?.duzeltilmis;
-  if (ayniYapi(ic, duz) && !kuralSorunlari(tur, duz).length) return { icerik: duz, denetim: { durum: "duzeltildi", notlar: [...kod, ...sorunlar], tarih } };
+  // Denetçi de uydurabilir: alıntısı metinde birebir geçmeyen sorun atılır (1 Kasım denemesinde olmayan bir web adresini "var" demişti)
+  const metinSade = sade(metinler(tur, ic).map(([, m]) => m).join(" "));
+  const sorunlar = (Array.isArray(c?.sorunlar) ? c.sorunlar : [])
+    .filter((x: Record<string, unknown>) => x && typeof x === "object" && sade(String(x.alinti || "")).length >= 3 && metinSade.includes(sade(String(x.alinti))))
+    .map((x: Record<string, unknown>) => uzunTireYok(`"${String(x.alinti).trim()}": ${String(x.sorun || "").trim()}`).slice(0, 220)).slice(0, 6) as string[];
+  if (!sorunlar.length && !kod.length) return { icerik: ic, denetim: { durum: "onaylandi", notlar: [], tarih } };
+  const duz = sorunlar.length ? sinirla(tur, c?.duzeltilmis) : null;
+  if (duz && ayniYapi(ic, duz) && !kuralSorunlari(tur, duz).length) return { icerik: duz, denetim: { durum: "duzeltildi", notlar: [...kod, ...sorunlar], tarih } };
   return { icerik: ic, denetim: { durum: "kontrol_gerekli", notlar: [...kod, ...sorunlar].length ? [...kod, ...sorunlar] : ["Denetçi bu metinden emin olamadı."], tarih } };
 }
 
