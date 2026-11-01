@@ -175,7 +175,8 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     kontrol(cihaz + ' hazır metin yazılıp gösteriliyor', !!yazB && !!(await p.$('#metin-isler .yazilan')));
     await p.waitForSelector('#metin-isler .yazilan .denetim', { timeout: 3000 }).catch(() => {});
     kontrol(cihaz + ' hazır metnin altında denetçi sonucu var', /Denetçi kontrol etti/.test((await p.textContent('#metin-isler .yazilan .denetim').catch(() => '')) || ''));
-    kontrol(cihaz + ' sayfa işinde "metnini yazın" düğmesi var', (await p.$$('#olcum-isler .yaz-alt .btn-amber, #yz-isler .yaz-alt .btn-amber')).length > 0);
+    // Sahte işletme "çorum mobilya" aramasında zaten 3. sırada: o arama için ayrı sayfa önerilmez
+    kontrol(cihaz + ' zaten ilk 3’te çıkılan arama için "sayfası ekletin" işi yok', !/"Çorum mobilya" sayfası ekletin/i.test((await p.textContent('#yz-isler').catch(() => '')) || ''));
     await tasma('hazır metinler');
     // Site sağlığı: otomatik tarandı, puan ve eksik işi görünüyor
     await p.click('#yan-menu [data-git=google]').catch(() => {}); await p.waitForTimeout(200);

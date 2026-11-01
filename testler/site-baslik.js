@@ -1,5 +1,5 @@
-// "Sitenizin başlığını düzeltin" işi site taramasına göre kişiselleşiyor mu: node testler/site-baslik.js
-// panel.js içindeki IS.siteBaslik'i 4KDent'in gerçek tarama sonucuyla (1 Kasım) dener.
+// "Sitenizin başlığını düzeltin" işi: site taranmışsa çıkmaz (eksikler "Sitenizdeki eksikleri düzelttirin" işinde),
+// taranmamışsa genel mesaj verir. Kullanım: node testler/site-baslik.js
 const assert = require('assert');
 const kaynak = require('fs').readFileSync(require('path').join(__dirname, '..', 'assets', 'panel.js'), 'utf8');
 const bas = kaynak.indexOf('siteBaslik: function'), son = kaynak.indexOf('\n    siteYok:', bas);
@@ -8,12 +8,9 @@ const siteBaslik = eval('(' + kaynak.slice(bas + 'siteBaslik: '.length, son).tri
 const K = (kod, tamam, detay) => ({ kod, tamam, detay });
 const dent = { ad: '4KDent', semt: 'Çorum', is_turu: 'Diş kliniği', site_saglik: { kontroller: [K('baslik', true), K('aciklama', false, 'Açıklama: "Çorum"'), K('telefon', true), K('yer', true)] } };
 
-const a = siteBaslik(dent, 'çorum diş kliniği');
-assert(!/title/.test(a.metin.yazi), 'başlık zaten iyi, istenmemeli');
-assert(/meta description/.test(a.metin.yazi) && /Şu an sadece "Çorum" yazıyor/.test(a.metin.yazi), 'eksik açıklama istenmeli');
-assert(!/telefonumuz|adresimiz/.test(a.metin.yazi), 'telefon ve yer zaten var');
-assert(/Eksik olan: Google açıklaması/.test(a.n));
-assert.strictEqual(siteBaslik({ ...dent, site_saglik: { kontroller: [K('baslik', true), K('aciklama', true), K('telefon', true), K('yer', true)] } }, 'x'), null, 'hepsi tamamsa iş yok');
-const taranmamis = siteBaslik({ ...dent, site_saglik: null }, 'x');
-assert(/title/.test(taranmamis.metin.yazi) && /telefonumuz ve adresimiz/.test(taranmamis.metin.yazi), 'taranmamışsa hepsi istenir');
-console.log('site-baslik: 6/6 geçti');
+assert.strictEqual(siteBaslik(dent, 'çorum diş kliniği'), null, 'taranmış sitede eksikler site işinde; tekrar istenmez');
+const taranmamis = siteBaslik({ ...dent, site_saglik: null }, 'çorum diş kliniği');
+assert(/title/.test(taranmamis.metin.yazi) && /meta description/.test(taranmamis.metin.yazi), 'taranmamışsa başlık ve açıklama istenir');
+assert(/telefonumuz ve adresimiz/.test(taranmamis.metin.yazi), 'taranmamışsa telefon ve adres istenir');
+assert(/"çorum diş kliniği" aramasında/.test(taranmamis.n));
+console.log('site-baslik: 4/4 geçti');

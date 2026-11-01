@@ -286,6 +286,45 @@
   function yerAdi(i) { return i.semt === 'Türkiye geneli' ? 'Türkiye' : (i.semt || '').split(',')[0].trim(); }
 
   // Hazır işler: dükkân sahibinin anlayacağı dille, madde madde
+  // Platform kontrolünde (yardimci: platformlar) "var" çıkan site: zaten profili olan yere "hesap açın" denmez
+  function platformdaVar(alan) {
+    var a = String(alan || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+    return ((isletme.platformlar && isletme.platformlar.liste) || []).some(function (p) { return p.durum === 'var' && String(p.alan || '').replace(/^www\./, '').split('/')[0] === a; });
+  }
+  // --- İşlerin işletmeye uyup uymadığını gerçek veriyle kontrol eden yardımcılar (4KDent denetimi, 1 Kasım) ---
+  var SAGLIK_K = /\b(dis|hekim\w*|doktor|klinik\w*|hastane\w*|poliklinik\w*|veteriner|eczane|fizyoterap\w*|psikolog|diyetisyen|estetik|saglik|ortodont\w*)\b/;
+  function saglikIsl(i) { return SAGLIK_K.test(sadeK((i.is_turu || '') + ' ' + (i.ad || ''))); }
+  // "yakınımda" aramaları kişinin konumuna göre değişir: bunlar için sayfa/profil işi önerilmez
+  function yakinAramasi(k) { return k.kaynak === 'yakin' || /\byakin/.test(sadeK(k.kelime)); }
+  // Özel klinik "diş hastanesi" diye sayfa açamaz (kurum türü işletmeninkiyle uyuşmuyor)
+  function kurumUyusmuyor(kelime, i) { return /\bhastane/.test(sadeK(kelime)) && !/\bhastane/.test(sadeK((i.is_turu || '') + ' ' + (i.ad || ''))); }
+  // Aramada şehir ve iş türü dışında kalan kelimeler ("çorum implant diş" -> ["implant"]): işletme bu hizmeti veriyor mu bilmiyoruz
+  function hizmetKelimeleri(kelime, i) {
+    var cikar = sadeK((i.semt || '') + ' ' + (i.is_turu || '') + ' ' + isAdi(i, '') + ' ve en iyi fiyat fiyatlari merkezi merkez ozel' +
+      (saglikIsl(i) ? ' hekim hekimi hekimleri disci doktor klinik klinigi klinikleri poliklinik poliklinigi muayenehane agiz saglik sagligi' : '')).split(' ');
+    return sadeK(kelime).split(' ').filter(function (w) { return w.length > 2 && !cikar.some(function (c) { return c.length > 2 && (w === c || (c.length > 3 && (w.indexOf(c) === 0 || c.indexOf(w) === 0))); }); });
+  }
+  // Şart cümlesinde gösterilecek hizmet: aramadan şehir adı çıkınca kalan ifade ("çorum diş teli" -> "diş teli")
+  function hizmetIfadesi(kelime, i) { var y = sadeK(yerAdi(i)); return String(kelime).split(/\s+/).filter(function (w) { return sadeK(w) !== y; }).join(' '); }
+  // Ana sayfanın başlığı aramanın bütün kelimelerini zaten içeriyorsa ayrı sayfa önerilmez (site taraması: site_saglik.title)
+  // Sağlıkta "diş hekimi", "diş kliniği", "dişçi" aynı işi anlatır: başlıkta biri varsa diğerleri de karşılanmış sayılır
+  var SAGLIK_ES = ['hekim', 'hekimi', 'disci', 'doktor', 'klinik', 'klinigi', 'poliklinik', 'poliklinigi', 'muayenehane'];
+  function siteBuAramayiHedefliyor(kelime, i) {
+    var t = sadeK((i.site_saglik && i.site_saglik.title) || ''); if (!t) return false;
+    var tk = t.split(' '), saglikBaslik = saglikIsl(i) && tk.some(function (x) { return SAGLIK_ES.indexOf(x) >= 0; });
+    return sadeK(kelime).split(' ').filter(function (w) { return w.length > 2; }).every(function (w) {
+      return (saglikBaslik && SAGLIK_ES.indexOf(w) >= 0) || tk.some(function (x) { return x === w || (w.length > 3 && x.indexOf(w) === 0); });
+    });
+  }
+  // Rehber/liste sayfası işletmenin şehrine ait mi (link ya da başlıkta şehir geçmeli; "Türkiye geneli" ise hepsi uygun)
+  function sehirdeMi(x, i) { var y = sadeK(yerAdi(i)); return i.semt === 'Türkiye geneli' || !y || sadeK((x.link || '') + ' ' + (x.baslik || '')).indexOf(y) >= 0; }
+  // Bu ölçümde Google sonuçlarında görünen alan adları (sektör sitesi önerisine kanıt)
+  function aramadaGorulenAlanlar(o) {
+    var s = {};
+    ((o && o.kelimeler) || []).forEach(function (k) { (k.arama_ilk3 || []).concat(k.rehberler || []).forEach(function (x) { if (x.alan) s[String(x.alan).replace(/^www\./, '')] = 1; }); });
+    ((o && o.rehber_sayfalari) || []).forEach(function (x) { if (x.alan) s[String(x.alan).replace(/^www\./, '')] = 1; });
+    return s;
+  }
   var IS = {
     googleProfil: function (i, b) {
       var yer = yerAdi(i);
@@ -304,7 +343,7 @@
     },
     yorum: function (i, benim, ort) {
       return { k: 'yorum', t: 'Her hafta 3-5 yeni Google yorumu toplayın', s: 'Her hafta · 10 dakika',
-        n: benim != null ? 'Sizin ' + sayi(benim) + ' yorumunuz var, haritada öndeki 3 işletmenin ortalaması ' + sayi(ort) + '. Google ve yapay zekâ, çok ve yeni yorumu olan işletmeyi öne çıkarıyor.' : 'Google ve yapay zekâ, çok ve yeni yorumu olan işletmeyi öne çıkarıyor.',
+        n: benim != null ? 'Sizin ' + sayi(benim) + ' yorumunuz var, haritada önünüzdeki işletmelerin ortalaması ' + sayi(ort) + '. Google ve yapay zekâ, çok ve yeni yorumu olan işletmeyi öne çıkarıyor.' : 'Google ve yapay zekâ, çok ve yeni yorumu olan işletmeyi öne çıkarıyor.',
         adimlar: [
           'Google İşletme Profilinize girin ve "Yorum iste" ya da "Yorum bağlantısını paylaş" yazan yerden bağlantınızı kopyalayın.',
           'Satıştan veya teslimattan sonra memnun kalan müşterinize aşağıdaki mesajı WhatsApp’tan gönderin. Mesajdaki [yorum bağlantınız] yazan yere kopyaladığınız bağlantıyı yapıştırın.',
@@ -315,18 +354,21 @@
         sonuc: 'Haritada öne geçmenin en hızlı yolu. Yapay zekâ da önerirken yorum sayısına ve puana bakıyor.' };
     },
     puan: function (i, benim, ort) {
+      var y = isletme.yorumlar, cevapsiz = y && y.cevapsiz_sayi != null ? y.cevapsiz_sayi : null;
       return { k: 'puan', t: 'Puanınızı yükseltin', s: '20 dakika, sonra haftada 5 dakika',
         n: 'Puanınız ' + String(benim).replace('.', ',') + ', öndekilerin ortalaması ' + ort.toFixed(1).replace('.', ',') + '.',
         adimlar: [
           'Google İşletme Profilinizdeki yorumlar bölümünü açın.',
-          'Cevapsız kalan bütün yorumlara cevap yazın. İyi yorumlara teşekkür edin.',
+          cevapsiz === 0 ? 'Son yorumlarınızın hepsine cevap vermişsiniz; yeni gelenlere de 2 gün içinde cevap verin.' : (cevapsiz ? 'Son yorumlarınızdan ' + cevapsiz + ' tanesi cevapsız; Google sayfasındaki hazır taslaklarla cevaplayın.' : 'Cevapsız kalan bütün yorumlara cevap yazın.') + ' İyi yorumlara teşekkür edin.',
           'Kötü yorumlarda özür dileyin ve çözüm teklif edin. Örnek: "Yaşadığınız sorun için üzgünüz, 05xx numaramızdan bize ulaşırsanız hemen ilgilenelim."',
           'Sorunu çözdüğünüz müşteriden yorumunu güncellemesini rica edin.'
         ],
         sonuc: 'Puanı düşük işletmeyi hem müşteri hem yapay zekâ atlıyor. Cevap verilen kötü yorumlar güven verir.' };
     },
-    // Site taranmışsa (site_saglik) sadece gerçekten eksik olanları ister; hepsi tamamsa iş yok (null)
+    // Site taranmışsa (site_saglik) eksiklerin hepsi "Sitenizdeki eksikleri düzelttirin" işinde zaten var: aynı şey iki kez istenmez.
+    // Sadece site hiç taranmadıysa genel başlık/açıklama mesajı verilir.
     siteBaslik: function (i, sorgu) {
+      if (i.site_saglik && i.site_saglik.kontroller) return null;
       var yer = yerAdi(i), isK = (i.is_turu || 'hizmet').toLocaleLowerCase('tr'), ss = i.site_saglik, k = {};
       ((ss && ss.kontroller) || []).forEach(function (x) { k[x.kod] = x; });
       var eksik = function (kod) { return !ss || (k[kod] && !k[kod].tamam); };
@@ -351,7 +393,7 @@
         adimlar: [
           'Google İşletme Profilinizin içinden ücretsiz basit site açılabiliyor mu bakın. Açılamıyorsa Wix, Ticimax veya bir tanıdığınızdan tek sayfalık site yaptırın.',
           'Sayfada şunlar yazı olarak olsun: ne sattığınız veya hangi hizmeti verdiğiniz, açık adres, telefon, çalışma saatleri.',
-          'Müşterilerin en çok sorduğu 5 soruyu ve cevaplarını ekleyin (örnek: "Teslimat var mı?", "Taksit yapıyor musunuz?").',
+          'Müşterilerin en çok sorduğu 5 soruyu ve cevaplarını ekleyin (örnek: "Randevu gerekiyor mu?", "Hafta sonu açık mısınız?", "Kartla ödeme var mı?").',
           'Sitenin adresini Google İşletme Profilinize ve Instagram’ınıza ekleyin.'
         ],
         sonuc: 'Google aramasında çıkmaya başlarsınız ve yapay zekâ sizin hakkınızda okuyacak bir kaynak bulur.' };
@@ -388,14 +430,16 @@
         sonuc: 'ChatGPT’ye "' + yerAdi(i) + ' ' + isAdi(i, '') + '" sorulduğunda listeye girme şansınız doğar.',
         l: 'https://www.bingplaces.com', lm: 'Bing Places' };
     },
+    // Yandex kaydı platform kontrolünde bulunduysa sadece Apple istenir (Apple otomatik kontrol edilemiyor)
     digerHaritalar: function () {
-      return { k: 'apple-yandex', t: 'Apple Haritalar ve Yandex Haritalar’a ekleyin', s: '20 dakika · ücretsiz',
-        n: 'iPhone kullananlar ve Siri Apple Haritalar’a, Türkiye’de birçok kişi Yandex Haritalar’a bakıyor.',
+      var yandexVar = platformdaVar('yandex.com.tr');
+      return { k: 'apple-yandex', t: yandexVar ? 'Apple Haritalar’a ekleyin' : 'Apple Haritalar ve Yandex Haritalar’a ekleyin', s: yandexVar ? '10 dakika · ücretsiz' : '20 dakika · ücretsiz',
+        n: yandexVar ? 'Yandex Haritalar’da kaydınızı bulduk. iPhone kullananlar ve Siri ise Apple Haritalar’a bakıyor; orayı otomatik kontrol edemiyoruz.' : 'iPhone kullananlar ve Siri Apple Haritalar’a, Türkiye’de birçok kişi Yandex Haritalar’a bakıyor.',
         adimlar: [
-          'Apple için businessconnect.apple.com adresine Apple kimliğinizle (iPhone’unuzdaki hesap) girin, "İşletme ekle" deyin, bilgilerinizi girin.',
-          'Yandex için Google’a "Yandex işletme ekle" yazın, çıkan Yandex Business sayfasından ücretsiz kayıt olun.',
+          'Önce iPhone’da Haritalar uygulamasında adınızı aratın; çıkıyorsa bu adımı geçin. Çıkmıyorsa businessconnect.apple.com adresine Apple kimliğinizle (iPhone’unuzdaki hesap) girin, "İşletme ekle" deyin, bilgilerinizi girin.',
+          yandexVar ? null : 'Yandex için Google’a "Yandex işletme ekle" yazın, çıkan Yandex Business sayfasından ücretsiz kayıt olun.',
           'Her yerde adı, adresi ve telefonu Google’daki ile aynı yazın. Farklı yazılmış bilgi yapay zekânın kafasını karıştırır.'
-        ],
+        ].filter(Boolean),
         sonuc: 'Yapay zekâ sizi ne kadar çok yerde aynı bilgiyle görürse size o kadar güveniyor.',
         l: 'https://businessconnect.apple.com', lm: 'Apple Business Connect' };
     }
@@ -404,10 +448,18 @@
   // Sektörünüzdeki rehber ve platform siteleri: araştırılmış liste + Google'da gerçekten çıkan liste sayfaları
   function rehberIsleri(i, o) {
     var isler = [];
-    var sektor = (isletme.sektor_rehberleri || i.sektor_rehberleri || []);
+    // Yapay zekânın önerdiği sektör sitelerinden sadece bu işletmenin Google aramalarında gerçekten görünenler ya da
+    // sektörüyle bilinen büyük siteler kalır (4KDent'e "Armut" ve var olmayan "Enuygun Sağlık" önerilmişti)
+    var gorulen = aramadaGorulenAlanlar(o), tS = sadeK(i.is_turu || '');
+    var bilinen = ['sikayetvar.com'].concat(saglikIsl(i) ? ['doktortakvimi.com'] : [],
+      /(tadilat|temizlik|nakliyat|boya|tesisat|elektrik|usta|montaj|tamir|ders|fotograf|klima|cilingir)/.test(tS) ? ['armut.com'] : [],
+      /(restoran|kafe|cafe|lokanta|otel|pansiyon|kebap|pide)/.test(tS) ? ['tripadvisor.com.tr', 'yemeksepeti.com'] : []);
+    var sektorHepsi = (isletme.sektor_rehberleri || i.sektor_rehberleri || []).filter(function (x) { var a = String(x.alan || '').replace(/^www\./, ''); return gorulen[a] || bilinen.indexOf(a) >= 0; });
+    var sektor = sektorHepsi.filter(function (x) { return !platformdaVar(x.alan); });
+    var zatenVar = sektorHepsi.length - sektor.length;
     if (sektor.length) isler.push({
       k: 'sektor-siteleri', t: 'Sektörünüzün sitelerinde işletme hesabı açın', s: 'Her biri 15-20 dakika · çoğu ücretsiz',
-      n: '"' + (i.is_turu || 'işletme') + '" işletmeleri için Türkiye’de müşterilerin baktığı siteleri araştırdık. Yapay zekâ ve Google bu sitelerdeki profilleri okuyor. Aşağıdakilerin her birinde hesabınız olsun:',
+      n: '"' + (i.is_turu || 'işletme') + '" işletmeleri için Türkiye’de müşterilerin baktığı siteleri araştırdık. Yapay zekâ ve Google bu sitelerdeki profilleri okuyor. ' + (zatenVar ? zatenVar + ' tanesinde sizi zaten bulduk; kalanlarda ' : 'Aşağıdakilerin her birinde ') + 'hesabınız olsun:',
       siteler: sektor.map(function (x) { return { ad: x.ad, alan: x.alan, url: 'https://' + x.alan, not: x.ne_ise_yarar }; }),
       adimlar: [
         'Listedeki her siteye girin ve "Firma ekle", "İşletme kaydı", "Satıcı ol" ya da "Hizmet veren ol" yazan bölümü bulun.',
@@ -417,7 +469,7 @@
       ],
       sonuc: 'Yapay zekâ sizi ne kadar çok güvenilir sitede görürse o kadar çok öneriyor.'
     });
-    var tum = o.rehber_sayfalari || [];
+    var tum = (o.rehber_sayfalari || []).filter(function (x) { return sehirdeMi(x, i); });
     var sayfalar = tum.filter(function (x) { return x.tur !== 'rakip'; });
     var rakipSayfa = tum.filter(function (x) { return x.tur === 'rakip'; });
     if (rakipSayfa.length) isler.push({
@@ -429,12 +481,12 @@
         'Sitenizi yapan kişiye aşağıdaki mesajı gönderin.',
         'Sayfa yayına girince 3-4 hafta bekleyin; Norevo haftalık ölçümde değişimi gösterecek.'
       ],
-      metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemize "' + rakipSayfa[0].kelime.replace(/(^|\s)\S/g, function (h) { return h.toLocaleUpperCase('tr'); }) + '" başlıklı yeni bir sayfa ekleyebilir misiniz? Sayfada ' + yerAdi(i) + ' işletmemizin adresi, telefonu, çalışma saatleri, ürün gruplarımız (fotoğraflı), teslimat bölgelerimiz ve sık sorulan 5 soru ile cevapları olsun. Sayfa başlığı ve ana başlık aynı olsun. Teşekkürler.' },
+      metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemize "' + rakipSayfa[0].kelime.replace(/(^|\s)\S/g, function (h) { return h.toLocaleUpperCase('tr'); }) + '" başlıklı yeni bir sayfa ekleyebilir misiniz? Sayfada ' + yerAdi(i) + ' işletmemizin adresi, telefonu, çalışma saatleri, verdiğimiz hizmetler ya da sattığımız ürünler (fotoğraflı), hizmet verdiğimiz bölgeler ve sık sorulan 5 soru ile cevapları olsun. Sayfa başlığı ve ana başlık aynı olsun. Teşekkürler.' },
       sonuc: 'Rakiplerinizin çıktığı aramalarda siz de Google’ın ilk sayfasına çıkma şansı yakalarsınız.'
     });
     if (sayfalar.length) isler.push({
       k: 'liste-sayfalari', t: 'Google’da çıkan liste sayfalarına adınızı ekletin', s: 'Sayfa başına 10 dakika',
-      n: 'Müşterileriniz Google’da arama yapınca bu liste ve rehber sayfalarını görüyor. Bu sayfalarda sizin adınızı göremedik:',
+      n: 'Müşterileriniz Google’da arama yapınca bu liste ve rehber sayfalarını görüyor. Sayfaların içini otomatik okuyamıyoruz; adınızın geçip geçmediğine bir bakın:',
       siteler: sayfalar.map(function (x) { return { ad: x.baslik, alan: x.alan, url: 'https://' + x.alan, not: '"' + x.kelime + '" aramasında ' + x.sira + '. sırada çıkıyor.' }; }),
       adimlar: [
         'Her sayfayı açın ve listede işletmenizin olup olmadığına bakın.',
@@ -450,7 +502,10 @@
   function olcumIsleri(o, i) {
     var isler = [];
     var b = o.isletme_bilgi || {};
-    var ilk3 = (o.harita_sonuclar || []).filter(function (r) { return !r.siz; }).slice(0, 3);
+    // Karşılaştırma sadece haritada ÖNÜNÜZDEKİLERLE (en fazla 3); 1. sıradaysanız yorum/puan işi çıkmaz.
+    // (Eskiden ilk 3 "rakip" alınıyordu: 4KDent 3. iken 4. sıradaki 35 yorumlu işletme de ortalamaya giriyordu.)
+    var benS = ((o.harita_sonuclar || []).filter(function (r) { return r.siz; })[0] || {}).sira;
+    var ilk3 = (o.harita_sonuclar || []).filter(function (r) { return !r.siz && (!benS || r.sira < benS); }).slice(0, 3);
     var ortYorum = ilk3.length ? Math.round(ilk3.reduce(function (t, r) { return t + (r.yorum || 0); }, 0) / ilk3.length) : null;
     var ortPuan = ilk3.length ? ilk3.reduce(function (t, r) { return t + (r.puan || 0); }, 0) / ilk3.length : null;
     if (b.bulundu === false) isler.push(IS.googleProfil(i, b));
@@ -462,7 +517,8 @@
     else if (o.arama_sonuclar && o.arama_sira == null && i.site) { var sb = o.marka_arama && o.marka_arama.sira == null ? IS.siteGorunmuyor(i, o) : IS.siteBaslik(i, o.arama_sorgu || ''); if (sb) isler.push(sb); }
     var benH = (o.harita_sonuclar || []).filter(function (r) { return r.siz; })[0];
     if (i.site && benH && !benH.site) isler.push(IS.profilSite(i));
-    if (o.yz_soru_sayisi && o.yz_gecen === 0) isler.push(IS.bing(i));
+    // Bing işi ChatGPT için: ChatGPT ölçüldüyse onun sonucuna, ölçülmediyse Gemini'ye bakılır
+    if (o.cg_soru_sayisi ? o.cg_gecen === 0 : (o.yz_soru_sayisi && o.yz_gecen === 0)) isler.push(IS.bing(i));
     if (o.harita_sira && o.harita_sira <= 3 && o.yz_gecen > 0) {
       isler.push({ k: 'koru', t: 'İyi durumdasınız, yerinizi koruyun', s: 'Her hafta', n: 'Haritalarda ilk 3’tesiniz ve yapay zekâ sizi öneriyor. Bunu korumak için:', adimlar: ['Her hafta birkaç yeni Google yorumu toplamaya devam edin.', 'Ayda 2-3 yeni fotoğraf ekleyin.', 'Kampanya veya yeni ürün olunca Google profilinizde "Güncelleme" paylaşın.'] });
     }
@@ -486,10 +542,13 @@
       adimlar.push({ t: 'Tripadvisor’da işletmenizi sahiplenin', s: '15 dakika', n: 'Yeme-içme ve konaklamada yapay zekâ Tripadvisor yorumlarını sıkça kaynak gösteriyor.', adimlar: ['Google’a "Tripadvisor işletme sahiplen" yazın ve çıkan sayfadan işletmenizi arayın.', 'Çıkarsa "Sahiplen", çıkmazsa "İşletme ekle" deyin.', 'Menü, fotoğraf ve çalışma saatlerini ekleyin. Yorumlara cevap verin.'], l: 'https://www.tripadvisor.com.tr/Owners', lm: 'Tripadvisor işletme' });
     else
       adimlar.push({ t: 'Şikayetvar’daki şikâyetlere cevap verin', s: 'Haftada 10 dakika', n: 'Müşteriler ve yapay zekâ "güvenilir mi?" sorusunda Şikayetvar’a bakıyor.', adimlar: ['Google’a "Şikayetvar ' + i.ad + '" yazın. Markanızın sayfası çıkıyorsa Şikayetvar’ın "Marka girişi" bölümünden kurumsal hesap açın.', 'Cevapsız şikâyetlere kısa, kibar ve çözüm teklif eden cevaplar yazın.', 'Sorunu çözünce müşteriden şikâyeti "çözüldü" olarak işaretlemesini rica edin.'], l: 'https://www.sikayetvar.com', lm: 'Şikayetvar' });
-    adimlar.push(i.site
-      ? { k: 'site-sayfa', yaz: { tur: 'sayfa', kelime: yer + ' ' + cek }, t: 'Sitenize "' + yer + ' ' + cek + '" sayfası ekletin', s: '1-2 saat (sitenizi yapan kişi için)', n: 'Gemini önerirken en çok işletmelerin kendi sitelerini kaynak gösteriyor.', adimlar: ['Sitenizi kim yaptıysa aşağıdaki mesajı ona gönderin.', 'Sayfa yayına girince bağlantısını Google İşletme Profilinize ekleyin.'], metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemize "' + yer + ' ' + cek + '" başlıklı yeni bir sayfa ekleyebilir misiniz? Sayfada şunlar yazı olarak olsun: ' + yer + ' işletmemizin açık adresi, telefonu, çalışma saatleri, sattığımız ürün grupları veya verdiğimiz hizmetler, teslimat/servis bölgelerimiz ve müşterilerin sık sorduğu 5 soru ile cevapları. Sayfa başlığı: "' + i.ad + ' ' + yer + ' | ' + (i.is_turu || '') + '". Teşekkürler.' } }
+    // Site bu aramada zaten ilk 3'teyse ayrı sayfa önerilmez
+    var sayfaK = sadeK(yer + ' ' + cek), sayfaSira = ((o && o.kelimeler) || []).filter(function (x) { return sadeK(x.kelime) === sayfaK; }).map(function (x) { return x.arama_sira; })[0];
+    if (!(i.site && ((sayfaSira && sayfaSira <= 3) || siteBuAramayiHedefliyor(yer + ' ' + cek, i)))) adimlar.push(i.site
+      ? { k: 'site-sayfa', yaz: { tur: 'sayfa', kelime: yer + ' ' + cek }, t: 'Sitenize "' + yer + ' ' + cek + '" sayfası ekletin', s: '1-2 saat (sitenizi yapan kişi için)', n: 'Gemini önerirken en çok işletmelerin kendi sitelerini kaynak gösteriyor.', adimlar: ['Sitenizi kim yaptıysa aşağıdaki mesajı ona gönderin.', 'Sayfa yayına girince bağlantısını Google İşletme Profilinize ekleyin.'], metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemize "' + yer + ' ' + cek + '" başlıklı yeni bir sayfa ekleyebilir misiniz? Sayfada şunlar yazı olarak olsun: ' + yer + ' işletmemizin açık adresi, telefonu, çalışma saatleri, verdiğimiz hizmetler ya da sattığımız ürünler, hizmet verdiğimiz bölgeler ve müşterilerin sık sorduğu 5 soru ile cevapları. Sayfa başlığı: "' + i.ad + ' ' + yer + ' | ' + (i.is_turu || '') + '". Teşekkürler.' } }
       : IS.siteYok(i));
-    adimlar.push({ t: 'Şehrinizdeki listelerde ve haberlerde adınız geçsin', s: 'Ayda 1 deneme', n: '"En iyi ' + cek + ' yerleri" gibi yazılar ve yerel haber siteleri yapay zekânın en çok okuduğu kaynaklar arasında.', adimlar: ['Google’a "' + yer + ' en iyi ' + cek + '" yazın. Çıkan liste yazılarını ve yerel haber sitelerini not edin.', 'Bu sitelere ve şehrinizin popüler Instagram sayfalarına telefonla veya mesajla ulaşın, işletmenizi tanıtmalarını isteyin.', 'Açılış, kampanya veya yardım kampanyası gibi haber olacak bir şey yaptığınızda yerel gazetelere haber verin.'] });
+    // Sağlıkta reklam yasağı var: "tanıtmalarını isteyin" önerisi verilmez
+    if (!saglikIsl(i)) adimlar.push({ t: 'Şehrinizdeki listelerde ve haberlerde adınız geçsin', s: 'Ayda 1 deneme', n: '"En iyi ' + cek + ' yerleri" gibi yazılar ve yerel haber siteleri yapay zekânın en çok okuduğu kaynaklar arasında.', adimlar: ['Google’a "' + yer + ' en iyi ' + cek + '" yazın. Çıkan liste yazılarını ve yerel haber sitelerini not edin.', 'Bu sitelere ve şehrinizin popüler Instagram sayfalarına telefonla veya mesajla ulaşın, işletmenizi tanıtmalarını isteyin.', 'Açılış, kampanya veya yardım kampanyası gibi haber olacak bir şey yaptığınızda yerel gazetelere haber verin.'] });
     return adimlar;
   }
 
@@ -634,9 +693,12 @@
     var bir = k.harita_birinci || null;
     // Harita tarafı
     if (b.bulundu === false) isler.push(IS.googleProfil(i, b));
-    else if (!k.yerel_kutuda && !(k.harita_sira && k.harita_sira <= 3)) isler.push({
+    var uygunsuz = yakinAramasi(k) || kurumUyusmuyor(k.kelime, i), hk = hizmetKelimeleri(k.kelime, i);
+    // Aramada işletmenin vermediği bir hizmet olabilir ("implant", "çocuk"): öneri "veriyorsanız" diye yazılır
+    var sart = hk.length ? '"' + hizmetIfadesi(k.kelime, i) + '" hizmetini veriyorsanız: ' : '';
+    if (b.bulundu !== false && !uygunsuz && !k.yerel_kutuda && !(k.harita_sira && k.harita_sira <= 3)) isler.push({
       k: 'profil-' + kod, t: 'Google profilinizde "' + k.kelime + '" geçsin', s: '20 dakika · ücretsiz',
-      n: 'Google, harita kutusuna bu aramayla en çok eşleşen profilleri koyuyor. ' + (k.harita_sira ? 'Haritalar’da ' + k.harita_sira + '. sıradasınız.' : k.harita_bakilan != null ? 'Haritalar’da ilk 20’de değilsiniz.' : 'Haritalar bu aramada ölçülemedi.'),
+      n: sart + 'Google, harita kutusuna bu aramayla en çok eşleşen profilleri koyuyor. ' + (k.harita_sira ? 'Haritalar’da ' + k.harita_sira + '. sıradasınız.' : k.harita_bakilan != null ? 'Haritalar’da ilk 20’de değilsiniz.' : 'Haritalar bu aramada ölçülemedi.'),
       adimlar: [
         'Google İşletme Profilinize girin, "Profili düzenle" deyin.',
         'Ana kategori işinizi tam anlatsın. "' + k.kelime + '" aramasına uyan ek kategoriler varsa ekleyin.',
@@ -649,10 +711,11 @@
       n: 'Bu aramada haritalarda 1. sıradaki "' + bir.ad + '" işletmesinin ' + sayi(bir.yorum) + ' yorumu' + (bir.puan ? ' ve ' + String(bir.puan).replace('.', ',') + ' puanı' : '') + ' var. Sizin ' + sayi(b.yorum) + ' yorumunuz var. Aradaki fark kapandıkça yükselirsiniz.' }));
     // Site tarafı
     if (!i.site) isler.push(IS.siteYok(i));
-    else if (!k.arama_sira) {
+    // Ana sayfa bu aramayı zaten hedefliyorsa, "yakınımda" aramasıysa ya da kurum türü uymuyorsa ayrı sayfa önerilmez
+    else if (!k.arama_sira && !uygunsuz && !siteBuAramayiHedefliyor(k.kelime, i)) {
       var ust = (k.arama_ilk3 || []).filter(function (x) { return x.tur !== 'rehber'; })[0];
-      isler.push({ k: 'sayfa-' + kod, yaz: { tur: 'sayfa', kelime: k.kelime }, t: 'Sitenize "' + K + '" sayfası ekletin', s: '1-2 saat (sitenizi yapan kişi için)',
-        n: 'Bu aramada sitenizi ilk 10’da göremedik.' + (ust ? ' 1. sıradaki site: ' + ust.alan + ' ("' + ust.baslik + '").' : '') + ' Google bir aramada, başlığı o aramayla aynı olan sayfaları öne çıkarıyor.',
+      isler.push({ k: 'sayfa-' + kod, yaz: { tur: 'sayfa', kelime: k.kelime }, t: 'Sitenize "' + K + '" sayfası ekletin' + (hk.length ? ' (bu hizmeti veriyorsanız)' : ''), s: '1-2 saat (sitenizi yapan kişi için)',
+        n: sart + 'Bu aramada sitenizi ilk 10’da göremedik.' + (ust ? ' 1. sıradaki site: ' + ust.alan + ' ("' + ust.baslik + '").' : '') + ' Google bir aramada, başlığı o aramayla aynı olan sayfaları öne çıkarıyor.',
         adimlar: ['Aşağıdaki mesajı sitenizi yapan kişiye gönderin.', 'Sayfa yayına girince ana sayfanızdan bu sayfaya bağlantı verilsin.', '3-4 hafta sonra burada sıranızın değiştiğini göreceksiniz.'],
         metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemize "' + K + '" başlıklı yeni bir sayfa ekleyebilir misiniz? Sayfa başlığı (title) "' + K + ' | ' + i.ad + '" olsun, sayfadaki ana başlık da "' + K + '". İçinde en az 300 kelimelik açıklama, fotoğraflar, adresimiz, telefonumuz, çalışma saatlerimiz ve bu konuda müşterilerin sık sorduğu 5 soru ile cevapları olsun. Ana sayfadan bu sayfaya bağlantı verelim. Teşekkürler.' },
         sonuc: 'Bu aramada Google’ın ilk sayfasına girme şansı yakalarsınız.' });
@@ -661,13 +724,17 @@
       adimlar: ['Sayfanın başlığı "' + K + '" ile başlasın.', 'Sayfaya fotoğraf, fiyat aralığı ve sık sorulan sorular eklensin (en az 300 kelime).', 'Google İşletme Profilinizdeki web sitesi bağlantısı bu sayfayı göstersin ya da ana sayfadan bu sayfaya bağlantı verilsin.', 'Aşağıdaki rehber sitelerden sitenize bağlantı alın.'],
       sonuc: 'Üstünüzdeki sitelerin önüne geçme şansınız artar.' });
     // Bu aramada çıkan rehberler
-    var reh = (k.rehberler || []);
+    var reh = (k.rehberler || []).filter(function (x) { return sehirdeMi(x, i); });
     if (reh.length) isler.push({ k: 'rehber-' + kod, t: 'Bu aramada çıkan rehber sitelere eklenin', s: 'Site başına 10 dakika',
       n: '"' + k.kelime + '" arayanlar Google’da bu sayfaları da görüyor. Buralarda adınız olsun:',
       siteler: reh.map(function (x) { return { ad: x.baslik, alan: x.alan, url: x.link || ('https://' + x.alan), not: x.sira + '. sırada' }; }),
       adimlar: ['Her sayfayı açın, işletmeniz listede var mı bakın.', 'Yoksa "Firma ekle" ya da "Ücretsiz kayıt" bölümünden ekleyin. Adı, adresi ve telefonu Google’daki ile aynı yazın.'],
       sonuc: 'Müşteri rehbere tıklasa bile sizi görür. Yapay zekâ da bu rehberleri okuyor.' });
-    if (!isler.length) isler.push({ bilgi: true, t: 'Bu aramada en öndesiniz', n: 'Yerinizi korumak için her hafta birkaç yeni yorum toplayın ve ayda birkaç fotoğraf ekleyin.' });
+    if (!isler.length) isler.push(k.arama_sira === 1 || (k.harita_sira && k.harita_sira <= 3 && k.arama_sira)
+      ? { bilgi: true, t: 'Bu aramada en öndesiniz', n: 'Yerinizi korumak için her hafta birkaç yeni yorum toplayın ve ayda birkaç fotoğraf ekleyin.' }
+      : { bilgi: true, t: 'Bu arama için ayrı bir iş önermiyoruz', n: yakinAramasi(k) ? 'Bu arama, arayan kişinin bulunduğu yere göre değişiyor; ayrı sayfa ya da profil değişikliği gerekmiyor.'
+        : kurumUyusmuyor(k.kelime, i) ? 'Bu aramayı yapanlar başka türde bir kurum (ör. devlet hastanesi) arıyor; işletmeniz için uygun bir hedef değil.'
+        : 'Ana sayfanız bu aramayı zaten hedefliyor. İşlerim sayfasındaki genel işler (yorum, Google açıklaması, site eksikleri) bu aramada da yükselmenizi sağlar.' });
     return isler;
   }
   function aramaSayfaCiz(n) {
@@ -1058,6 +1125,26 @@
     kutu.appendChild(ul);
     siteIsleriCiz();
   }
+  function siteIstegi(k) {
+    var i = isletme, yer = yerAdi(i), isK = isAdi(i, 'işletme'), d = String(k.detay || '').replace(/^[^:]+:\s*/, '');
+    var ISTEK = {
+      https: 'Siteye ücretsiz SSL sertifikası kurulsun, site https ile açılsın.',
+      hiz: 'Ana sayfa hızlandırılsın, resimler küçültülsün (' + k.detay + ').',
+      mobil: 'Site telefon ekranına uyumlu hâle getirilsin.',
+      baslik: 'Ana sayfa başlığı (title) işimizi ve şehrimizi söylesin: "' + i.ad + ' | ' + yer + ' ' + isK + '". Şu an: ' + d,
+      aciklama: 'Google’da görünen açıklama (meta description) 120-155 karakterlik bir cümle olsun, ne iş yaptığımızı ve nerede olduğumuzu söylesin; örneğin "' + i.ad + ', ' + yer + ' bölgesinde ' + isK + '. Adres, telefon ve çalışma saatlerimiz sitemizde." Şu an sadece ' + d + ' yazıyor.',
+      h1: 'Ana sayfanın en üstündeki ana başlık (H1) işimizi ve şehrimizi söylesin; örneğin "' + yer + ' ' + isK + '". Şu an: ' + d,
+      telefon: 'Telefon numaramız ana sayfada yazı olarak ve tıklayınca arayacak şekilde olsun.',
+      yer: 'Açık adresimiz ve hizmet verdiğimiz bölgeler ana sayfada yazı olarak olsun.',
+      ad: 'İşletme adımız "' + i.ad + '" ana sayfada yazı olarak geçsin.',
+      sema: 'Ana sayfaya LocalBusiness yapılandırılmış verisi (JSON-LD) eklensin: işletme adı, adres, telefon, çalışma saatleri ve Google Haritalar bağlantısı.',
+      harita: 'İletişim bölümüne Google Haritalar haritası ya da işletme profilimizin bağlantısı eklensin.',
+      indeks: 'ACİL: sayfadaki "noindex" işareti kaldırılsın; bu işaret varken Google siteyi hiç göstermiyor.',
+      resim: 'Resimlere ne gösterdiklerini anlatan kısa açıklamalar (alt metni) eklensin. Taramada ' + k.detay.replace(/\.$/, '').toLocaleLowerCase('tr') + '.',
+      sitemap: 'Site haritası (sitemap.xml) oluşturulup Google Search Console’a eklensin.'
+    };
+    return ISTEK[k.kod] || (k.ad + ': ' + k.oneri);
+  }
   function siteIsleriCiz() {
     var ss = isletme.site_saglik, kutu = $('site-isler'); if (!kutu) return;
     var eksik = ss && ss.kontroller ? ss.kontroller.filter(function (k) { return !k.tamam; }).sort(function (a, b) { return b.agirlik - a.agirlik; }) : [];
@@ -1067,7 +1154,8 @@
       k: 'site-saglik-' + eksik.map(function (k) { return k.kod; }).join('-'), t: 'Sitenizdeki ' + eksik.length + ' eksiği düzelttirin', s: 'Sitenizi yapan kişi için · 1-3 saat',
       n: 'Sitenizi taradık. Bu eksikler Google’ın ve yapay zekânın sizi anlamasını zorlaştırıyor. Aşağıdaki mesajı sitenizi yapan kişiye gönderin.',
       adimlar: eksik.map(function (k) { return k.ad + ': ' + k.oneri; }),
-      metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemiz ' + gosterLink(ss.adres || isletme.site) + ' için şu düzeltmeleri yapabilir misiniz?\n\n' + eksik.map(function (k, n) { return (n + 1) + ') ' + k.ad + ': ' + k.oneri; }).join('\n') + '\n\nTeşekkürler.' },
+      // Siteyi yapan kişiye giden mesaj onun diliyle ve taramada bulunan gerçek değerlerle (öneri metinleri işletme sahibine hitap ediyor)
+      metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemiz ' + gosterLink(ss.adres || isletme.site) + ' için şu düzeltmeleri yapabilir misiniz?\n\n' + eksik.map(function (k, n) { return (n + 1) + ') ' + siteIstegi(k); }).join('\n') + '\n\nTeşekkürler.' },
       sonuc: 'Siteniz Google’da daha iyi anlaşılır, telefonda düzgün açılır; müşteri ve yapay zekâ size daha kolay güvenir.'
     }]);
   }
