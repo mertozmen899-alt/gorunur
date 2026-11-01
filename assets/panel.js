@@ -1412,7 +1412,24 @@
     }).catch(function (err) { $('sil-durum').textContent = err.message; btn.disabled = false; btn.textContent = 'Hesabımı ve verilerimi sil'; });
   });
 
-  // "Bu sonuç yanlış": kart altında kısa not formu açılır, bildirim yanlis_bildirimleri tablosuna gider (sadece yönetici okur)
+  // "Bu sonuç yanlış": kart altında kısa not formu açılır; yapay zekâ ölçüm verisine bakar (yardimci, islem 'yanlis'),
+  // cevabı sağ altta sohbet balonunda gösterilir. Bildirim yanlis_bildirimleri tablosuna sunucuda yazılır (sadece yönetici okur).
+  function destekMesaj(metin, kimden) {
+    var b = $('destek-balon');
+    if (!b) {
+      b = el('section', null, 'destek-balon'); b.id = 'destek-balon'; b.setAttribute('aria-label', 'Norevo destek');
+      var bas = el('div', null, 'destek-bas'), kapat = el('button', '×', 'destek-kapat'), liste = el('div', null, 'destek-liste');
+      kapat.type = 'button'; kapat.setAttribute('aria-label', 'Mesajları kapat');
+      kapat.addEventListener('click', function () { b.hidden = true; });
+      liste.setAttribute('role', 'log'); liste.setAttribute('aria-live', 'polite');
+      bas.appendChild(el('strong', 'Norevo destek')); bas.appendChild(kapat); b.appendChild(bas); b.appendChild(liste);
+      document.body.appendChild(b);
+    }
+    b.hidden = false;
+    var l = b.querySelector('.destek-liste'), m = el('p', metin, 'destek-mesaj destek-' + kimden);
+    l.appendChild(m); l.scrollTop = l.scrollHeight;
+    return m;
+  }
   function bildirimBaglam(bolum) {
     var o = gecmis[0] || {}, b = { sayfa: location.hash.slice(1) || 'ozet', olcum_id: o.id || null, olcum_tarih: o.baslangic || null };
     if (bolum === 'site' && isletme.site_saglik) { b.adres = isletme.site_saglik.adres; b.puan = isletme.site_saglik.puan; b.tarih = isletme.site_saglik.tarih; }
@@ -1436,13 +1453,15 @@
     vaz.addEventListener('click', function () { f.remove(); btn.setAttribute('aria-expanded', 'false'); btn.focus(); });
     f.addEventListener('submit', function (ev) {
       ev.preventDefault();
-      var bolum = btn.getAttribute('data-bolum');
-      gon.disabled = true; gon.textContent = 'Gönderiliyor…'; dr.textContent = '';
-      // insert sonrası select yok: kullanıcı kendi bildirimini okuyamaz (sadece yönetici okur)
-      A.sb.from('yanlis_bildirimleri').insert({ isletme_id: isletme.id, bolum: bolum, baglam: bildirimBaglam(bolum), notu: ta.value.trim().slice(0, 1000) || null }).then(function (r) {
-        if (r && r.error) throw r.error;
-        f.remove(); btn.textContent = 'Bildirdiniz, teşekkürler. Kontrol edip düzelteceğiz.'; btn.disabled = true; btn.removeAttribute('aria-expanded');
-      }).catch(function (err) { gon.disabled = false; gon.textContent = 'Gönder'; dr.textContent = A.hataMetni(err); });
+      var bolum = btn.getAttribute('data-bolum'), notu = ta.value.trim().slice(0, 1000);
+      gon.disabled = true; gon.textContent = 'Kontrol ediliyor…'; dr.textContent = '';
+      destekMesaj(notu || 'Bu sonuç yanlış görünüyor.', 'siz');
+      var bekle = destekMesaj('Ölçüm verilerinize bakıyoruz, birkaç saniye sürebilir…', 'biz');
+      yardimci({ islem: 'yanlis', bolum: bolum, baglam: bildirimBaglam(bolum), notu: notu || null }).then(function (r) {
+        bekle.textContent = [r.cevap].concat(r.ek || []).join(' ');
+        if (r.site) { isletme.site_saglik = r.site; siteCiz(); isSayaci(); }
+        f.remove(); btn.textContent = 'Kontrol ettik, cevabımız sağ altta.'; btn.disabled = true; btn.removeAttribute('aria-expanded');
+      }).catch(function (err) { bekle.textContent = err.message; gon.disabled = false; gon.textContent = 'Gönder'; });
     });
     btn.after(f); btn.setAttribute('aria-expanded', 'true'); ta.focus();
   });

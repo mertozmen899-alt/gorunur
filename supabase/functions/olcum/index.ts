@@ -566,9 +566,9 @@ Deno.serve(async (req) => {
   const { data: ymt } = await db.from("yoneticiler").select("eposta").eq("eposta", String(u.user.email || "").toLowerCase()).maybeSingle();
   if (!ymt) {
     const hak = parseInt(Deno.env.get("GUNLUK_OLCUM_HAKKI") || "3", 10);
-    // Hatalı biten ölçümler hakka sayılmaz
+    // Hatalı biten ölçümler ve "Yanlış mı?" ile iade edilenler (yardimci) hakka sayılmaz
     const { count } = await db.from("olcumler").select("id", { count: "exact", head: true })
-      .eq("sahip", u.user.id).eq("kaynak", "elle").neq("durum", "hata").gte("baslangic", new Date(Date.now() - 864e5).toISOString());
+      .eq("sahip", u.user.id).eq("kaynak", "elle").neq("durum", "hata").eq("hak_iade", false).gte("baslangic", new Date(Date.now() - 864e5).toISOString());
     if ((count || 0) > hak) { await kayitSil(); return json({ hata: `Bugünkü ölçüm hakkınız (${hak}) doldu. Yarın tekrar deneyin.` }, 429); }
   }
 

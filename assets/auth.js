@@ -26,7 +26,7 @@
     for (var k in HATA) if (m.indexOf(k) === 0) return HATA[k];
     if (/rate limit/i.test(m)) return HATA['Email rate limit exceeded'];
     // Sunucunun kendi Türkçe uyarıları olduğu gibi gösterilir (ör. günlük değişiklik sınırı)
-    if (/^Bugün /.test(m)) return m;
+    if (/^(Bugün |İşletme bilgileriniz)/.test(m)) return m;
     if (/check constraint .*(site|google_profil)/i.test(m)) return 'Web adresi geçersiz görünüyor. https:// ile başlayan tam adresi yazın ya da boş bırakın.';
     if (/fetch|network/i.test(m)) return 'İnternet bağlantısında sorun var. Tekrar deneyin.';
     // Teknik ayrıntı yalnız konsola yazılır, kullanıcıya sade mesaj gösterilir

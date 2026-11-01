@@ -82,6 +82,15 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     const upSonra = await p.evaluate(() => [JSON.parse(localStorage.getItem('fake') || '{}').upsert || 0, (JSON.parse(localStorage.getItem('fake') || '{}').isl || {}).whatsapp].join(' '));
     kontrol(cihaz + ' kurulum düzenlemesi kaydediliyor (upsert) ve panele dönülüyor', /panel\.html/.test(p.url()) && upSonra === (upOnce + 1) + ' 05327654321', p.url() + ' ' + upOnce + ' -> ' + upSonra + ' ' + ((await p.textContent('#uyari').catch(() => '')) || ''));
     await p.evaluate(() => { const st = JSON.parse(localStorage.getItem('fake') || '{}'); delete st.isl; delete st.upsert; localStorage.setItem('fake', JSON.stringify(st)); });
+    // Kurulumdan sonra tek küçük düzeltme: hak duruyorsa not görünür, kullanıldıysa ad/semt/iş türü kilitli
+    const duzeltmeAyarla = (deg) => p.evaluate((d) => { const st = JSON.parse(localStorage.getItem('fake') || '{}'); st.isl = { kurulum_bitti: true, degisiklik: d }; localStorage.setItem('fake', JSON.stringify(st)); }, deg);
+    await duzeltmeAyarla({});
+    await p.goto(ADRES + '/kurulum.html?adim=3'); await p.waitForSelector('#kurulum:not([hidden])', { timeout: 8000 }).catch(() => {});
+    kontrol(cihaz + ' kurulumdan sonra "bir kez küçük düzeltme" notu, ad açık', /bir kez küçük düzeltme/.test((await p.textContent('[data-adim="3"] .duzeltme-not').catch(() => '')) || '') && !(await p.$eval('#ad', (x) => x.readOnly).catch(() => true)));
+    await duzeltmeAyarla({ duzeltme: '2026-11-01T09:00:00Z' });
+    await p.goto(ADRES + '/kurulum.html?adim=3'); await p.waitForSelector('#kurulum:not([hidden])', { timeout: 8000 }).catch(() => {});
+    kontrol(cihaz + ' düzeltme hakkı kullanıldıysa ad ve iş türü kilitli', await p.$eval('#ad', (x) => x.readOnly).catch(() => false) && await p.$eval('#is', (x) => x.readOnly).catch(() => false) && /bir kez düzelttiniz/.test((await p.textContent('[data-adim="3"] .duzeltme-not').catch(() => '')) || ''));
+    await p.evaluate(() => { const st = JSON.parse(localStorage.getItem('fake') || '{}'); delete st.isl; localStorage.setItem('fake', JSON.stringify(st)); });
     // Panel: menü sayfaları
     hatalar.length = 0;
     await p.goto(ADRES + '/panel.html#ozet'); await p.waitForSelector('#panel:not([hidden])', { timeout: 10000 }).catch(() => {});
@@ -174,16 +183,21 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     kontrol(cihaz + ' platform listesinde Var, Bulunamadı ve Kendiniz kontrol edin görünüyor', /Var/.test(pl) && /Bulunamadı/.test(pl) && /Kendiniz kontrol edin/.test(pl), pl.slice(0, 120));
     kontrol(cihaz + ' Apple Haritalar için adımlar var', (await p.$$('#platform-icerik .p-kendiniz .adim-liste li')).length >= 3);
     await tasma('yorumlar ve platformlar');
-    // "Bu sonuç yanlış": site kartında form açılıyor, not gönderiliyor, bildirim kaydediliyor
+    // "Bu sonuç yanlış": site kartında form açılıyor, yapay zekâya gidiyor, cevap sağ alttaki balonda, site kartı güncelleniyor
     kontrol(cihaz + ' Google sayfasında "Bu sonuç yanlış" düğmeleri var', (await p.$$('[data-sayfa=google] .yanlis-btn')).length === 5);
     await p.click('#site-kart .yanlis-btn').catch(() => {});
     kontrol(cihaz + ' "Bu sonuç yanlış" formu açılıyor', await p.isVisible('#site-kart .yanlis-form textarea'));
     await p.fill('#site-kart .yanlis-form textarea', 'Sitem https ile açılıyor').catch(() => {});
-    await p.click('#site-kart .yanlis-form .btn-amber').catch(() => {}); await p.waitForTimeout(200);
+    await p.click('#site-kart .yanlis-form .btn-amber').catch(() => {}); await p.waitForTimeout(500);
     const yb = await p.evaluate(() => (JSON.parse(localStorage.getItem('fake') || '{}').yanlis || []).slice(-1)[0] || null);
-    kontrol(cihaz + ' bildirim bölüm, not ve site puanıyla kaydediliyor', !!yb && yb.bolum === 'site' && yb.notu === 'Sitem https ile açılıyor' && yb.baglam && yb.baglam.puan === 62, JSON.stringify(yb));
-    kontrol(cihaz + ' gönderince teşekkür yazıyor', /teşekkürler/.test((await p.textContent('#site-kart .yanlis-btn').catch(() => '')) || '') && !(await p.$('#site-kart .yanlis-form')));
+    kontrol(cihaz + ' bildirim bölüm, not ve site puanıyla yapay zekâya gidiyor', !!yb && yb.islem === 'yanlis' && yb.bolum === 'site' && yb.notu === 'Sitem https ile açılıyor' && yb.baglam && yb.baglam.puan === 62, JSON.stringify(yb));
+    const balon = (await p.textContent('#destek-balon').catch(() => '')) || '';
+    kontrol(cihaz + ' sağ altta sohbet balonu: not ve yapay zekâ cevabı', await p.isVisible('#destek-balon') && balon.includes('Sitem https ile açılıyor') && balon.includes('kusura bakmayın') && balon.includes('yeniden taradık'), balon);
+    kontrol(cihaz + ' yeniden taranan site sonucu kartta', /71/.test((await p.textContent('#site-saglik').catch(() => '')) || ''));
+    kontrol(cihaz + ' gönderince düğme "cevabımız sağ altta" yazıyor', /sağ altta/.test((await p.textContent('#site-kart .yanlis-btn').catch(() => '')) || '') && !(await p.$('#site-kart .yanlis-form')));
     await tasma('bu sonuç yanlış');
+    await p.click('#destek-balon .destek-kapat').catch(() => {});
+    kontrol(cihaz + ' sohbet balonu kapanıyor', !(await p.isVisible('#destek-balon')));
     // İşlerim: yorum ve platform işleri
     await p.click('#yan-menu [data-git=isler]').catch(() => {}); await p.waitForTimeout(150);
     const ypi = (await p.textContent('#yp-isler').catch(() => '')) || '';

@@ -30,6 +30,17 @@
     if (d.isSecili) { $('is-secili').hidden = false; $('is-secili').textContent = '✓ ' + d.is; }
     $('site').value = d.site; $('instagram').value = d.instagram; $('google').value = d.google; $('whatsapp').value = d.whatsapp;
     var r = document.querySelector('input[name=siklik][value="' + d.siklik + '"]'); if (r) r.checked = true;
+    // Kurulumdan sonra ad, semt ve iş türünde tek küçük düzeltme (kuralı veri tabanı uygular: isletme_degisti_temizle)
+    if (i && i.kurulum_bitti) {
+      var kullandi = !!(i.degisiklik && i.degisiklik.duzeltme);
+      document.querySelectorAll('.duzeltme-not').forEach(function (p) {
+        p.hidden = false;
+        p.textContent = kullandi
+          ? 'İşletme bilgilerinizi bir kez düzelttiniz, artık değiştirilemez. Bir hata varsa bize WhatsApp\'tan yazın.'
+          : 'Adınızda, semtinizde ve iş türünüzde bir kez küçük düzeltme yapabilirsiniz (yazım hatası, eksik kelime). Başka bir işletmeye geçmek için bize WhatsApp\'tan yazın.';
+      });
+      if (kullandi) ['semt', 'ad', 'is'].forEach(function (id) { $(id).readOnly = true; });
+    }
   }
 
   function gecerli() {

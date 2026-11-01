@@ -14,10 +14,10 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&family=Fredoka:wght@600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&family=Manrope:wght@400;500;600;700;800&family=Fredoka:wght@600&display=swap"></noscript>
 <script>(function(){var t;try{t=localStorage.getItem('norevo_tema')}catch(e){}if(t!=='acik'&&t!=='koyu')t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'koyu':'acik';document.documentElement.dataset.tema=t;if(t==='koyu'){var m=document.querySelector('meta[name="theme-color"]');if(m)m.content='#0F1217'}})()</script>
-<link rel="stylesheet" href="assets/style.css?v=40">
+<link rel="stylesheet" href="assets/style.css?v=42">
 <script src="assets/tema.js?v=2" defer></script>
 <script src="assets/vendor/supabase-js-2.45.4.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
-<script src="assets/auth.js?v=11"></script>
+<script src="assets/auth.js?v=12"></script>
 <style>
 .ymt-izgara{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
 .ymt-kutu{background:var(--kart);border:1px solid var(--cizgi2);border-radius:18px;padding:16px}
@@ -53,7 +53,7 @@
 <section class="ymt-bolum kart">
 <div class="kart-bas"><h3>"Bu sonuç yanlış" bildirimleri</h3><span class="pil pil-a" id="yanlis-sayi"></span></div>
 <p class="kart-alt">Müşterilerin panelde yanlış bulduğu sonuçlar. En yeni en üstte, son 50.</p>
-<div class="kaydir"><table class="tablo"><thead><tr><th>Tarih</th><th>İşletme</th><th>Bölüm</th><th>Not</th><th>Ayrıntı</th></tr></thead><tbody id="yanlis-tablo"></tbody></table></div>
+<div class="kaydir"><table class="tablo"><thead><tr><th>Tarih</th><th>İşletme</th><th>Bölüm</th><th>Not</th><th>Yapay zekâ</th><th>Ayrıntı</th></tr></thead><tbody id="yanlis-tablo"></tbody></table></div>
 </section>
 
 <section class="ymt-bolum kart">
@@ -104,6 +104,8 @@
         tr.appendChild(el('td', ad[b.isletme_id] || '-'));
         tr.appendChild(el('td', BOLUM[b.bolum] || b.bolum));
         tr.appendChild(el('td', b.notu || '-'));
+        var KARAR = { hata: 'Hata (bizim)', dogru: 'Doğru', belirsiz: 'Belirsiz' }, ISLEM = { hak_iade: 'hak iade edildi', site_tarandi: 'site yeniden tarandı' };
+        tr.appendChild(el('td', b.karar ? KARAR[b.karar] + (b.islem ? ' · ' + (ISLEM[b.islem] || b.islem) : '') + ': ' + (b.cevap || '') : '-'));
         tr.appendChild(el('td', Object.keys(g).filter(function (k) { return g[k] != null; }).map(function (k) { return k + ': ' + g[k]; }).join(' · ')));
         $('yanlis-tablo').appendChild(tr);
       });
