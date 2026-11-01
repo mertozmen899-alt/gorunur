@@ -938,6 +938,21 @@
     });
     return b;
   }
+  // Yayın denetçisinin sonucu (yardimci: denetle). Eski metinlerde denetim yoksa bir şey gösterilmez.
+  function denetimKutu(d) {
+    if (!d || !d.durum) return null;
+    var DURUM = {
+      onaylandi: ['✓ Denetçi kontrol etti: uydurma bilgi, abartılı vaat ve Google kuralına aykırı bir şey bulmadı.', 'iyi'],
+      duzeltildi: ['✓ Denetçi kontrol etti ve şunları düzeltti:', 'iyi'],
+      kontrol_gerekli: ['⚠ Yayınlamadan önce şunları kontrol edin:', 'dikkat'],
+      denetlenemedi: ['⚠ Bu metin otomatik kontrol edilemedi. Yayınlamadan önce dikkatle okuyun.', 'dikkat']
+    }[d.durum];
+    if (!DURUM) return null;
+    var k = el('div', null, 'denetim denetim-' + DURUM[1]);
+    k.appendChild(el('p', DURUM[0]));
+    if ((d.notlar || []).length && d.durum !== 'onaylandi') { var ul = el('ul'); d.notlar.forEach(function (n) { ul.appendChild(el('li', n)); }); k.appendChild(ul); }
+    return k;
+  }
   function metinCiz(kutu, sonuc) {
     var ic = sonuc.icerik || {}, alan = el('div', null, 'yazilan');
     if (sonuc.tur === 'sayfa') {
@@ -961,6 +976,7 @@
         alan.appendChild(d);
       });
     }
+    var dk = denetimKutu(sonuc.denetim); if (dk) alan.appendChild(dk);
     alan.appendChild(el('small', 'Yapay zekâ yazdı. Köşeli parantezli yerleri ([TELEFON] gibi) kendi bilginizle doldurun, yanlış bir şey varsa düzeltin.', 'kart-alt yazilan-not'));
     kutu.innerHTML = ''; kutu.appendChild(alan);
   }
@@ -1087,6 +1103,7 @@
     kutu.appendChild(el('p', (y.yer && y.yer.ad ? 'Google’daki profil: ' + y.yer.ad + (y.yer.adres ? ', ' + y.yer.adres : '') + '. ' : '') + 'Son yenileme: ' + tarih(y.tarih) + '.', 'kart-alt yorum-kaynak'));
     if (!liste.length) { kutu.appendChild(el('p', 'Profilinizde henüz yorum yok. İşlerim sayfasındaki "Her hafta 3-5 yeni Google yorumu toplayın" adımıyla başlayabilirsiniz.', 'kart-alt')); ypIsleriCiz(); return; }
     if (y.taslak_hata) kutu.appendChild(el('p', 'Cevap taslakları bu sefer yazılamadı. Yarın "Yorumları yenile" ile tekrar deneyin.', 'kart-alt'));
+    var tdk = denetimKutu(y.taslak_denetim); if (tdk) kutu.appendChild(tdk);
     var ul = el('ul', null, 'yorum-liste');
     liste.forEach(function (r) {
       var li = el('li', null, 'yorum' + (r.cevaplandi ? ' cevapli' : ''));

@@ -2,6 +2,7 @@
 // (2) site sağlığı taraması (SerpApi harcamaz)
 // (3) Google yorumları + cevap taslakları (günde 1 yenileme; en fazla 2 SerpApi araması + 1 Gemini)
 // (4) "Hangi platformlarda varsınız?" kontrolü (günde 1 yenileme; 1 SerpApi araması)
+// Müşterinin yayınlayacağı metinler (1 ve 3) yayın denetçisinden geçer (denetle): +1 Gemini çağrısı.
 // (5) "Yanlış mı?" bildirimi: yapay zekâ kontrol eder, cevabı panelde sohbet balonunda gösterilir (günde 10 bildirim, 1 Gemini)
 // Günlük sınırlar isletmeler.kullanim sütununda tutulur (sadece sunucu yazar, işletme adı değişince silinmez):
 //   SerpApi araması (yorumlar + platformlar) kişi başı günde 6, site taraması günde 5, hazır metin günde 15.
@@ -22,14 +23,14 @@ const json = (body: unknown, status = 200) =>
 const sade = (x: string) => (x || "").toLocaleLowerCase("tr").replace(/ı/g, "i").replace(/ş/g, "s").replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ö/g, "o").replace(/ç/g, "c").replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
 
 // ---------------- Gemini (JSON cevap) ----------------
-async function gemini(soru: string, anahtar: string) {
+async function gemini(soru: string, anahtar: string, sicaklik = 0.7) {
   const modeller = [Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-flash-lite-latest"].filter(Boolean) as string[];
   let son = "";
   for (const model of modeller) {
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": anahtar },
-        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: soru }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 4000, responseMimeType: "application/json" } }),
+        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: soru }] }], generationConfig: { temperature: sicaklik, maxOutputTokens: 4000, responseMimeType: "application/json" } }),
         signal: AbortSignal.timeout(45000),
       });
       const j = await r.json().catch(() => ({}));
@@ -57,12 +58,89 @@ Sadece şu JSON'u döndür:
 "sss":[{"soru":"müşterilerin bu konuda en sık sorduğu soru","cevap":"kısa cevap"}]}
 sss dizisinde tam 5 soru olsun.`;
   if (tur === "aciklama") return `${tanim}
-Bu işletmenin Google İşletme Profili için "İşletme açıklaması" metnini yaz. Google kuralları: en fazla 750 karakter, web adresi, telefon, kampanya ve indirim yazılmaz, büyük harfle bağırılmaz. İlk 250 karakterde ne iş yaptığı ve hangi bölgede hizmet verdiği net geçsin. ${KURAL}
+Bu işletmenin Google İşletme Profili için "İşletme açıklaması" metnini yaz. Google kuralları: en fazla 750 karakter, web adresi, telefon, kampanya ve indirim yazılmaz, büyük harfle bağırılmaz. İlk 250 karakterde ne iş yaptığı ve hangi bölgede hizmet verdiği net geçsin. 400-700 karakter yaz. ${KURAL} Bu metinde köşeli parantezli yer tutucu da KOYMA: telefon, adres, çalışma saati, fiyat ve web sitesi Google profilinin kendi alanlarında zaten var, açıklamada yasak. Bunların yerine işletmenin ne yaptığını, hangi hizmetleri sunduğunu (iş türünden çıkarılabilecek genel hizmetler, uydurma ayrıntı olmadan) ve kime hitap ettiğini anlat.${saglikMi(isl) ? " Bu bir sağlık işletmesi: övücü, karşılaştırmalı ya da sonuç vaat eden ifade kullanma; bilgilendirici ve tarafsız yaz." : ""}
 Sadece şu JSON'u döndür: {"metin":"açıklama metni"}`;
   if (tur === "gonderi") return `${tanim}
 Bu işletme için bu hafta Google İşletme Profili'nde paylaşılacak 3 farklı "Güncelleme" gönderisi taslağı yaz. Her biri 80-150 kelime, farklı bir konu seçsin (ör. bir ürün veya hizmeti tanıtma, müşteriye faydalı bir ipucu, işletmenin bir günü veya ekibi). Müşterinin bu işletmeyi Google'da arayacağı kelimeler doğal şekilde geçsin. ${KURAL}
 Sadece şu JSON'u döndür: {"gonderiler":[{"konu":"kısa konu adı","metin":"gönderi metni","fotograf":"bu gönderiye eklenecek fotoğraf için tek cümlelik öneri","dugme":"Ara veya Daha fazla bilgi"}]}`;
   throw new Error("Bilinmeyen metin türü");
+}
+
+// ---------------- Yayın denetçisi: müşterinin yayınlayacağı her yapay zekâ metni ----------------
+// 1) Kod kuralları (kesin): uzunluk, Google açıklamasında telefon / web / e-posta, büyük harfle bağırma, uzun tire, Markdown.
+// 2) İkinci yapay zekâ (denetçi): kayıtta olmayan somut iddia, sonuç vaadi, sağlık reklam yasağı, hasta mahremiyeti, Türkçe.
+// Sorun varsa denetçinin düzelttiği metin kod kurallarından da geçerse o kullanılır; geçmezse metin "kontrol_gerekli" notlarıyla gider.
+type Denetim = { durum: "onaylandi" | "duzeltildi" | "kontrol_gerekli" | "denetlenemedi"; notlar: string[]; tarih: string };
+const SAGLIK = /\b(dis|hekim|doktor|dr|klinik|klinigi|hastane|poliklinik|veteriner|eczane|fizyoterap\w*|psikolog|diyetisyen|estetik|saglik|ortodont\w*|implant|tip|terapi)\b/;
+const saglikMi = (isl: Record<string, any>) => SAGLIK.test(sade(`${isl.is_turu || ""} ${isl.ad || ""}`));
+// Denetlenecek metinler, hangi yolda olduklarıyla: [yol, metin]
+function metinler(tur: string, ic: Record<string, any>): Array<[string, string]> {
+  if (tur === "aciklama") return [["metin", String(ic.metin || "")]];
+  if (tur === "sayfa") return [["title", ic.title], ["aciklama", ic.aciklama], ["h1", ic.h1], ...(ic.paragraflar || []).map((p: string, n: number) => [`paragraf ${n + 1}`, p]), ...(ic.sss || []).flatMap((q: Record<string, string>, n: number) => [[`soru ${n + 1}`, q.soru], [`cevap ${n + 1}`, q.cevap]])].map(([a, b]) => [String(a), String(b || "")]);
+  if (tur === "gonderi") return (ic.gonderiler || []).map((g: Record<string, string>, n: number) => [`${n + 1}. gönderi`, String(g.metin || "")]);
+  if (tur === "yorum") return (ic.taslaklar || []).map((t: Record<string, string>) => [`${t.no}. cevap`, String(t.metin || "")]);
+  return [];
+}
+function kuralSorunlari(tur: string, ic: Record<string, any>): string[] {
+  const s: string[] = [];
+  const hepsi = metinler(tur, ic);
+  if (!hepsi.length || hepsi.some(([, m]) => !m.trim())) s.push("Metin eksik ya da boş.");
+  for (const [yol, m] of hepsi) {
+    if (/[—–]/.test(m)) s.push(`${yol}: uzun tire var.`);
+    if (/\*\*|^#|\n#/.test(m)) s.push(`${yol}: Markdown işareti var.`);
+    const bagir = (m.replace(/\[[^\]]*\]/g, "").match(/\b[A-ZÇĞİÖŞÜ]{4,}\b/g) || []).length;
+    if (bagir >= 3) s.push(`${yol}: büyük harfle yazılmış kelimeler var.`);
+  }
+  if (tur === "aciklama") {
+    const m = String(ic.metin || "");
+    if (m.length > 750) s.push(`Açıklama ${m.length} karakter; Google en fazla 750 kabul ediyor.`);
+    if (/https?:|www\.|\.(com|net|org|tr)\b|@/i.test(m)) s.push("Açıklamada web ya da e-posta adresi var; Google buna izin vermiyor.");
+    if (/(\+?90|0)?[\s(]*5\d{2}[\s)-]*\d{3}[\s-]*\d{2}[\s-]*\d{2}|0\s*\(?\d{3}\)?[\s-]*\d{3}[\s-]*\d{2}[\s-]*\d{2}/.test(m)) s.push("Açıklamada telefon numarası var; Google buna izin vermiyor.");
+  }
+  if (tur === "sayfa") {
+    if (String(ic.title || "").length > 65) s.push("Sayfa başlığı 60 karakteri aşıyor.");
+    if (String(ic.aciklama || "").length > 170) s.push("Google açıklaması 155 karakteri aşıyor.");
+  }
+  if (tur === "gonderi") for (const [yol, m] of hepsi) if (m.length > 1500) s.push(`${yol}: Google gönderisi en fazla 1500 karakter.`);
+  if (tur === "yorum") for (const [yol, m] of hepsi) if (m.length > 600) s.push(`${yol}: cevap çok uzun.`);
+  return s;
+}
+// Düzeltilmiş metin aynı yapıda mı (aynı alanlar, aynı sayıda öğe)
+function ayniYapi(a: Record<string, any>, b: unknown): boolean {
+  if (!b || typeof b !== "object") return false;
+  const bb = b as Record<string, any>;
+  return Object.keys(a).every((k) => Array.isArray(a[k]) ? Array.isArray(bb[k]) && bb[k].length === a[k].length : typeof bb[k] === typeof a[k]);
+}
+function denetciSorusu(tur: string, isl: Record<string, any>, ic: Record<string, any>, ekBaglam = "") {
+  const ne = { aciklama: "Google İşletme Profili açıklaması", sayfa: "web sitesine eklenecek sayfa metni", gonderi: "Google İşletme Profili gönderileri", yorum: "Google yorumlarına işletme sahibi adına yazılmış cevaplar" }[tur] || "metin";
+  const saglik = saglikMi(isl);
+  return `Sen bir yayın denetçisisin. Aşağıdaki ${ne}, "${isl.ad}" adına herkese açık yayınlanacak. Metni başka bir yapay zekâ yazdı; hata yapmış olabilir. İşletme sahibi metne güvenip olduğu gibi yayınlayabilir, bu yüzden titiz ol.
+İşletme hakkında KESİN bildiğimiz bilgiler sadece şunlar: ad "${isl.ad}", iş türü "${isl.is_turu}", bölge "${isl.semt}"${isl.site ? `, web sitesi ${isl.site}` : ""}. Bunların dışındaki her somut bilgi uydurmadır.${ekBaglam ? "\n" + ekBaglam : ""}
+Kontrol et:
+1. Uydurma bilgi: fiyat, indirim, kampanya, hediye, kuruluş yılı, deneyim süresi, ödül, sertifika, uzman ya da çalışan sayısı, marka veya cihaz adı, adres, telefon, çalışma saati, verilmiş bir söz ya da yapılmış bir değişiklik. Köşeli parantezli yer tutucular ([TELEFON], [ADRES] gibi) uygundur.
+2. Kanıtlanamayan üstünlük ya da sonuç vaadi: "en iyi", "bir numara", "lider", "garanti", "kesin sonuç", "ağrısız", "%100".
+3. ${saglik ? "Bu bir sağlık işletmesi. Türkiye'de sağlık hizmetlerinde reklam yasak: övücü, karşılaştırmalı, hasta yönlendiren, tedavi sonucu vaat eden, fiyat ya da kampanya içeren ifadeler olmamalı; dil bilgilendirici ve tarafsız olmalı. Yorum cevaplarında hastanın tedavisi, hastalığı ya da sağlık durumu herkese açık şekilde anılmamalı." : "Sağlık işletmesi değil; bu maddeyi atla."}
+4. Google kuralları: açıklamada web adresi, telefon, kampanya, büyük harfle bağırma olmamalı.
+5. Rakibi kötüleme, müşteriyi suçlama, tartışmaya girme, hakaret.
+6. Türkçe yazım hatası ya da anlamı bozuk cümle.
+Metin (JSON): ${JSON.stringify(ic)}
+Sorun yoksa sadece {"uygun":true,"sorunlar":[]} döndür.
+Sorun varsa {"uygun":false,"sorunlar":["işletme sahibinin anlayacağı kısa açıklama"],"duzeltilmis":{...}} döndür. "duzeltilmis" girdiyle aynı JSON yapısında olsun (aynı alanlar, aynı sayıda öğe); sorunlu kısmı çıkar ya da köşeli parantezli yer tutucuyla değiştir, YENİ BİLGİ EKLEME, sorunsuz kısımlara dokunma.`;
+}
+async function denetle(tur: string, isl: Record<string, any>, ic: Record<string, any>, GEM: string, ekBaglam = ""): Promise<{ icerik: Record<string, any>; denetim: Denetim }> {
+  const tarih = new Date().toISOString();
+  const kod = kuralSorunlari(tur, ic);
+  let c: Record<string, any>;
+  try { c = await gemini(denetciSorusu(tur, isl, ic, ekBaglam), GEM, 0.1); }
+  catch (e) {
+    console.log("denetci hata", String(e).slice(0, 120));
+    return { icerik: ic, denetim: { durum: "denetlenemedi", notlar: kod, tarih } };
+  }
+  const sorunlar = (Array.isArray(c?.sorunlar) ? c.sorunlar : []).map((x: unknown) => uzunTireYok(String(x)).slice(0, 200)).slice(0, 6) as string[];
+  if (c?.uygun === true && !sorunlar.length && !kod.length) return { icerik: ic, denetim: { durum: "onaylandi", notlar: [], tarih } };
+  const duz = c?.duzeltilmis;
+  if (ayniYapi(ic, duz) && !kuralSorunlari(tur, duz).length) return { icerik: duz, denetim: { durum: "duzeltildi", notlar: [...kod, ...sorunlar], tarih } };
+  return { icerik: ic, denetim: { durum: "kontrol_gerekli", notlar: [...kod, ...sorunlar].length ? [...kod, ...sorunlar] : ["Denetçi bu metinden emin olamadı."], tarih } };
 }
 
 // ---------------- Güvenli adres denetimi (SSRF koruması) ----------------
@@ -374,7 +452,7 @@ async function yorumlariGetir(isl: Record<string, any>, db: any, SERP: string, G
     } as Record<string, any>;
   });
   const cevapsiz = liste.filter((y) => !y.cevaplandi);
-  let taslakHata: string | null = null;
+  let taslakHata: string | null = null, taslakDenetim: Denetim | null = null;
   const secilen = cevapsiz.slice(0, 5);
   if (secilen.length && GEM) {
     try {
@@ -384,6 +462,14 @@ async function yorumlariGetir(isl: Record<string, any>, db: any, SERP: string, G
         const bul = t.find((x) => Number(x.no) === n + 1) || t[n];
         if (bul && bul.metin) y.taslak = uzunTireYok(bul.metin).slice(0, 450);
       });
+      // Yayın denetçisi: taslaklar yorumların kendisiyle birlikte kontrol edilir (hasta mahremiyeti, uydurma söz)
+      const yazili = secilen.filter((y) => y.taslak);
+      if (yazili.length) {
+        const ek = "Cevaplanan yorumlar:\n" + yazili.map((y, n) => `${n + 1}) ${y.puan}/5: ${y.metin ? '"' + y.metin + '"' : "(yazı yok)"}`).join("\n");
+        const d = await denetle("yorum", isl, { taslaklar: yazili.map((y, n) => ({ no: n + 1, metin: y.taslak })) }, GEM, ek);
+        yazili.forEach((y, n) => { y.taslak = String(d.icerik.taslaklar[n]?.metin || y.taslak).slice(0, 450); });
+        taslakDenetim = d.denetim;
+      }
     } catch (e) { taslakHata = String((e as Error).message).slice(0, 160); }
   } else if (secilen.length) taslakHata = "Yapay zekâ anahtarı eksik.";
   const sonuc = {
@@ -392,7 +478,7 @@ async function yorumlariGetir(isl: Record<string, any>, db: any, SERP: string, G
     puan: pi.rating ?? yer?.puan ?? null,
     yorum_sayisi: pi.reviews ?? yer?.yorum_sayisi ?? null,
     yorumlar: liste, bakilan: liste.length, cevapsiz_sayi: cevapsiz.length,
-    taslak_hata: taslakHata, arama,
+    taslak_hata: taslakHata, taslak_denetim: taslakDenetim, arama,
   };
   await db.from("isletmeler").update({ yorumlar: sonuc }).eq("id", isl.id);
   return sonuc;
@@ -616,12 +702,20 @@ Deno.serve(async (req) => {
     if (!GEM) return json({ hata: "Yapay zekâ anahtarı eksik." }, 503);
     const kayit = (isl.hazir_metinler || {}) as Record<string, any>;
     const anahtar = tur === "sayfa" ? `sayfa:${sade(kelime)}` : tur;
-    if (govde.onbellek && kayit[anahtar]) return json({ metin: kayit[anahtar] });
+    if (govde.onbellek && kayit[anahtar]) {
+      // Denetçiden önce yazılmış metin: bir kez denetlenip kaydedilir
+      if (!kayit[anahtar].denetim) {
+        const d = await denetle(tur, isl, kayit[anahtar].icerik || {}, GEM);
+        kayit[anahtar] = { ...kayit[anahtar], icerik: d.icerik, denetim: d.denetim };
+        await db.from("isletmeler").update({ hazir_metinler: kayit }).eq("id", isl.id);
+      }
+      return json({ metin: kayit[anahtar] });
+    }
     // Günde en fazla 15 metin ("Yeniden yazın" da sayılır)
     if (!(await harca("metin", 1, 15))) return json({ hata: "Bugünlük metin hakkınız doldu. Yarın tekrar deneyin." }, 429);
     try {
-      const icerik = await gemini(metinSorusu(tur, isl, kelime), GEM);
-      const sonuc = { tur, kelime: tur === "sayfa" ? kelime : null, icerik, tarih: new Date().toISOString() };
+      const d = await denetle(tur, isl, await gemini(metinSorusu(tur, isl, kelime), GEM), GEM);
+      const sonuc = { tur, kelime: tur === "sayfa" ? kelime : null, icerik: d.icerik, denetim: d.denetim, tarih: new Date().toISOString() };
       kayit[anahtar] = sonuc;
       delete kayit._sayac; // eski sayaç (artık kullanim sütununda)
       await db.from("isletmeler").update({ hazir_metinler: kayit }).eq("id", isl.id);

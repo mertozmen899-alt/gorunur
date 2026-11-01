@@ -173,6 +173,8 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     const yazB = await p.$('#metin-isler .yaz-alt .btn-amber');
     if (yazB) { await yazB.click(); await p.waitForSelector('#metin-isler .yazilan', { timeout: 3000 }).catch(() => {}); }
     kontrol(cihaz + ' hazır metin yazılıp gösteriliyor', !!yazB && !!(await p.$('#metin-isler .yazilan')));
+    await p.waitForSelector('#metin-isler .yazilan .denetim', { timeout: 3000 }).catch(() => {});
+    kontrol(cihaz + ' hazır metnin altında denetçi sonucu var', /Denetçi kontrol etti/.test((await p.textContent('#metin-isler .yazilan .denetim').catch(() => '')) || ''));
     kontrol(cihaz + ' sayfa işinde "metnini yazın" düğmesi var', (await p.$$('#olcum-isler .yaz-alt .btn-amber, #yz-isler .yaz-alt .btn-amber')).length > 0);
     await tasma('hazır metinler');
     // Site sağlığı: otomatik tarandı, puan ve eksik işi görünüyor
@@ -185,6 +187,7 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     kontrol(cihaz + ' Google yorumları kendiliğinden geldi', /37/.test(yorumYazi) && /4,3/.test(yorumYazi), yorumYazi.slice(0, 120));
     kontrol(cihaz + ' cevapsız yorumlara taslak ve Kopyala düğmesi var', (await p.$$('#yorum-icerik .yorum-taslak button')).length === 3);
     kontrol(cihaz + ' taslağın altında Yanıtla talimatı var', /Yanıtla/.test((await p.textContent('#yorum-icerik .yorum-taslak').catch(() => '')) || ''));
+    kontrol(cihaz + ' yorum taslaklarında denetçi uyarısı görünüyor', /Yayınlamadan önce/.test((await p.textContent('#yorum-icerik .denetim-dikkat').catch(() => '')) || ''));
     kontrol(cihaz + ' cevaplanmış yorumda taslak yok', (await p.$$('#yorum-icerik .yorum.cevapli .yorum-taslak')).length === 0);
     // Platformlar: durum etiketleri
     const pl = (await p.textContent('#platform-icerik').catch(() => '')) || '';
