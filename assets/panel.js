@@ -325,15 +325,24 @@
         ],
         sonuc: 'Puanı düşük işletmeyi hem müşteri hem yapay zekâ atlıyor. Cevap verilen kötü yorumlar güven verir.' };
     },
+    // Site taranmışsa (site_saglik) sadece gerçekten eksik olanları ister; hepsi tamamsa iş yok (null)
     siteBaslik: function (i, sorgu) {
-      var yer = yerAdi(i);
-      return { k: 'site-baslik', t: 'Sitenizin Google’da görünen başlığını düzeltin', s: '15 dakika (sitenizi yapan kişi için)',
-        n: '"' + sorgu + '" aramasında sitenizi ilk sonuçlarda göremedik. Google, sitenizin başlığında işinizi ve şehrinizi görmek istiyor.',
+      var yer = yerAdi(i), isK = (i.is_turu || 'hizmet').toLocaleLowerCase('tr'), ss = i.site_saglik, k = {};
+      ((ss && ss.kontroller) || []).forEach(function (x) { k[x.kod] = x; });
+      var eksik = function (kod) { return !ss || (k[kod] && !k[kod].tamam); };
+      var istek = [], tamam = [], eksikAd = [];
+      if (eksik('baslik')) { istek.push('Ana sayfa başlığı (title) şöyle olsun: "' + i.ad + ' | ' + yer + ' ' + isK + '".'); eksikAd.push('başlık'); } else tamam.push('başlığınızda işiniz ve şehriniz var');
+      if (eksik('aciklama')) { istek.push('Google’da görünen açıklama (meta description) şöyle olsun: "' + i.ad + ', ' + yer + ' bölgesinde ' + isK + '. Adres, telefon ve çalışma saatlerimiz sitemizde."' + (k.aciklama && k.aciklama.detay ? ' Şu an sadece ' + k.aciklama.detay.replace(/^Açıklama:\s*/, '') + ' yazıyor.' : '')); eksikAd.push('Google açıklaması'); }
+      var yazi = [eksik('telefon') && 'telefonumuz', eksik('yer') && 'adresimiz'].filter(Boolean);
+      if (yazi.length) { istek.push('Ana sayfada ' + yazi.join(' ve ') + ' yazı olarak (resim değil) görünsün.'); eksikAd.push(yazi.join(' ve ').replace('umuz', '').replace('imiz', '')); } else if (ss) tamam.push('telefonunuz ve şehriniz sayfada yazıyor');
+      if (!istek.length) return null;
+      return { k: 'site-baslik', t: eksik('baslik') ? 'Sitenizin Google’da görünen başlığını düzeltin' : 'Sitenizin Google açıklamasını tamamlayın', s: '15 dakika (sitenizi yapan kişi için)',
+        n: '"' + sorgu + '" aramasında sitenizi ilk sonuçlarda göremedik.' + (tamam.length ? ' Sitenize baktık: ' + tamam.join(', ') + '. Eksik olan: ' + eksikAd.join(', ') + '.' : ' Google, sitenizin başlığında işinizi ve şehrinizi görmek istiyor.'),
         adimlar: [
           'Sitenizi kim yaptıysa (ajans, tanıdık, siz) aşağıdaki mesajı ona gönderin.',
           'Değişiklik yapılınca 2-4 hafta bekleyin. Norevo bir sonraki ölçümlerde farkı gösterecek.'
         ],
-        metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemizin ana sayfa başlığını (title) ve açıklamasını (meta description) şöyle değiştirebilir misiniz? Başlık: "' + i.ad + ' | ' + yer + ' ' + (i.is_turu || '') + '". Açıklama: "' + i.ad + ', ' + yer + ' bölgesinde ' + (i.is_turu || 'hizmet').toLocaleLowerCase('tr') + '. Adres, telefon ve çalışma saatlerimiz sitemizde." Ayrıca ana sayfada adresimiz, telefonumuz ve çalışma saatlerimiz yazı olarak (resim değil) görünsün. Teşekkürler.' },
+        metin: { baslik: 'Sitenizi yapan kişiye gönderilecek mesaj', yazi: 'Merhaba, sitemizde ' + (istek.length > 1 ? 'şu ' + istek.length + ' değişikliği' : 'şu değişikliği') + ' yapabilir misiniz? ' + istek.map(function (x, n) { return istek.length > 1 ? (n + 1) + ') ' + x : x; }).join(' ') + ' Teşekkürler.' },
         sonuc: 'Google aramasında sitenizin çıkma şansı artar.' };
     },
     siteYok: function (i) {
@@ -450,7 +459,7 @@
     // Arama ölçülemediyse (arama_sonuclar yok) "sitenizi göremedik" denmez
     if (o.arama_sonuclar && o.arama_sira == null && !i.site) isler.push(IS.siteYok(i));
     // Site adıyla aratınca bile ilk 10'da yoksa asıl sorun başlık değil, Google'ın siteyi tanımaması
-    else if (o.arama_sonuclar && o.arama_sira == null && i.site) isler.push(o.marka_arama && o.marka_arama.sira == null ? IS.siteGorunmuyor(i, o) : IS.siteBaslik(i, o.arama_sorgu || ''));
+    else if (o.arama_sonuclar && o.arama_sira == null && i.site) { var sb = o.marka_arama && o.marka_arama.sira == null ? IS.siteGorunmuyor(i, o) : IS.siteBaslik(i, o.arama_sorgu || ''); if (sb) isler.push(sb); }
     var benH = (o.harita_sonuclar || []).filter(function (r) { return r.siz; })[0];
     if (i.site && benH && !benH.site) isler.push(IS.profilSite(i));
     if (o.yz_soru_sayisi && o.yz_gecen === 0) isler.push(IS.bing(i));
