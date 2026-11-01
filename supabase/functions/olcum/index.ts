@@ -75,7 +75,10 @@ function cekirdekIs(isK: string): string {
   return isK.split(/\s+/).filter((k) => k && !EKLER.has(k)).join(" ") || isK;
 }
 // Müşteri niyeti taşımayan aramalar (iş arayan, işletme açmak isteyen, bilgi arayan)
-const NIYET_DISI = /(iş ilan|is ilan|ilanlari|ilanları|eleman|maaş|maas|nedir|nasıl|nasil|kariyer|staj|sahibinden|letgo|dolandırıcı|dolandirici|şikayet|sikayet|telefon numarası|haritası|wiki|fuar|sergi|ihale|toptan|açma şart|acma sart|şartları|sartlari|isim öneri|isim oneri|isimleri|logo|ne iş yapar|kaç para|kac para|kursu|kurs |okulu|bölümü|bolumu|üniversite|universite|başvuru|basvuru|anlamı|anlami|ingilizce|ödev|odev|fiyat|ücret|ucret|indir|pdf|ekşi|eksi sozluk|forum|nöbetçi eczane)/i;
+const NIYET_DISI = /(iş ilan|is ilan|ilanlari|ilanları|eleman|maaş|maas|nedir|nasıl|nasil|kariyer|staj|sahibinden|letgo|dolandırıcı|dolandirici|şikayet|sikayet|telefon numarası|haritası|wiki|fuar|sergi|ihale|toptan|açma şart|acma sart|şartları|sartlari|isim öneri|isim oneri|isimleri|logo|ne iş yapar|kaç para|kac para|kursu|kurs |okulu|bölümü|bolumu|üniversite|universite|başvuru|basvuru|anlamı|anlami|ingilizce|ödev|odev|fiyat|ücret|ucret|indir|pdf|ekşi|eksi sozluk|forum|nöbetçi eczane|lar odası|ler odası|lar odasi|ler odasi|başkan|baskan|dernek|sendika|federasyon)/i;
+// "çorum mobilyacılar sitesi" çarşı adı, "çorum mobilya siteleri" internet mağazası arar: dükkânın müşterisi değil (Loca Mobilya, 1 Kasım).
+// İş türünde site/web geçen işletme (web tasarım) hariç.
+const SITE_ARAMA = /(^|\s)site(si|leri|ler)?(\s|$)/i;
 // "çorum" kelimesi tam kelime olarak (Türkçe ekleriyle: çorumda, çorum'daki) geçiyor mu
 function yerGeciyor(k: string, yerler: string[]): boolean {
   const m = " " + sade(k) + " ";
@@ -173,7 +176,8 @@ function aramalariSec(o: { yer: string; sehir: string; turkiye: boolean; isK: st
   const KATEGORI = new Set(["salonu", "salon", "servisi", "servis", "merkezi", "merkez", "evi", "kliniği", "klinik", "bürosu", "ofisi", "atölyesi", "hizmetleri", "hizmeti"]);
   const isKelimeleri = o.isK.split(" ").filter((t) => t.length >= 4 && !KATEGORI.has(t) && !EKLER.has(t));
   const sektor = [temel, isTemiz, o.isK, ...(o.profil?.esler || []), ...(o.profil?.urunler || []), ...(o.profil ? [] : isKelimeleri)];
-  const uygun = (k: string) => !NIYET_DISI.test(k) && k.split(" ").length <= 6 && ifadeGeciyor(k, sektor) && (o.turkiye || yerGeciyor(k, yerler));
+  const siteIsi = /(site|web|internet)/.test(o.isK);
+  const uygun = (k: string) => !NIYET_DISI.test(k) && (siteIsi || !SITE_ARAMA.test(k)) && k.split(" ").length <= 6 && ifadeGeciyor(k, sektor) && (o.turkiye || yerGeciyor(k, yerler));
   const S1 = ile(o.turkiye ? "" : o.yer, temel);                                   // "çorum mobilya"  (temel arama)
   const S2 = o.sehir && !o.turkiye ? ile(o.sehir, temel) : "";                      // "istanbul veteriner" (ilçedeki işletme için şehir araması)
   const S3 = ile(o.turkiye ? "" : o.yer, isTemiz);                                  // iş türünün kendisi ("çorum mobilya satıcısı" yerine "çorum mobilya")
