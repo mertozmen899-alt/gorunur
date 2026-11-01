@@ -54,6 +54,8 @@ const YAYGIN = new Set([
   "bahar", "lale", "star", "park", "life", "city", "center", "plus", "pro", "prime", "royal", "elit", "lux", "vip", "moda", "nova",
   "ali", "mehmet", "ahmet", "mustafa", "ayse", "fatma", "elif", "zeynep", "emre", "murat", "hasan", "huseyin", "yusuf", "osman", "omer",
 ]);
+// Cevaptaki bağlantıların alan adları (ChatGPT kaynakları "([site](adres))" biçiminde veriyor); panel "kaynak siteler" işi için
+const metindekiAlanlar = (m: string) => [...new Set((m.match(/https?:\/\/[^\s)\]"']+/g) || []).map((u) => alanAdi(u)).filter(Boolean))].slice(0, 10);
 function alanAdi(url?: string | null): string {
   if (!url) return "";
   try {
@@ -173,7 +175,8 @@ function aramalariSec(o: { yer: string; sehir: string; turkiye: boolean; isK: st
   const S2 = o.sehir && !o.turkiye ? ile(o.sehir, temel) : "";                      // "istanbul veteriner" (ilçedeki işletme için şehir araması)
   const S3 = ile(o.turkiye ? "" : o.yer, isTemiz);                                  // iş türünün kendisi ("çorum mobilya satıcısı" yerine "çorum mobilya")
   const S4 = o.isK !== isTemiz ? ile(o.turkiye ? "" : o.yer, o.isK) : "";
-  const yakin = !o.turkiye && o.konumVar ? `${temel} yakınımda` : "";
+  // "yakınımda" araması ölçülmez: Google sonucu telefonun gerçek konumuna göre verir, SerpApi konumu (şehir düzeyi bile)
+  // bunu taklit edemiyor; 1 Kasım'da Çorum için Samsun/Ankara sonuçları geldi.
   const elle = o.elle.map((k) => (o.turkiye || yerGeciyor(k, yerler)) ? k : ile(o.yer, k));
   // Başka kişi/işletme adı geçen öneriler ("gözde koçak diş hekimi çorum", "dr ahmet ...") listeye girmez
   const ozel = new Set((o.profil?.ozel_adlar || []).map(imza));
@@ -221,8 +224,7 @@ function aramalariSec(o: { yer: string; sehir: string; turkiye: boolean; isK: st
     if (es) esSayisi++;
     goruldu.add(im); secilenTok.push(t); liste.push(a);
   }
-  liste = liste.slice(0, yakin ? 9 : 10);
-  if (yakin && !goruldu.has(imza(yakin))) liste.push({ kelime: yakin, kaynak: "yakin" });
+  liste = liste.slice(0, 10);
   liste.forEach((a) => { a.populer = populerImza.has(imza(a.kelime)); if (oneriler.some((x) => imza(x) === imza(a.kelime)) && a.kaynak === "oneri") a.kaynak = "google"; });
   // ---- Otomatik denetim (her ölçümde) ----
   if (!liste.length || imza(liste[0].kelime) !== imza(S1)) denetim.push({ kod: "temel-yok", mesaj: `Temel arama "${S1}" ilk sırada değil` });
@@ -902,7 +904,7 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
       if (r.status === "rejected") return { soru, tekrar: 1, hata: String(r.reason?.message || r.reason).slice(0, 200) };
       const { metin, isletmeler, kaynaklar } = r.value;
       const geciyor = adGeciyor(metin, isl.ad, adHaric) || isletmeler.some((t) => adGeciyor(t, isl.ad, adHaric)) || siteGeciyor(metin, kaynaklar);
-      return { soru, tekrar: 1, model: "google-ai-mode", aramali: true, geciyor, ozet: metin.slice(0, 1000), isletmeler, _metin: metin };
+      return { soru, tekrar: 1, model: "google-ai-mode", aramali: true, geciyor, ozet: metin.slice(0, 1000), isletmeler, kaynaklar: [...new Set(kaynaklar)].slice(0, 10), _metin: metin };
     });
     const basarili = cevaplar.filter((c) => !("hata" in c));
     s.gyz_soru_sayisi = basarili.length;
@@ -935,7 +937,8 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
         if (Date.now() > bitis) { cevaplar[n] = { soru, tekrar, hata: "Süre doldu, sorulmadı." }; continue; }
         try {
           const { model, metin } = await chatgptSor(soru + KISA, cgSehir, OAI);
-          cevaplar[n] = { soru, tekrar, model, aramali: true, geciyor: adGeciyor(metin, isl.ad, adHaric) || siteGeciyor(metin), ozet: metin.slice(0, 1000) };
+          const kaynaklar = metindekiAlanlar(metin);
+          cevaplar[n] = { soru, tekrar, model, aramali: true, geciyor: adGeciyor(metin, isl.ad, adHaric) || siteGeciyor(metin, kaynaklar), ozet: metin.slice(0, 1000), kaynaklar };
           metinler.push(metin);
         } catch (e) {
           cevaplar[n] = { soru, tekrar, hata: String((e as Error).message).slice(0, 200) };

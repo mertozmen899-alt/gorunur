@@ -128,7 +128,7 @@
   var HEDEFLER = {
     telefon: { ad: 'Daha çok telefon', isler: ['google-profil', 'nap', 'yorum', 'yorum-cevap-', 'puan', 'profil-', 'aciklama', 'urun-listesi', 'fotograf'] },
     dukkan: { ad: 'Dükkânıma daha çok müşteri', isler: ['google-profil', 'fotograf', 'yorum', 'yorum-cevap-', 'puan', 'apple-yandex', 'bing', 'gonderi-', 'nap'] },
-    internet: { ad: 'İnternetten daha çok müşteri', isler: ['site-sayfa', 'site-baslik', 'site-saglik-', 'site-yok', 'sayfa-', 'rakip-sayfa', 'rehber-', 'sektor-siteleri', 'liste-sayfalari', 'platform-', 'guclendir-'] }
+    internet: { ad: 'İnternetten daha çok müşteri', isler: ['site-sayfa', 'site-baslik', 'site-saglik-', 'site-yok', 'sayfa-', 'yz-kaynak', 'rakip-sayfa', 'rehber-', 'sektor-siteleri', 'liste-sayfalari', 'platform-', 'guclendir-'] }
   };
   var ekstraIs = 0, tumIsler = false;
   function hedefeUygun(kod) {
@@ -525,6 +525,30 @@
     return isler.slice(0, 4);
   }
 
+  // ChatGPT ve Google Yapay Zekâ Modu'nun işletme önerirken kaynak gösterdiği siteler (ölçümde kaydedilir; eski ölçümde cevaptaki
+  // bağlantılardan çıkarılır). Kendi siteniz, rakiplerin siteleri, sosyal medya, devlet siteleri ve zaten profil olan yerler çıkarılır.
+  var KAYNAK_DISI = /(^|\.)(google\.|youtube\.com|instagram\.com|facebook\.com|twitter\.com|x\.com|tiktok\.com|linkedin\.com|wikipedia\.org|openai\.com|gov\.tr$)/;
+  function alanOf(u) { try { return new URL(/^https?:/.test(u) ? u : 'https://' + u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } }
+  function yzKaynakIsi(o, i) {
+    if (!o) return null;
+    var say = {}, haric = {}, cevap = 0;
+    haric[alanOf(i.site || '')] = 1;
+    (o.harita_sonuclar || []).forEach(function (r) { if (r.site) haric[alanOf(r.site)] = 1; });
+    (o.cg_cevaplar || []).concat(o.gyz_cevaplar || []).forEach(function (c) {
+      if (!c || c.hata) return;
+      var k = c.kaynaklar || (String(c.ozet || '').match(/https?:\/\/[^\s)\]"']+/g) || []).map(alanOf);
+      var bu = {}; k.forEach(function (a) { if (a) bu[a] = 1; });
+      Object.keys(bu).forEach(function (a) { if (!haric[a] && !KAYNAK_DISI.test(a) && !platformdaVar(a)) say[a] = (say[a] || 0) + 1; });
+      cevap++;
+    });
+    var liste = Object.keys(say).sort(function (a, b) { return say[b] - say[a]; }).slice(0, 6);
+    if (!liste.length) return null;
+    return { k: 'yz-kaynak', t: 'Yapay zekânın kaynak gösterdiği sitelerde yer alın', s: 'Site başına 10-15 dakika · çoğu ücretsiz',
+      n: 'ChatGPT ve Google Yapay Zekâ Modu, ' + yerde(i.semt) + ' ' + isAdi(i, 'işletme') + ' önerirken bu sitelere baktı. Buralarda adınız yoksa önerilmeniz zorlaşıyor:',
+      siteler: liste.map(function (a) { return { ad: a, alan: a, url: 'https://' + a, not: say[a] + ' / ' + cevap + ' cevapta kaynak' }; }),
+      adimlar: ['Her siteyi açın ve ' + yerAdi(i) + ' ' + isAdi(i, '') + ' listesinde işletmenizin olup olmadığına bakın.', 'Yoksa "Firma ekle", "İşletme kaydı" ya da "İletişim" bölümünden eklenmesini isteyin. Adı, adresi ve telefonu Google’daki ile harfi harfine aynı yazın.', 'Varsa bilgilerinizin güncel olduğunu kontrol edin.'],
+      sonuc: 'Yapay zekâ önerirken bu sitelere bakıyor; orada görünmek önerilme şansınızı doğrudan artırır.' };
+  }
   // Yapay zekâda önerilmek için somut adımlar; sektöre göre rehber önerir
   function yzYolu(o, i) {
     var t = sadeK(i.is_turu || '');
@@ -532,6 +556,7 @@
     var isK = isAdi(i, 'işletme');
     var cek = isK.split(/\s+/).filter(function (k) { return k && EKLER.indexOf(k) < 0; }).join(' ') || isK;
     var adimlar = [IS.bing(i), IS.digerHaritalar(i)];
+    var yk = yzKaynakIsi(o, i); if (yk) adimlar.unshift(yk);
     var arastirilmis = rehberIsleri(i, o);
     if (arastirilmis.length) adimlar = adimlar.concat(arastirilmis);
     else if (/(dis|doktor|hekim|klinik|psikolog|diyetisyen|fizyoterap|estetik|saglik)/.test(t) && !/veteriner/.test(t))

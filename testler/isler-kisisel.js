@@ -14,7 +14,10 @@ const VERI = {
     yorumlar: { gun: '2026-11-01', tarih: new Date().toISOString(), puan: 4.9, yorum_sayisi: 290, cevapsiz_sayi: 0, bakilan: 1, yorumlar: [{ ad: 'A.', puan: 5, metin: 'İyi', cevaplandi: true }] },
     sektor_rehberleri: [{ ad: 'Armut', alan: 'armut.com' }, { ad: 'Uydurma Sağlık', alan: 'uydurmasaglik.com' }, { ad: 'DoktorTakvimi', alan: 'doktortakvimi.com' }, { ad: 'Şikayetvar', alan: 'sikayetvar.com' }] },
   olcum: { id: 'o1', durum: 'bitti', kaynak: 'elle', baslangic: new Date().toISOString(), harita_sorgu: 'çorum diş kliniği', harita_sira: 3, arama_sorgu: 'çorum diş kliniği', arama_sira: null,
-    arama_sonuclar: { konum: 'Corum,Turkiye' }, marka_arama: { sira: 1, kelime: 'Örnek Diş çorum' }, yz_gecen: 0, yz_soru_sayisi: 17, cg_soru_sayisi: 0, cg_gecen: 0, yz_cevaplar: [], gyz_cevaplar: [], cg_cevaplar: [],
+    arama_sonuclar: { konum: 'Corum,Turkiye' }, marka_arama: { sira: 1, kelime: 'Örnek Diş çorum' }, yz_gecen: 0, yz_soru_sayisi: 17, cg_soru_sayisi: 3, cg_gecen: 0, yz_cevaplar: [],
+    gyz_cevaplar: [{ soru: 's', kaynaklar: ['tecrubelerim.com', 'rakipa.com', 'corumadsm.saglik.gov.tr'] }],
+    // Eski ölçüm biçimi: kaynaklar alanı yok, bağlantılar cevap metninde
+    cg_cevaplar: [{ soru: 's1', ozet: '- Rakip A ([tecrubelerim.com](https://tecrubelerim.com/corum?utm_source=openai)) ([instagram.com](https://www.instagram.com/x)) ([emsalo.com](https://www.emsalo.com/corum/en-iyi-10))' }, { soru: 's2', ozet: 'Rakip B ([sikayetvar.com](https://www.sikayetvar.com/b)) ([ornekdis.com](https://ornekdis.com/))' }],
     isletme_bilgi: { ad: 'Örnek Diş', puan: 4.9, yorum: 290, bulundu: true },
     harita_sonuclar: [{ sira: 1, ad: 'Rakip A', siz: false, puan: 4.9, yorum: 600, site: 'https://rakipa.com' }, { sira: 2, ad: 'Rakip B', siz: false, puan: 4.8, yorum: 300, site: null }, { sira: 3, ad: 'Örnek Diş', siz: true, puan: 4.9, yorum: 290, site: 'https://ornekdis.com' }, { sira: 4, ad: 'Rakip C', siz: false, puan: 4.7, yorum: 30, site: null }],
     kelimeler: [ara('çorum diş kliniği', 'temel', { harita_sira: 3, harita_bakilan: 20, rehberler: [{ alan: 'doktortakvimi.com', link: 'https://www.doktortakvimi.com/dis-hekimi/corum', sira: 2, baslik: 'Diş Hekimi Çorum' }] }),
@@ -58,6 +61,9 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
   kontrol('"yakınımda" araması için iş önerilmiyor', /bulunduğu yere göre değişiyor/.test(aramalar[4]));
   kontrol('"implant" için "veriyorsanız" şartı var', /"implant" hizmetini veriyorsanız/.test(aramalar[2]) && /\(bu hizmeti veriyorsanız\)/.test(aramalar[2]));
   kontrol('"diş hekimi" için hizmet şartı yok (işin kendisi)', !/hizmetini veriyorsanız/.test(aramalar[1]));
+  const yk = (isler.match(/Yapay zekânın kaynak gösterdiği sitelerde yer alın[\s\S]*?(?=\n\d+\n|$)/) || [''])[0];
+  kontrol('yapay zekânın kaynak sitesi işi var (tecrubelerim 2 cevapta, emsalo)', /tecrubelerim\.com/.test(yk) && /2 \/ 3 cevapta/.test(yk) && /emsalo\.com/.test(yk), yk.slice(0, 300));
+  kontrol('kaynak işinde rakip sitesi, kendi site, sosyal medya, devlet sitesi ve zaten profil olan yer yok', !/rakipa\.com|ornekdis\.com|instagram|saglik\.gov\.tr|sikayetvar/.test(yk), yk.slice(0, 300));
   console.log(JSON.stringify(sonuc, null, 2));
   await b.close(); sunucu.close();
   process.exit(sonuc.kalan.length ? 1 : 0);
