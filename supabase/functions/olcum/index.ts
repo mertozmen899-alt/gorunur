@@ -312,7 +312,7 @@ async function sektorRehberleri(isK: string, GEM: string, modeller: string[]) {
   // Alan adı gerçekten açılıyor mu? (uydurma siteleri ele)
   const denetim = await Promise.allSettled(temiz.map(async (x) => {
     // SSRF koruması: yönlendirmeler elle (en fazla 3), sadece http/https, port 80/443, iç adres ve iç IP yok
-    const { r } = await guvenliGetir("https://" + x.alan, 7000, { "User-Agent": "Mozilla/5.0 (GorunurDenetim)" });
+    const { r } = await guvenliGetir("https://" + x.alan, 7000, { "User-Agent": "Mozilla/5.0 (NorevoDenetim)" });
     await r.body?.cancel();
     if (r.status >= 500 && r.status !== 503) throw new Error("kapali");
     return x;

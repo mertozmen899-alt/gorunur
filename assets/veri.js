@@ -264,5 +264,5 @@
       return { ad: j[0], ipucu: es && n(j[0]).indexOf(q) < 0 ? '"' + es + '" olarak da aranır' : '' };
     });
   }
-  window.GorunurVeri = { YERLER: YERLER, ISLER: ISLER, n: n, yerAra: yerAra, isAra: isAra };
+  window.NorevoVeri = { YERLER: YERLER, ISLER: ISLER, n: n, yerAra: yerAra, isAra: isAra };
 })();

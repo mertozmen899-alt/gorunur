@@ -1,6 +1,6 @@
-# Görünür projesi
+# Norevo projesi (eski adı: Görünür)
 
-Kullanıcı "görünür" ya da "devam" yazarsa önce bu dosyanın "Durum" bölümünü oku, kısa bir özet ver ve ne yapmak istediğini sor.
+Kullanıcı "norevo", "görünür" ya da "devam" yazarsa önce bu dosyanın "Durum" bölümünü oku, kısa bir özet ver ve ne yapmak istediğini sor.
 
 ## Durum (31 Ekim 2026, öğle)
 - **Proje klasörü: `E:\Claude Code\norevo\gorunur`** (31 Ekim'de `C:\Users\Mierd\gorunur`'dan kopyalandı; C: kopyası eski, Mert onaylayınca silinecek). Claude hafızası: `C:\Users\Mierd\.claude\projects\E--Claude-Code-norevo-gorunur\memory\`.

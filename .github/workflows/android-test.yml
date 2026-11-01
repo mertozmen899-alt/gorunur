@@ -24,7 +24,7 @@ jobs:
       - name: Son APK'yı al
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release download android -p Gorunur.apk --repo "${{ github.repository }}"
+        run: gh release download android -p Norevo.apk --repo "${{ github.repository }}"
 
       - name: Sanallaştırmayı aç
         run: |

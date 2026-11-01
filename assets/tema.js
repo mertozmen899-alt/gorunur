@@ -1,9 +1,9 @@
 // Norevo: açık / karanlık tema düğmesi.
 // İlk boyama: her sayfanın <head>'indeki küçük betik <html data-tema> değerini daha CSS yüklenmeden koyar (yanlış renk parlaması olmaz).
-// Bu dosya: düğmeyi üst menüye ekler, seçimi kaydeder (localStorage "gorunur_tema": "acik" | "koyu"),
+// Bu dosya: düğmeyi üst menüye ekler, seçimi kaydeder (localStorage "norevo_tema": "acik" | "koyu"),
 // elle seçim yoksa cihazın ayarını (prefers-color-scheme) izler ve <meta name="theme-color"> değerini günceller.
 (function () {
-  var ANAHTAR = 'gorunur_tema';
+  var ANAHTAR = 'norevo_tema';
   var RENK = { acik: '#FFFFFF', koyu: '#0F1217' };
   var kok = document.documentElement;
   var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;

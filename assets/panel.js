@@ -1,7 +1,7 @@
 // Norevo: müşteri paneli. İşletme bilgisi + gerçek ölçüm sonuçları.
 (function () {
   'use strict';
-  var A = window.GorunurAuth;
+  var A = window.NorevoAuth;
   var $ = function (id) { return document.getElementById(id); };
   var MOD = { gelir: 'Bana gelirler', giderim: 'Ben onlara giderim', online: 'Online çalışırım' };
   var SIKLIK = { haftalik: 'tercihiniz haftalık kısa özet', onemli: 'tercihiniz sadece önemli bir şey olunca', yok: 'mesaj göndermeyeceğiz' };

@@ -12,8 +12,8 @@
     var p = new URLSearchParams(location.search);
     var k = p.get('utm_source') || p.get('kaynak') || '';
     try {
-      if (k) sessionStorage.setItem('gorunur_kaynak', k.slice(0, 100));
-      return sessionStorage.getItem('gorunur_kaynak') || (document.referrer ? 'yonlendirme' : 'dogrudan');
+      if (k) sessionStorage.setItem('norevo_kaynak', k.slice(0, 100));
+      return sessionStorage.getItem('norevo_kaynak') || (document.referrer ? 'yonlendirme' : 'dogrudan');
     } catch (e) {
       return k || 'dogrudan';
     }
@@ -296,7 +296,7 @@
     var liste = document.getElementById('liste');
     var listeGoruldu = false, promoAcik = false, oncekiOdak = null, bekleyen = false, promoBekliyor = false;
     var promoDene = function () {};
-    var ANAHTAR = 'gorunur_tanitim', HAFTA = 7 * 24 * 3600 * 1000;
+    var ANAHTAR = 'norevo_tanitim', HAFTA = 7 * 24 * 3600 * 1000;
 
     function seritGuncelle() {
       bekleyen = false;
@@ -346,7 +346,7 @@
       seritGuncelle();
     }
     promo.addEventListener('click', function (e) { if (e.target.closest('[data-kapat]')) promoKapat(); });
-    window.__gorunurPromo = promoAc; // test ve ekran görüntüsü için
+    window.__norevoPromo = promoAc; // test ve ekran görüntüsü için
 
     // Pencere yalnız bilgisayarda ve ziyaretçi okurken araya girmeden açılır: en az 6 sn sonra,
     // sarı "Nasıl çalışır" bandı geçildiğinde ya da fare sayfadan yukarı çıkarken (kapatmaya/sekme değiştirmeye giderken).
@@ -441,7 +441,7 @@
     });
   }
 
-  window.Gorunur = { formBagla: formBagla, EPOSTA_RE: EPOSTA_RE };
+  window.Norevo = { formBagla: formBagla, EPOSTA_RE: EPOSTA_RE };
 
   document.addEventListener('DOMContentLoaded', function () {
     balonlar();

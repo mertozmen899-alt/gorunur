@@ -144,14 +144,14 @@ public class MainActivity extends Activity {
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         s.setCacheMode(WebSettings.LOAD_DEFAULT);
         s.setMediaPlaybackRequiresUserGesture(true);
-        s.setUserAgentString(s.getUserAgentString() + " GorunurApp/" + BuildConfig.VERSION_NAME);
+        s.setUserAgentString(s.getUserAgentString() + " NorevoApp/" + BuildConfig.VERSION_NAME);
 
         CookieManager cerez = CookieManager.getInstance();
         cerez.setAcceptCookie(true);
         cerez.setAcceptThirdPartyCookies(web, true);
 
         // Sadece çevrimdışı sayfadaki "Tekrar dene" düğmesi için.
-        web.addJavascriptInterface(new Kopru(), "GorunurUygulama");
+        web.addJavascriptInterface(new Kopru(), "NorevoUygulama");
 
         web.setWebViewClient(new WebViewClient() {
             @Override

@@ -1,14 +1,14 @@
 // Norevo: 5 adımlı kurulum sihirbazı. Her adımda kaydeder, yarıda kalan yerden devam eder.
 (function () {
   'use strict';
-  var A = window.GorunurAuth, V = window.GorunurVeri;
+  var A = window.NorevoAuth, V = window.NorevoVeri;
   var $ = function (id) { return document.getElementById(id); };
   var bolumler = document.querySelectorAll('[data-adim]');
   var d = { adim: 1, mod: [], semt: '', ad: '', is: '', isSecili: false, site: '', instagram: '', google: '', whatsapp: '', siklik: 'haftalik' };
 
   // Hızlı testi dolduranın cevaplarını al
   function testCevaplari() {
-    try { return JSON.parse(sessionStorage.getItem('gorunur_test') || 'null'); } catch (e) { return null; }
+    try { return JSON.parse(sessionStorage.getItem('norevo_test') || 'null'); } catch (e) { return null; }
   }
 
   function doldur(i) {
@@ -84,7 +84,7 @@
     }
     $('ileri').disabled = true; $('atla').disabled = true;
     kaydet(d.adim === 5).then(function () {
-      if (d.adim === 5) { try { sessionStorage.removeItem('gorunur_test'); } catch (e) {} location.replace(A.KOK + 'panel.html'); return; }
+      if (d.adim === 5) { try { sessionStorage.removeItem('norevo_test'); } catch (e) {} location.replace(A.KOK + 'panel.html'); return; }
       d.adim++; goster(); odakla();
     }).catch(function (err) {
       $('uyari').textContent = A.hataMetni(err) + ' Bilgileriniz kaydedilemedi.';

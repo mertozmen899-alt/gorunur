@@ -569,7 +569,7 @@
     var zamanR = aramaZamani(sonVeri);
     k.appendChild(el('p', 't-not', (zamanR ? 'Bu sonuçlar ' + zamanR + ' yapılan aramaya göre.' : 'Sonuç bugün yapılan tek bir aramaya göre.') + ' Konuma ve güne göre sıra biraz değişebilir; Norevo bunu her hafta ölçer.'));
     out.appendChild(k);
-    try { sessionStorage.setItem('gorunur_test_rapor', JSON.stringify({ ad: siz && siz.ad, sira: sira })); } catch (e) {}
+    try { sessionStorage.setItem('norevo_test_rapor', JSON.stringify({ ad: siz && siz.ad, sira: sira })); } catch (e) {}
     k.scrollIntoView && k.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   $('t-ben-form').addEventListener('submit', function (e) {
@@ -604,7 +604,7 @@
           var yer = durum.sehir === 'Türkiye geneli' ? 'Türkiye’de' : (function (ad) { var k = ad.toLocaleLowerCase('tr'), u = k.match(/[aıoueiöü]/g) || ['e']; return ad + '’' + (/[çfhkpsşt]$/.test(k) ? 't' : 'd') + ('aıou'.indexOf(u[u.length - 1]) >= 0 ? 'a' : 'e'); })(durum.sehir.split(',')[0].trim());
           document.querySelector('#s5 .yer').textContent = yer;
           document.querySelector('#s5 .is-kucuk').textContent = durum.is.toLocaleLowerCase('tr');
-          try { sessionStorage.setItem('gorunur_test', JSON.stringify({ mod: durum.mod.slice(0, 3), sehir: durum.sehir, is: durum.is })); } catch (e) {}
+          try { sessionStorage.setItem('norevo_test', JSON.stringify({ mod: durum.mod.slice(0, 3), sehir: durum.sehir, is: durum.is })); } catch (e) {}
           sonucCiz(sonuc);
           durum.adim = 5; guncelle(); odakla();
         }, azalt ? 0 : 500);
@@ -612,7 +612,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    window.Gorunur.formBagla($('test-form'), function () {
+    window.Norevo.formBagla($('test-form'), function () {
       return { calismaSekli: durum.mod.slice(0, 3), sehir: durum.sehir.slice(0, 120), isTuru: durum.is.slice(0, 120) };
     });
   });

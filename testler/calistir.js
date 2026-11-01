@@ -189,17 +189,17 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     kontrol(cihaz + ' panelde sayfa hatası yok', !hatalar.length, hatalar.join(' | '));
     // Karanlık tema: düğme var, tıklayınca tema değişip kaydediliyor
     for (const s of ['index.html', 'panel.html#ozet']) {
-      await p.evaluate(() => localStorage.removeItem('gorunur_tema'));
+      await p.evaluate(() => localStorage.removeItem('norevo_tema'));
       await p.emulateMedia({ colorScheme: 'light' });
       await p.goto(ADRES + '/' + s); await p.waitForSelector('#tema-dugme', { timeout: 5000 }).catch(() => {});
       kontrol(cihaz + ' ' + s + ' tema düğmesi var', await p.isVisible('#tema-dugme'));
       const once = await p.evaluate(() => document.documentElement.dataset.tema);
       await p.click('#tema-dugme').catch(() => {});
-      const sonra = await p.evaluate(() => [document.documentElement.dataset.tema, (document.getElementById('tema-dugme') || {}).getAttribute && document.getElementById('tema-dugme').getAttribute('aria-pressed'), localStorage.getItem('gorunur_tema')].join(','));
+      const sonra = await p.evaluate(() => [document.documentElement.dataset.tema, (document.getElementById('tema-dugme') || {}).getAttribute && document.getElementById('tema-dugme').getAttribute('aria-pressed'), localStorage.getItem('norevo_tema')].join(','));
       kontrol(cihaz + ' ' + s + ' tema düğmesi karanlığa geçiriyor', once === 'acik' && sonra === 'koyu,true,koyu', once + ' -> ' + sonra);
     }
     // Cihaz karanlıkta ve elle seçim yokken sayfa koyu açılıyor, yatay taşma yok
-    await p.evaluate(() => localStorage.removeItem('gorunur_tema'));
+    await p.evaluate(() => localStorage.removeItem('norevo_tema'));
     await p.emulateMedia({ colorScheme: 'dark' });
     for (const s of ['index.html', 'test.html', 'giris.html', 'panel.html#isler']) {
       await p.goto(ADRES + '/' + s); await p.waitForTimeout(s.startsWith('panel') ? 1200 : 600);

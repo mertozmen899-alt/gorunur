@@ -69,5 +69,5 @@
     return sb.auth.signOut().then(function () { location.replace(KOK); });
   }
 
-  window.GorunurAuth = { sb: sb, KOK: KOK, hataMetni: hataMetni, oturum: oturum, girisGerekli: girisGerekli, isletmeGetir: isletmeGetir, isletmeKaydet: isletmeKaydet, cikis: cikis };
+  window.NorevoAuth = { sb: sb, KOK: KOK, hataMetni: hataMetni, oturum: oturum, girisGerekli: girisGerekli, isletmeGetir: isletmeGetir, isletmeKaydet: isletmeKaydet, cikis: cikis };
 })();

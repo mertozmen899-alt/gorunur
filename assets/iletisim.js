@@ -3,7 +3,7 @@
   'use strict';
   var NUMARA = '905556984086';
   function baglanti(metin) { return 'https://wa.me/' + NUMARA + '?text=' + encodeURIComponent(metin || 'Merhaba, Norevo sitesinden yazıyorum.'); }
-  window.gorunurWhatsApp = baglanti;
+  window.norevoWhatsApp = baglanti;
 
   function kur() {
     if (document.querySelector('.wa-dugme')) return;
@@ -18,12 +18,12 @@
     document.body.appendChild(a);
     // Balon: sadece bilgisayarda (geniş ekran ve fare) bir kez 4 sn sonra kısa süre görünsün, sonra sadece üzerine gelince; telefonda hiç görünmez
     var gor = false;
-    try { gor = sessionStorage.getItem('gorunur_wa_balon') === '1'; } catch (e) {}
+    try { gor = sessionStorage.getItem('norevo_wa_balon') === '1'; } catch (e) {}
     if (!gor && window.matchMedia && matchMedia('(min-width: 721px) and (hover: hover)').matches) {
       setTimeout(function () {
         a.classList.add('wa-acik');
         setTimeout(function () { a.classList.remove('wa-acik'); }, 6000);
-        try { sessionStorage.setItem('gorunur_wa_balon', '1'); } catch (e) {}
+        try { sessionStorage.setItem('norevo_wa_balon', '1'); } catch (e) {}
       }, 4000);
     }
   }
