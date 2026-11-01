@@ -904,6 +904,17 @@
     });
     return b;
   }
+  // Yorum cevap taslağındaki [TELEFON] yerine kurulumda verilen numarayı yazar (numara yoksa olduğu gibi bırakır)
+  function telefonYaz(no) {
+    var r = String(no || '').replace(/\D/g, '');
+    if (r.length === 12 && r.slice(0, 2) === '90') r = '0' + r.slice(2);
+    else if (r.length === 10 && r.charAt(0) === '5') r = '0' + r;
+    return r.length === 11 && r.charAt(0) === '0' ? r.replace(/^(\d{4})(\d{3})(\d{2})(\d{2})$/, '$1 $2 $3 $4') : String(no || '').trim();
+  }
+  function taslakDoldur(t) {
+    var no = telefonYaz(isletme && isletme.whatsapp);
+    return no ? String(t).replace(/\[TELEFON[A-ZÇĞİÖŞÜ ]*\]/g, no) : String(t);
+  }
   function metinCiz(kutu, sonuc) {
     var ic = sonuc.icerik || {}, alan = el('div', null, 'yazilan');
     if (sonuc.tur === 'sayfa') {
@@ -1065,12 +1076,14 @@
       ust.appendChild(sag); li.appendChild(ust);
       li.appendChild(el('p', r.metin || '(Yazı yok, sadece puan verilmiş.)', 'yorum-metin' + (r.metin ? '' : ' bos')));
       if (!r.cevaplandi && r.taslak) {
+        var taslak = taslakDoldur(r.taslak);
         var t = el('div', null, 'hazir-metin yorum-taslak');
         t.appendChild(el('span', 'Cevap taslağı', 'hazir-baslik'));
-        t.appendChild(el('p', r.taslak));
+        t.appendChild(el('p', taslak));
         var alt = el('div', null, 'yorum-taslak-alt');
-        alt.appendChild(kopyaDugme(function () { return r.taslak; }));
-        alt.appendChild(el('small', 'Google İşletme Profilinizde yorumun altındaki "Yanıtla"ya yapıştırın.' + (/\[[A-ZÇĞİÖŞÜ ]+\]/.test(r.taslak) ? ' Köşeli parantezli yeri kendi bilginizle doldurun.' : ''), 'kart-alt'));
+        alt.appendChild(kopyaDugme(function () { return taslak; }));
+        alt.appendChild(el('small', 'Google İşletme Profilinizde yorumun altındaki "Yanıtla"ya yapıştırın.', 'kart-alt'));
+        if (/\[[A-ZÇĞİÖŞÜ ]+\]/.test(taslak)) alt.appendChild(el('small', /\[TELEFON/.test(taslak) ? 'Köşeli parantezli yere telefonunuzu yazmadan yayınlamayın.' : 'Köşeli parantezli yeri kendi bilginizle doldurmadan yayınlamayın.', 'kart-alt taslak-eksik'));
         t.appendChild(alt); li.appendChild(t);
       }
       ul.appendChild(li);
