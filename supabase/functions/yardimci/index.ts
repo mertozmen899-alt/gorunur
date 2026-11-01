@@ -41,6 +41,23 @@ async function gemini(soru: string, anahtar: string, sicaklik = 0.7) {
       return JSON.parse(metin.replace(/^```(json)?|```$/g, "").trim());
     } catch (e) { son = `${model}: ${String(e).slice(0, 80)}`; }
   }
+  // Gemini'nin hepsi düşerse (ücretsiz kota dolunca 429) aynı istem ChatGPT'ye gider; 1 Kasım'da yorum taslakları bu yüzden yazılamadı
+  const OAI = (Deno.env.get("OPENAI_API_KEY") || "").trim();
+  if (OAI) for (const model of [Deno.env.get("OPENAI_MODEL"), "gpt-5-mini", "gpt-4.1-mini"].filter(Boolean) as string[]) {
+    try {
+      const govde: Record<string, unknown> = { model, input: soru + "\n\nCevabı sadece JSON olarak ver.", text: { format: { type: "json_object" } }, max_output_tokens: 8000 };
+      if (model.startsWith("gpt-5")) govde.reasoning = { effort: "low" }; else govde.temperature = sicaklik;
+      const r = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + OAI },
+        body: JSON.stringify(govde), signal: AbortSignal.timeout(60000),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { son += `; ${model}: ${r.status}`; continue; }
+      const metin = String(j.output_text || (j.output || []).flatMap((o: { content?: Array<{ text?: string }> }) => o.content || []).map((c: { text?: string }) => c.text || "").join("")).trim();
+      if (!metin) { son += `; ${model}: boş`; continue; }
+      return JSON.parse(metin.replace(/^```(json)?|```$/g, "").trim());
+    } catch (e) { son += `; ${model}: ${String(e).slice(0, 80)}`; }
+  }
   throw new Error("Yapay zekâ şu an cevap vermedi (" + son + ")");
 }
 
@@ -535,6 +552,21 @@ async function yorumlariGetir(isl: Record<string, any>, db: any, SERP: string, G
     } as Record<string, any>;
   });
   const cevapsiz = liste.filter((y) => !y.cevaplandi);
+  const { taslakHata, taslakDenetim } = await taslaklariYaz(isl, cevapsiz, GEM);
+  const konular = await yorumKonulari(isl, liste, (j.topics || []) as Array<Record<string, any>>, GEM);
+  const sonuc = {
+    tarih: new Date().toISOString(), gun: bugunTR(),
+    yer: yer ? { ad: yer.ad || pi.title || null, adres: yer.adres || pi.address || null, place_id: yer.place_id || null } : (pi.title ? { ad: pi.title, adres: pi.address || null, place_id: null } : null),
+    puan: pi.rating ?? yer?.puan ?? null,
+    yorum_sayisi: pi.reviews ?? yer?.yorum_sayisi ?? null,
+    yorumlar: liste, bakilan: liste.length, cevapsiz_sayi: cevapsiz.length,
+    taslak_hata: taslakHata, taslak_denetim: taslakDenetim, konular, arama,
+  };
+  await db.from("isletmeler").update({ yorumlar: sonuc }).eq("id", isl.id);
+  return sonuc;
+}
+// Cevapsız yorumların ilk 5'ine cevap taslağı yazar (yorum nesnelerine "taslak" ekler) ve denetler
+async function taslaklariYaz(isl: Record<string, any>, cevapsiz: Array<Record<string, any>>, GEM: string) {
   let taslakHata: string | null = null, taslakDenetim: Denetim | null = null;
   const secilen = cevapsiz.slice(0, 5);
   if (secilen.length && GEM) {
@@ -548,17 +580,7 @@ async function yorumlariGetir(isl: Record<string, any>, db: any, SERP: string, G
       taslakDenetim = await taslaklariDenetle(isl, secilen, GEM);
     } catch (e) { taslakHata = String((e as Error).message).slice(0, 160); }
   } else if (secilen.length) taslakHata = "Yapay zekâ anahtarı eksik.";
-  const konular = await yorumKonulari(isl, liste, (j.topics || []) as Array<Record<string, any>>, GEM);
-  const sonuc = {
-    tarih: new Date().toISOString(), gun: bugunTR(),
-    yer: yer ? { ad: yer.ad || pi.title || null, adres: yer.adres || pi.address || null, place_id: yer.place_id || null } : (pi.title ? { ad: pi.title, adres: pi.address || null, place_id: null } : null),
-    puan: pi.rating ?? yer?.puan ?? null,
-    yorum_sayisi: pi.reviews ?? yer?.yorum_sayisi ?? null,
-    yorumlar: liste, bakilan: liste.length, cevapsiz_sayi: cevapsiz.length,
-    taslak_hata: taslakHata, taslak_denetim: taslakDenetim, konular, arama,
-  };
-  await db.from("isletmeler").update({ yorumlar: sonuc }).eq("id", isl.id);
-  return sonuc;
+  return { taslakHata, taslakDenetim };
 }
 
 // ---------------- Platformlar ----------------
@@ -694,7 +716,7 @@ Deno.serve(async (req) => {
   const db = createClient(URL_, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const govde = await req.json().catch(() => ({}));
   let isl: Record<string, any> | null = null;
-  let deneme = false;
+  let deneme = false, yonetici = false;
   // Deneme yolu (sadece sunucu tarafı anahtarla): oturum olmadan belirli işletme için çalıştırır
   const cronBaslik = req.headers.get("x-gorunur-cron") || "";
   // Deneme taraması: herhangi bir adresi veri tabanına yazmadan tarar (sadece sunucu tarafı anahtarla)
@@ -717,6 +739,8 @@ Deno.serve(async (req) => {
     if (!u?.user) return json({ hata: "Giriş yapmanız gerekiyor." }, 401);
     const { data } = await db.from("isletmeler").select("*").eq("sahip", u.user.id).maybeSingle();
     isl = data;
+    const { data: ymt } = await db.from("yoneticiler").select("eposta").eq("eposta", String(u.user.email || "").toLowerCase()).maybeSingle();
+    yonetici = !!ymt;
   }
   if (!isl || !isl.kurulum_bitti) return json({ hata: "Önce kurulumu tamamlayın." }, 400);
   const SERP = (Deno.env.get("SERPAPI_KEY") || "").trim();
@@ -730,7 +754,8 @@ Deno.serve(async (req) => {
     return data === true;
   };
   const kapi: Kapi = async () => {
-    if (!(await harca("serp", 1, 6))) throw new KotaHatasi("Bugünkü arama hakkınız doldu. Yarın tekrar deneyin.");
+    // Yönetici işletme başı günlük sınırdan muaf (aynı gün işletme değiştirip deniyor); sistem bütçesi aşağıda yine geçerli
+    if (!yonetici && !(await harca("serp", 1, 6))) throw new KotaHatasi("Bugünkü arama hakkınız doldu. Yarın tekrar deneyin.");
     const { data, error } = await db.rpc("serp_harca", { adet: 1, sinir: SERP_SINIR, p_aylik: SERP_AYLIK });
     if (error) console.log("serp_harca hata", error.message);
     if (data !== true) {
@@ -751,6 +776,15 @@ Deno.serve(async (req) => {
       } catch (e) { console.log("eski taslak denetimi", String(e).slice(0, 120)); }
     }
     if (govde.sadece_denetim) return json({ yorumlar: onceki });
+    // Bugün yenilendi ama yapay zekâ taslak yazamadıysa: arama harcamadan sadece taslaklar yeniden yazılır (hazır metin hakkından)
+    const taslaksiz = (onceki?.yorumlar || []).filter((y: Record<string, any>) => !y.cevaplandi && !y.taslak);
+    if (onceki?.gun === bugunTR() && onceki.taslak_hata && taslaksiz.length && !(deneme && govde.zorla)) {
+      if (!(await harca("metin", 1, 15))) return json({ hata: "Bugünlük metin hakkınız doldu. Yarın tekrar deneyin.", yorumlar: onceki }, 429);
+      const t = await taslaklariYaz(isl, (onceki.yorumlar || []).filter((y: Record<string, any>) => !y.cevaplandi), GEMy);
+      onceki.taslak_hata = t.taslakHata; onceki.taslak_denetim = t.taslakDenetim;
+      await db.from("isletmeler").update({ yorumlar: onceki }).eq("id", isl.id);
+      return json({ yorumlar: onceki });
+    }
     if (onceki?.gun === bugunTR() && !(deneme && govde.zorla)) return json({ yorumlar: onceki, mesaj: "Yorumlarınızı bugün yeniledik. Yarın tekrar yenileyebilirsiniz." });
     if (!SERP) return json({ hata: "Arama anahtarı eksik.", yorumlar: onceki }, 503);
     try {

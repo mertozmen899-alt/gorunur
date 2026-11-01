@@ -474,12 +474,14 @@ async function chatgptSor(soru: string, sehir: string, anahtar: string) {
       model, input: soru,
       tools: [{ type: "web_search", user_location: { type: "approximate", country: "TR", ...(sehir ? { city: sehir } : {}) } }],
     };
-    if (model.startsWith("gpt-5")) govde.reasoning = { effort: "low" };
+    // OPENAI_EFFORT: ChatGPT uygulaması daha çok düşünüp daha çok site tarıyor; low dışında soru başına süre 75 sn
+    const effort = Deno.env.get("OPENAI_EFFORT") || "low";
+    if (model.startsWith("gpt-5")) govde.reasoning = { effort };
     let r: Response;
     try {
       r = await fetch("https://api.openai.com/v1/responses", {
         method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + anahtar },
-        body: JSON.stringify(govde), signal: AbortSignal.timeout(45000),
+        body: JSON.stringify(govde), signal: AbortSignal.timeout(effort === "low" ? 45000 : 75000),
       });
     } catch (e) {
       // Zaman aşımında başka modele geçilmez (toplam süre uzamasın)
@@ -852,7 +854,8 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
   const kelimeSorulari = kelimeler.map((k) => `"${k}" diye arıyorum. Hangi işletmeleri önerirsin?`);
   // Şablon ve arama kelimelerini karıştır: 3 şablon + kelimeler, sonra kalan şablonlar
   const tumSorular = tekillestir([...sablon.slice(0, 3), ...kelimeSorulari.slice(0, 3), ...sablon.slice(3), ...kelimeSorulari.slice(3)]);
-  const KISA = " Kısa cevap ver: 3-5 işletme adı ve her biri için tek cümle.";
+  // Sayı sınırı yok: gerçek kullanıcıya ChatGPT 8-10 işletme sayıyor; "3-5 işletme" deyince 4KDent listeden düşüyordu (1 Kasım)
+  const KISA = " Her işletme için tek cümle yeter.";
   // Site adresi kaynaklarda/metinde geçiyorsa da "geçiyor" sayılır (Google Yapay Zekâ Modu ve ChatGPT kaynak gösterir)
   const siteGeciyor = (metin: string, kaynaklar: string[] = []) => !!siteAlan && (kaynaklar.includes(siteAlan) || metin.toLowerCase().includes(siteAlan));
   let yzMetinleri: string[] = [];
@@ -938,7 +941,13 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
     // Süre sınırı: 100 sn sonra yeni soru başlatılmaz (Edge Function süresi aşılmasın)
     const bitis = Date.now() + 70000;
     let sira = 0;
-    await Promise.all(Array.from({ length: 2 }, async () => {
+    // Her cevap gelince kaydedilir: 60 sn bölüm sınırı dolarsa gelmiş cevaplar kaybolmaz (1 Kasım: gpt-5 x2 tekrarda hepsi düşüyordu)
+    const kaydet = () => {
+      const b = cevaplar.filter((c) => c && !("hata" in c));
+      s.cg_soru_sayisi = b.length; s.cg_gecen = b.filter((c) => c.geciyor).length; s.cg_cevaplar = cevaplar.filter(Boolean);
+    };
+    // Sorular aynı anda gider (en fazla 6): gpt-5'te bir cevap ~15-20 sn, 2'şer gidince 6 soru sınıra sığmıyordu
+    await Promise.all(Array.from({ length: Math.min(6, isler.length) }, async () => {
       while (sira < isler.length) {
         const n = sira++, { soru, tekrar } = isler[n];
         if (Date.now() > bitis) { cevaplar[n] = { soru, tekrar, hata: "Süre doldu, sorulmadı." }; continue; }
@@ -946,17 +955,17 @@ async function olcumYap(db: Db, isl: Isl, SERP: string, GEM: string, kaynak: "el
           const { model, metin } = await chatgptSor(soru + KISA, cgSehir, OAI);
           const kaynaklar = metindekiAlanlar(metin);
           cevaplar[n] = { soru, tekrar, model, aramali: true, geciyor: adGeciyor(metin, isl.ad, adHaric) || siteGeciyor(metin, kaynaklar), ozet: metin.slice(0, 1000), kaynaklar };
-          metinler.push(metin);
+          metinler.push(metin); yzMetinleri.push(metin);
         } catch (e) {
           cevaplar[n] = { soru, tekrar, hata: String((e as Error).message).slice(0, 200) };
         }
+        kaydet();
       }
     }));
     const basarili = cevaplar.filter((c) => c && !("hata" in c));
     s.cg_soru_sayisi = basarili.length;
     s.cg_gecen = basarili.filter((c) => c.geciyor).length;
     s.cg_cevaplar = cevaplar;
-    yzMetinleri.push(...metinler);
     const hatali = cevaplar.filter((c) => c && "hata" in c);
     if (hatali.length && hatali.length * 2 >= cevaplar.length) hatalar.push(`ChatGPT: ${cevaplar.length} cevaptan ${hatali.length} tanesi alınamadı (${String(hatali[0].hata).slice(0, 140)})`);
     else if (hatali.length) console.log("chatgpt eksik cevap", hatali.length, String(hatali[0].hata).slice(0, 140));
