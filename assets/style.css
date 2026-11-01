@@ -1242,3 +1242,5 @@ button.sayi-kutu[aria-expanded="true"]{border-color:var(--amber)}
 .sekmeler button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .sekme-disi{display:none!important}
 .hk-video{display:block;width:100%;height:auto;max-width:100%;aspect-ratio:16/9;margin-top:22px;border-radius:16px;background:var(--kart2)}
+.ornek-serit{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;justify-content:center;padding:10px max(16px,env(safe-area-inset-left,0px));background:var(--amberzemin);color:var(--yazi);font-size:14px;text-align:center;border-bottom:1px solid var(--amberkenar)}
+.ornek-serit a{font-weight:800}

@@ -244,6 +244,13 @@ const kontrol = (ad, ok, detay) => (ok ? sonuc.gecen.push(ad) : sonuc.kalan.push
     }
     await p.emulateMedia({ colorScheme: 'light' });
     await p.evaluate(() => localStorage.clear());
+    // Herkese açık örnek panel: oturum istemez, uydurma veriyle açılır, ölçüm yapmaz
+    await p.goto(ADRES + '/panel.html?ornek=1#ozet'); await p.waitForSelector('#panel:not([hidden])', { timeout: 8000 }).catch(() => {});
+    kontrol(cihaz + ' örnek panel uydurma işletmeyle açılıyor ve şeridi var', (await p.textContent('#baslik').catch(() => '')) === 'Lale Mobilya' && await p.isVisible('.ornek-serit'));
+    kontrol(cihaz + ' örnek panelde rakip hareketleri dolu', /Kuzey Mobilya/.test((await p.textContent('#hareket-liste').catch(() => '')) || ''));
+    await tasma('örnek panel');
+    await p.click('#yeniden').catch(() => {}); await p.waitForTimeout(800);
+    kontrol(cihaz + ' örnek panelde ölçüm yerine açıklama çıkıyor', /örnek panel/.test((await p.textContent('#panel').catch(() => '')) || ''));
     await ctx.close();
   }
   // Dosya denetimi: supabase-js yükleyen her sayfa SRI (integrity) ile yüklüyor
